@@ -161,11 +161,6 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 		INSERT INTO kitting_parts (machine_id, department, part_number, description, qty_required) 
 		VALUES ($1, 'assembly', 'PART-100', 'Frame Chassis', 1)
 	`, newMachine.ID)
-	
-	db.DB.Exec(`
-		INSERT INTO controls_checkpoints (machine_id, checkpoint_type, description, expected_value)
-		VALUES ($1, 'plc_firmware', 'Load v1.2 Firmware', 'v1.2')
-	`, newMachine.ID)
 
 	db.DB.Exec(`
 		INSERT INTO design_documents (machine_id, document_type, version, file_url)
