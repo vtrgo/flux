@@ -1,0 +1,84 @@
+/**
+ * VTR Feeder Solutions — Marketing Asset Utility CSS
+ * Helper classes for rendering brand logos, taglines, and triangle icons.
+ */
+
+/* Logo Classes */
+.vtr-asset-logo-turquoise {
+  background-image: url('/assets/general/Logo Files/Digital Files/VTR LOGO-Turquoise.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vtr-asset-logo-black {
+  background-image: url('/assets/general/Logo Files/Digital Files/VTR LOGO-Black.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vtr-asset-logo-white {
+  background-image: url('/assets/general/Logo Files/Digital Files/VTR LOGO-White.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Tagline Classes */
+.vtr-asset-tagline-turquoise {
+  background-image: url('/assets/general/Tagline Files/Digital Files/VTR Tagline-Turquoise.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vtr-asset-tagline-black {
+  background-image: url('/assets/general/Tagline Files/Digital Files/VTR Tagline-Black.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vtr-asset-tagline-white {
+  background-image: url('/assets/general/Tagline Files/Digital Files/VTR Tagline-White.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Triangle Icon Classes */
+.vtr-asset-icon-solid {
+  background-image: url('/assets/general/Triangle Icon/Digital Files/Triangle Icon_Solid.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vtr-asset-icon-dark {
+  background-image: url('/assets/general/Triangle Icon/Digital Files/Triangle Icon_Outline_Dark.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vtr-asset-icon-medium {
+  background-image: url('/assets/general/Triangle Icon/Digital Files/Triangle Icon_Outline_Medium.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vtr-asset-icon-light {
+  background-image: url('/assets/general/Triangle Icon/Digital Files/Triangle Icon_Outline_Light.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.vtr-asset-icon-white {
+  background-image: url('/assets/general/Triangle Icon/Digital Files/Triangle Icon_Outline_White.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}

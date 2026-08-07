@@ -1,0 +1,1457 @@
+/* === VTR Feeder Solutions — Document Creator Stylesheet === */
+
+.creator-section {
+  padding-top: 2rem;
+}
+
+.route-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+}
+
+.back-link {
+  color: var(--vtr-theme-primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.back-link:hover {
+  opacity: 0.8;
+}
+
+.route-breadcrumb {
+  opacity: 0.7;
+}
+
+.creator-workspace-grid {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .creator-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Control Panel */
+.creator-control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.75rem;
+  background: var(--vtr-card-bg, rgba(10, 22, 34, 0.75));
+  border: 1px solid var(--vtr-card-border, rgba(106, 178, 226, 0.25));
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.panel-section h3 {
+  font-family: var(--vtr-font-heading);
+  font-size: 1.1rem;
+  color: var(--vtr-theme-primary);
+  margin-top: 0;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--vtr-card-border);
+  padding-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--vtr-theme-neutral);
+  opacity: 0.9;
+}
+
+.creator-input,
+.creator-textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--vtr-card-border, rgba(106, 178, 226, 0.3));
+  border-radius: 6px;
+  color: #fff;
+  padding: 0.65rem 0.85rem;
+  font-family: var(--vtr-font-body);
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.creator-input:focus,
+.creator-textarea:focus {
+  border-color: var(--vtr-theme-primary);
+  box-shadow: 0 0 8px var(--vtr-glow-color, rgba(106, 178, 226, 0.4));
+}
+
+.creator-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.panel-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.action-btn {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.primary-btn {
+  background: var(--vtr-theme-primary);
+  color: #000;
+}
+
+.primary-btn:hover {
+  background: #fff;
+  box-shadow: 0 0 15px var(--vtr-theme-primary);
+  transform: translateY(-2px);
+}
+
+.secondary-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--vtr-card-border);
+  color: var(--vtr-theme-neutral);
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: var(--vtr-theme-primary);
+  transform: translateY(-2px);
+}
+
+/* Canvas Container */
+.creator-canvas-container {
+  display: flex;
+  flex-direction: column;
+  background: rgba(5, 11, 17, 0.5);
+  border: 1px solid var(--vtr-card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.canvas-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(10, 22, 34, 0.85);
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--vtr-card-border);
+}
+
+.status-indicator {
+  font-size: 0.85rem;
+  font-family: 'Space Mono', monospace;
+  color: var(--vtr-theme-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #30C0CD;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #30C0CD;
+  animation: pulse-glow 1.5s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.5; }
+}
+
+.view-toggle-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--vtr-theme-neutral);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-toggle-btn.active {
+  background: var(--vtr-theme-primary);
+  color: #000;
+  border-color: var(--vtr-theme-primary);
+}
+
+.view-toggle-btn:hover:not(.active) {
+  color: var(--vtr-theme-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.canvas-viewport {
+  padding: 2rem;
+  overflow-y: auto;
+  max-height: 850px;
+  background: radial-gradient(circle at center, rgba(10, 22, 34, 0.6) 0%, rgba(5, 11, 17, 0.9) 100%);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.document-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+/* Document Live Preview Page style */
+.document-page {
+  background: var(--vtr-card-bg, #0a1622);
+  color: var(--vtr-theme-neutral, #C3C5C7);
+  border: 1px solid var(--vtr-card-border, rgba(106, 178, 226, 0.3));
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 20px var(--vtr-glow-color, rgba(106, 178, 226, 0.15));
+  width: 100%;
+  max-width: 800px;
+  min-height: 1000px;
+  padding: 3rem;
+  position: relative;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  box-sizing: border-box;
+}
+
+/* Document styling elements */
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid var(--vtr-theme-primary);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.doc-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Document Logo Styling */
+.doc-logo-wrapper {
+  margin-bottom: 0.5rem;
+}
+
+.doc-logo-wrapper .themed-logo-canvas {
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  max-width: 160px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.doc-logo-wrapper .themed-logo-glow-layer {
+  width: 100px;
+  height: 100px;
+  filter: blur(20px);
+  opacity: 0.5;
+}
+
+.doc-logo-wrapper .vtr-logo-themed-img {
+  max-height: 28px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Specific Left-Justified Header style for Technical Proposals */
+.doc-header.proposal-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid var(--vtr-theme-primary);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2.5rem;
+  width: 100%;
+}
+
+.doc-header.proposal-header .doc-logo-wrapper {
+  margin-bottom: 0;
+}
+
+.doc-header.proposal-header .themed-logo-canvas {
+  padding: 1.5rem 2.5rem;
+  border-radius: 12px;
+  max-width: 260px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  margin: 0;
+}
+
+.doc-header.proposal-header .themed-logo-glow-layer {
+  width: 150px;
+  height: 150px;
+  filter: blur(30px);
+  opacity: 0.6;
+}
+
+.doc-header.proposal-header .vtr-logo-themed-img {
+  max-height: 50px;
+  display: block;
+  margin: 0;
+}
+
+.doc-header.proposal-header .doc-meta {
+  text-align: right;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.doc-org-name {
+  font-family: var(--vtr-font-heading);
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: var(--vtr-theme-primary);
+  letter-spacing: 0.05em;
+}
+
+.doc-org-tagline {
+  font-size: 0.75rem;
+  color: var(--vtr-theme-accent);
+  font-style: italic;
+}
+
+.doc-meta {
+  text-align: right;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.doc-body h1 {
+  font-family: var(--vtr-font-heading);
+  font-weight: 900;
+  font-size: 2rem;
+  color: var(--vtr-theme-primary);
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+.doc-subtitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--vtr-theme-neutral);
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 1rem;
+}
+
+.doc-section {
+  margin-bottom: 2rem;
+}
+
+.doc-section h2 {
+  font-family: var(--vtr-font-heading);
+  font-size: 1.25rem;
+  color: var(--vtr-theme-primary);
+  margin-top: 1.5rem;
+  margin-bottom: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--vtr-card-border);
+  padding-bottom: 0.35rem;
+}
+
+.doc-grid-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 600px) {
+  .doc-grid-fields {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.doc-field-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--vtr-card-border);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.doc-field-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--vtr-theme-accent);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.doc-field-value {
+  font-weight: 600;
+  font-size: 1.05rem;
+  word-break: break-word;
+}
+
+.doc-paragraph {
+  margin-bottom: 1rem;
+  text-align: justify;
+}
+
+.doc-badge {
+  display: inline-block;
+  background: var(--vtr-theme-primary);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.05em;
+}
+
+.doc-badge.status-pass {
+  background: #2ec4b6;
+  color: #000;
+}
+
+.doc-badge.status-fail {
+  background: #e71d36;
+  color: #fff;
+}
+
+.doc-footer {
+  border-top: 1px solid var(--vtr-card-border);
+  padding-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  font-family: 'Space Mono', monospace;
+  margin-top: 4rem;
+}
+
+/* Markdown view styling */
+.markdown-preview-block {
+  width: 100%;
+  max-width: 800px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--vtr-card-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  color: #00ffcc;
+  overflow-x: auto;
+}
+
+.markdown-preview-block pre {
+  margin: 0;
+}
+
+/* Modal Dialog Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(11, 15, 25, 0.7);
+  backdrop-filter: blur(12px);
+  z-index: 1100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 900px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(18, 24, 38, 0.95);
+  border: 1px solid var(--vtr-card-border);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  animation: modalScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalScaleIn {
+  from { transform: scale(0.95) translateY(10px); }
+  to { transform: scale(1) translateY(0); }
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--vtr-card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-family: var(--vtr-font-heading);
+  font-size: 1.25rem;
+  letter-spacing: 0.05em;
+  color: var(--vtr-text-primary);
+}
+
+.modal-header .close-btn {
+  background: transparent;
+  border: none;
+  color: var(--vtr-text-muted);
+  font-size: 1.75rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.modal-header .close-btn:hover {
+  color: var(--vtr-theme-accent);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal-search-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.modal-assets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding: 0.25rem;
+}
+
+.modal-asset-card {
+  background: rgba(11, 15, 25, 0.5);
+  border: 1px solid var(--vtr-card-border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s ease;
+}
+
+.modal-asset-card:hover {
+  border-color: var(--vtr-theme-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 242, 254, 0.1);
+}
+
+.modal-asset-preview {
+  height: 110px;
+  background: #0f1320;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--vtr-card-border);
+}
+
+.modal-asset-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-asset-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-asset-icon {
+  font-size: 2rem;
+  opacity: 0.8;
+}
+
+.modal-asset-badge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0.2rem 0.4rem;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  z-index: 5;
+}
+
+.modal-asset-info {
+  padding: 0.75rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-asset-name {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--vtr-text-primary);
+}
+
+.modal-asset-path {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.15rem;
+}
+
+.modal-asset-use {
+  font-size: 0.75rem;
+  margin-top: 0.35rem;
+  opacity: 0.8;
+  color: var(--vtr-theme-accent);
+}
+
+.modal-asset-action-btn {
+  width: 100%;
+  padding: 0.4rem;
+  background: rgba(0, 242, 254, 0.15);
+  border: 1px solid var(--vtr-theme-primary);
+  border-radius: 6px;
+  color: var(--vtr-theme-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.modal-asset-action-btn:hover {
+  background: var(--vtr-theme-primary);
+  color: #0b0f19;
+  box-shadow: var(--vtr-button-glow);
+}
+
+/* Document Attached Assets Style */
+.doc-attachments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.doc-attachment-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--vtr-card-border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-attachment-preview {
+  height: 150px;
+  background: #0b0f19;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-bottom: 1px solid var(--vtr-card-border);
+}
+
+.doc-attachment-preview img,
+.doc-attachment-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.doc-attachment-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: left;
+}
+
+.doc-attachment-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--vtr-text-primary);
+}
+
+.doc-attachment-desc {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.doc-attachment-meta {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  opacity: 0.5;
+  margin-top: 0.5rem;
+}
+
+/* Cover Page Styles */
+.proposal-cover-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 297mm;
+  padding: 5rem 3rem;
+  box-sizing: border-box;
+}
+
+.proposal-cover-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 2rem;
+  width: 100%;
+}
+
+.proposal-cover-header .themed-logo-canvas {
+  padding: 2rem 3rem;
+  border-radius: 16px;
+  max-width: 320px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+}
+
+.proposal-cover-header .vtr-logo-themed-img {
+  max-height: 60px;
+}
+
+.proposal-cover-title-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  margin: 4rem 0;
+  width: 100%;
+}
+
+.proposal-cover-title {
+  font-family: var(--vtr-font-heading);
+  font-weight: 900;
+  font-size: 2.5rem;
+  line-height: 1.25;
+  color: var(--vtr-theme-primary);
+  margin-bottom: 1.5rem;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.proposal-cover-subtitle {
+  font-size: 1.35rem;
+  color: var(--vtr-text-muted);
+}
+
+.proposal-cover-subtitle strong {
+  color: var(--vtr-theme-accent);
+}
+
+.proposal-cover-footer {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid var(--vtr-card-border);
+  padding-top: 2rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* ============================================================
+   Proposal Pages — Shared Structural Classes (Pages 2-4)
+   These replace inline styles that used CSS custom properties.
+   ============================================================ */
+.proposal-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 297mm;
+  box-sizing: border-box;
+}
+
+.proposal-page-content {
+  flex: 1;
+}
+
+.proposal-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--vtr-card-border);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+
+.proposal-page-footer {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--vtr-card-border);
+  padding-top: 1rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  font-family: 'Space Mono', monospace;
+}
+
+.proposal-section-title {
+  font-family: var(--vtr-font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--vtr-theme-primary);
+}
+
+.proposal-page-docid {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  font-family: 'Space Mono', monospace;
+}
+
+/* --- Page 2: Covering Letter classes --- */
+.proposal-letter-sender {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.proposal-letter-meta {
+  text-align: right;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.proposal-letter-recipient {
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.proposal-letter-subject {
+  font-family: var(--vtr-font-heading);
+  margin-bottom: 1.5rem;
+  color: var(--vtr-theme-primary);
+  font-size: 1.15rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.5rem;
+}
+
+.proposal-letter-body {
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+.proposal-letter-content {
+  white-space: pre-wrap;
+  min-height: 200px;
+  padding: 0.5rem 0;
+}
+
+.proposal-letter-closing {
+  margin-top: 2rem;
+}
+
+.proposal-letter-signature {
+  font-weight: bold;
+  margin-top: 1.5rem;
+}
+
+/* --- Page 3: Drawing container classes --- */
+.proposal-drawing-frame {
+  width: 100%;
+  height: 180mm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--vtr-card-border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  box-sizing: border-box;
+  margin-top: 1.5rem;
+}
+
+.proposal-drawing-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.proposal-drawing-caption {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.proposal-drawing-placeholder {
+  width: 100%;
+  height: 180mm;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--vtr-card-border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 2rem;
+  box-sizing: border-box;
+  text-align: center;
+  margin-top: 1.5rem;
+  color: var(--vtr-text-muted);
+}
+
+/* --- Page 4: Technical Spec classes --- */
+.proposal-spec-heading {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--vtr-theme-primary);
+}
+
+.proposal-spec-body {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.doc-tech-details-block {
+  white-space: pre-wrap;
+  font-family: var(--vtr-font-mono, 'Space Mono', monospace);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  padding: 1.25rem;
+  background: var(--vtr-card-bg-fallback, rgba(0, 0, 0, 0.3));
+  border: 1px solid var(--vtr-card-border);
+  border-radius: 8px;
+  color: var(--vtr-text-muted);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+  text-align: left;
+  margin-bottom: 1.5rem;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+/* --- Page 4: Confidential Footer --- */
+.proposal-page-confidential-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+  border-top: 1px solid var(--vtr-card-border);
+  padding-top: 1rem;
+  font-size: 0.75rem;
+}
+
+.proposal-confidential-label {
+  font-weight: 700;
+  color: var(--vtr-theme-accent);
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+  margin-bottom: 0.15rem;
+}
+
+.proposal-confidential-docid {
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  opacity: 0.6;
+  font-family: 'Space Mono', monospace;
+}
+
+@page {
+  size: 210mm 297mm;
+  margin: 0;
+}
+
+/* ============================================================
+   PRINT / PDF MEDIA STYLES
+   Produces clean A4 pages with exact color reproduction.
+   Every element that uses CSS custom properties (dark-theme)
+   is overridden here with explicit print-safe colors.
+   ============================================================ */
+@media print {
+
+  /* --- Global Print Reset --- */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+    font-family: 'Outfit', 'Calibri', 'Helvetica Neue', sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+  }
+
+  /* --- Hide All UI Chrome --- */
+  .vtr-header,
+  .vtr-footer,
+  .toast-container,
+  .creator-control-panel,
+  .canvas-toolbar,
+  .route-header-bar,
+  .section-header,
+  .modal-overlay,
+  #asset-picker-modal,
+  #document-markdown-view,
+  .markdown-preview-block {
+    display: none !important;
+  }
+
+  /* --- Strip Layout Containers --- */
+  main, .app-view, .creator-section, .vtr-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .creator-workspace-grid {
+    display: block !important;
+  }
+
+  .creator-canvas-container {
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .canvas-viewport {
+    padding: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .document-preview-wrapper {
+    gap: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* ============================================================
+     BASE PAGE — applies to every .document-page
+     ============================================================ */
+  .document-page {
+    background: #ffffff !important;
+    color: #1a1a1a !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 20mm !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    overflow: hidden !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Remove page-break on the very last page to avoid trailing blank */
+  .document-page:last-child {
+    page-break-after: auto !important;
+  }
+
+  /* ============================================================
+     PROPOSAL PAGES — fixed A4 with flex column fill
+     ============================================================ */
+  .proposal-page,
+  .proposal-cover-page {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+  }
+
+  /* ============================================================
+     PAGE 1 — Cover Page
+     ============================================================ */
+  .proposal-cover-page {
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .proposal-cover-header {
+    margin-top: 10mm !important;
+  }
+
+  /* Strip the glassmorphic logo canvas decoration */
+  .proposal-cover-header .themed-logo-canvas {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    border-radius: 0 !important;
+  }
+
+  .proposal-cover-header .themed-logo-glow-layer,
+  .proposal-cover-header .themed-logo-border-accent {
+    display: none !important;
+  }
+
+  .proposal-cover-header .vtr-logo-themed-img {
+    filter: none !important;
+    max-height: 55px !important;
+  }
+
+  /* Tagline — "What is Impossible." — print as dark grey */
+  .proposal-cover-header > div:last-child {
+    color: #555555 !important;
+  }
+
+  .proposal-cover-title-section {
+    margin: 20mm 0 !important;
+  }
+
+  .proposal-cover-title {
+    color: #000000 !important;
+    text-shadow: none !important;
+    font-size: 2.2rem !important;
+  }
+
+  .proposal-cover-subtitle {
+    color: #333333 !important;
+    font-size: 1.25rem !important;
+  }
+
+  .proposal-cover-subtitle strong {
+    color: #000000 !important;
+  }
+
+  .proposal-cover-footer {
+    border-top: 1.5pt solid #000000 !important;
+    color: #333333 !important;
+    padding-top: 5mm !important;
+    margin-top: 0 !important;
+    font-size: 0.8rem !important;
+    opacity: 1 !important;
+  }
+
+  /* ============================================================
+     PAGES 2-4 — Content Pages:
+     Clean class-based print overrides for proposal pages.
+     ============================================================ */
+
+  /* Page header / footer separator bars */
+  .proposal-page-header {
+    border-bottom-color: #cccccc !important;
+  }
+
+  .proposal-page-footer {
+    border-top-color: #cccccc !important;
+    opacity: 1 !important;
+    color: #333333 !important;
+  }
+
+  .proposal-section-title {
+    color: #000000 !important;
+  }
+
+  .proposal-page-docid {
+    opacity: 1 !important;
+    color: #555555 !important;
+  }
+
+  /* Page 2: Covering Letter */
+  .proposal-letter-sender,
+  .proposal-letter-meta {
+    opacity: 1 !important;
+    color: #1a1a1a !important;
+  }
+
+  .proposal-letter-recipient {
+    color: #1a1a1a !important;
+  }
+
+  .proposal-letter-subject {
+    color: #000000 !important;
+    border-bottom: 1pt solid #cccccc !important;
+  }
+
+  .proposal-letter-body {
+    color: #1a1a1a !important;
+  }
+
+  .proposal-letter-content {
+    color: #1a1a1a !important;
+  }
+
+  /* ============================================================
+     PAGE 3 — Design Drawing
+     ============================================================ */
+
+  .proposal-drawing-frame {
+    background: #f8f9fa !important;
+    border: 1pt solid #cccccc !important;
+    border-radius: 4px !important;
+  }
+
+  .proposal-drawing-frame img {
+    filter: none !important;
+  }
+
+  .proposal-drawing-caption {
+    color: #333333 !important;
+    opacity: 1 !important;
+  }
+
+  .proposal-drawing-placeholder {
+    border: 2px dashed #cccccc !important;
+    background: #fafafa !important;
+    color: #666666 !important;
+  }
+
+  /* ============================================================
+     PAGE 4 — Technical Specifications
+     ============================================================ */
+
+  .proposal-spec-heading {
+    color: #000000 !important;
+  }
+
+  .proposal-spec-body {
+    color: #1a1a1a !important;
+  }
+
+  .doc-tech-details-block {
+    max-height: none !important;
+    overflow: visible !important;
+    background: #f5f7fa !important;
+    border: 1pt solid #cccccc !important;
+    border-radius: 4px !important;
+    color: #1a1a1a !important;
+    box-shadow: none !important;
+    font-size: 0.7rem !important;
+    line-height: 1.4 !important;
+    padding: 4mm !important;
+    white-space: pre-wrap !important;
+  }
+
+  .doc-section h2,
+  .doc-section h3 {
+    color: #000000 !important;
+    border-bottom-color: #cccccc !important;
+  }
+
+  .doc-paragraph {
+    color: #1a1a1a !important;
+  }
+
+  /* Page 4 Confidential footer */
+  .proposal-page-confidential-footer {
+    border-top: 1.5pt solid #000000 !important;
+    color: #333333 !important;
+    padding-top: 4mm !important;
+    opacity: 1 !important;
+  }
+
+  .proposal-confidential-label {
+    color: #000000 !important;
+  }
+
+  .proposal-confidential-docid {
+    opacity: 1 !important;
+    color: #555555 !important;
+  }
+
+  /* ============================================================
+     NON-PROPOSAL DOCUMENT TYPES (FAT, Case Study, Spec Sheet)
+     ============================================================ */
+
+  .doc-header {
+    border-bottom: 2pt solid #000000 !important;
+  }
+
+  .doc-org-name {
+    color: #000000 !important;
+  }
+
+  .doc-org-tagline {
+    color: #555555 !important;
+  }
+
+  .doc-logo-wrapper {
+    margin-bottom: 0 !important;
+  }
+
+  .doc-logo-wrapper .themed-logo-canvas {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    max-width: 150px !important;
+    backdrop-filter: none !important;
+    overflow: visible !important;
+  }
+
+  .doc-logo-wrapper .themed-logo-glow-layer,
+  .doc-logo-wrapper .themed-logo-border-accent {
+    display: none !important;
+  }
+
+  .doc-logo-wrapper .vtr-logo-themed-img {
+    filter: none !important;
+    max-height: 32px !important;
+  }
+
+  .doc-body h1 {
+    color: #000000 !important;
+  }
+
+  .doc-subtitle {
+    color: #333333 !important;
+    border-bottom: 1pt solid #cccccc !important;
+  }
+
+  .doc-field-card {
+    background: #f5f7fa !important;
+    border: 1pt solid #dddddd !important;
+    color: #1a1a1a !important;
+  }
+
+  .doc-field-label {
+    color: #555555 !important;
+  }
+
+  .doc-badge {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 1pt solid #000000 !important;
+  }
+
+  .doc-badge.status-pass {
+    background: #ddffdd !important;
+    color: #006600 !important;
+    border: 1pt solid #006600 !important;
+  }
+
+  .doc-badge.status-fail {
+    background: #ffdddd !important;
+    color: #cc0000 !important;
+    border: 1pt solid #cc0000 !important;
+  }
+
+  .doc-footer {
+    border-top: 1pt solid #cccccc !important;
+    position: static !important;
+    margin-top: auto !important;
+    padding-top: 4mm !important;
+    opacity: 1 !important;
+    color: #555555 !important;
+  }
+
+  /* ============================================================
+     ATTACHMENT GALLERY (legacy — if visible in print)
+     ============================================================ */
+  .doc-attachments-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 3mm !important;
+  }
+
+  .doc-attachment-card {
+    background: #ffffff !important;
+    border: 1pt solid #cccccc !important;
+    page-break-inside: avoid !important;
+  }
+
+  .doc-attachment-preview {
+    height: 30mm !important;
+    background: #f8f9fa !important;
+    border-bottom: 1pt solid #cccccc !important;
+  }
+
+  .doc-attachment-body {
+    color: #1a1a1a !important;
+  }
+
+  .doc-attachment-title {
+    color: #000000 !important;
+  }
+
+  .doc-attachment-desc {
+    color: #333333 !important;
+  }
+}
+

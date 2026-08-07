@@ -1,0 +1,131 @@
+.module {
+  background: var(--vtr-card-bg, #1a1a1a);
+  border: 1px solid var(--vtr-theme-primary, #00e5ff);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.header {
+  background: rgba(0, 229, 255, 0.05);
+  border-bottom: 1px solid var(--vtr-theme-primary, #00e5ff);
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  color: var(--vtr-theme-primary, #00e5ff);
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.badge {
+  background: var(--vtr-theme-primary, #00e5ff);
+  color: var(--bg-primary, #000);
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+}
+
+.list {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emptyMessage {
+  color: var(--vtr-theme-neutral, #888);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--vtr-card-border, #333);
+  border-radius: 6px;
+  padding: 1rem;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.card:hover {
+  border-color: rgba(0, 229, 255, 0.4);
+  background: rgba(0, 229, 255, 0.02);
+}
+
+.cardInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.docType {
+  color: var(--vtr-theme-primary, #00e5ff);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+
+.docVersion {
+  color: var(--vtr-theme-neutral, #888);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+}
+
+.fileUrl {
+  color: var(--text-primary, #e0e0e0);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  margin: 0 0 1rem 0;
+  word-break: break-all;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.viewBtn, .ecrBtn {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+}
+
+.viewBtn {
+  background: transparent;
+  color: var(--vtr-theme-primary, #00e5ff);
+  border-color: var(--vtr-theme-primary, #00e5ff);
+}
+
+.viewBtn:hover {
+  background: rgba(0, 229, 255, 0.1);
+}
+
+.ecrBtn {
+  background: transparent;
+  color: var(--accent-red, #ff3366);
+  border-color: var(--accent-red, #ff3366);
+}
+
+.ecrBtn:hover {
+  background: rgba(255, 51, 102, 0.1);
+}

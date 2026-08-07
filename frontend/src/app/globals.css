@@ -1,0 +1,98 @@
+@import '../styles/theme.css';
+@import '../styles/themes.css';
+
+:root {
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --text-primary: #e0e0e0;
+  --text-secondary: #9e9e9e;
+  
+  --accent-green: #00ff00;
+  --accent-amber: #ffb000;
+  --accent-cyan: #00e5ff;
+  --accent-red: #ff3333;
+  
+  --border-color: #333333;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Global VTR Input Styles */
+.vtr-input {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--vtr-card-border, var(--border-color));
+  color: var(--text-primary);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+}
+
+.vtr-input:focus {
+  border-color: var(--vtr-theme-primary, var(--accent-cyan));
+  box-shadow: 0 0 8px var(--vtr-glow-color, transparent);
+}
+
+.vtr-input option {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Global VTR Button Styles */
+.vtr-btn {
+  color: var(--vtr-theme-primary, var(--accent-cyan));
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--vtr-theme-primary, var(--accent-cyan));
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  text-decoration: none;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.vtr-btn:hover {
+  background-color: var(--vtr-theme-primary, rgba(0, 229, 255, 0.1));
+  color: var(--bg-primary, #000);
+  box-shadow: 0 0 12px var(--vtr-glow-color, rgba(0, 229, 255, 0.2));
+}
+
+.vtr-btn-secondary {
+  color: var(--vtr-theme-neutral, var(--text-secondary));
+  border-color: var(--vtr-card-border, var(--border-color));
+  background-color: var(--vtr-card-bg, transparent);
+  font-weight: 400;
+}
+
+.vtr-btn-secondary:hover {
+  color: var(--vtr-theme-primary, var(--accent-cyan));
+  border-color: var(--vtr-theme-primary, var(--accent-cyan));
+  background-color: transparent;
+  box-shadow: 0 0 10px var(--vtr-glow-color, transparent);
+}

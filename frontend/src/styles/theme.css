@@ -1,0 +1,86 @@
+/**
+ * VTR Feeder Solutions — Official Design System Theme CSS
+ * Generated from Brand Standards Manual (Updated July 31, 2025)
+ */
+
+:root {
+  /* Brand Primary Colors */
+  --vtr-pantone-315-c: #6AB2E2;
+  --vtr-pantone-315-c-rgb: 106, 178, 226;
+  
+  --vtr-pantone-320-c: #009BA6;
+  --vtr-pantone-320-c-rgb: 0, 155, 166;
+  
+  --vtr-pantone-319-c: #30C0CD;
+  --vtr-pantone-319-c-rgb: 48, 192, 205;
+  
+  --vtr-pantone-428-c: #C3C5C7;
+  --vtr-pantone-428-c-rgb: 195, 197, 200;
+  
+  --vtr-pantone-123-c: #FFC52F;
+  --vtr-pantone-123-c-rgb: 255, 197, 47;
+  
+  --vtr-black: #000000;
+  --vtr-black-rgb: 0, 0, 0;
+
+  --vtr-coral: #FF7F50;
+  --vtr-coral-rgb: 255, 127, 80;
+
+  /* Triangle Icon Opacity Variants */
+  --vtr-icon-opacity-dark: 1.0;
+  --vtr-icon-opacity-medium: 0.6;
+  --vtr-icon-opacity-light: 0.3;
+
+  /* Typography Stacks */
+  --vtr-font-logo: 'Baron', sans-serif;
+  --vtr-font-heading: 'National', 'Calibri', 'Segoe UI', sans-serif;
+  --vtr-font-body: 'Calibri', system-ui, -apple-system, sans-serif;
+
+  /* Layout & Logo Safe Space Tokens */
+  --vtr-logo-safe-space: 1.25em; /* Based on lowercase 'e' x-height standard */
+  --vtr-logo-min-width: 96px;
+}
+
+/* Base Typography Application */
+body {
+  font-family: var(--vtr-font-body);
+  color: var(--vtr-black);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--vtr-font-heading);
+  font-weight: 700;
+  color: var(--vtr-pantone-315-c);
+}
+
+/* Brand Utility Classes */
+.bg-vtr-315 { background-color: var(--vtr-pantone-315-c); }
+.bg-vtr-320 { background-color: var(--vtr-pantone-320-c); }
+.bg-vtr-319 { background-color: var(--vtr-pantone-319-c); }
+.bg-vtr-428 { background-color: var(--vtr-pantone-428-c); }
+.bg-vtr-123 { background-color: var(--vtr-pantone-123-c); }
+.bg-vtr-black { background-color: var(--vtr-black); }
+
+.text-vtr-315 { color: var(--vtr-pantone-315-c); }
+.text-vtr-320 { color: var(--vtr-pantone-320-c); }
+.text-vtr-319 { color: var(--vtr-pantone-319-c); }
+.text-vtr-428 { color: var(--vtr-pantone-428-c); }
+.text-vtr-123 { color: var(--vtr-pantone-123-c); }
+.text-vtr-black { color: var(--vtr-black); }
+
+/* Monogram Opacity Tints */
+.vtr-icon-dark { color: rgba(var(--vtr-pantone-315-c-rgb), var(--vtr-icon-opacity-dark)); }
+.vtr-icon-medium { color: rgba(var(--vtr-pantone-315-c-rgb), var(--vtr-icon-opacity-medium)); }
+.vtr-icon-light { color: rgba(var(--vtr-pantone-315-c-rgb), var(--vtr-icon-opacity-light)); }
+
+/* Logo Safe Space Container */
+.vtr-logo-container {
+  padding: var(--vtr-logo-safe-space);
+  min-width: var(--vtr-logo-min-width);
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+}

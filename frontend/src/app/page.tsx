@@ -1,0 +1,277 @@
+"use client";
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import styles from './page.module.css';
+
+interface Machine {
+  id: string;
+  order_number: string;
+  model_type: string;
+  status: string;
+  created_at: string;
+}
+
+interface Defect {
+  id: string;
+  machine_id: string;
+  order_number: string;
+  source_department: string;
+  assigned_department: string;
+  description: string;
+  severity: string;
+  status: string;
+}
+
+export default function Home() {
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [defects, setDefects] = useState<Defect[]>([]);
+  const [newOrderNumber, setNewOrderNumber] = useState("");
+  const [newModelType, setNewModelType] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sseConnected, setSseConnected] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('http://localhost:8080/api/machines').then(res => res.json()),
+      fetch('http://localhost:8080/api/defects').then(res => res.json())
+    ])
+      .then(([macData, defData]) => {
+        setMachines(macData || []);
+        setDefects(defData || []);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch data:", err);
+        setLoading(false);
+      });
+
+    const eventSource = new EventSource('http://localhost:8080/api/sse');
+
+    eventSource.onopen = () => setSseConnected(true);
+    eventSource.onerror = () => setSseConnected(false);
+
+    eventSource.addEventListener('machine_created', (e) => {
+      const newMachine: Machine = JSON.parse(e.data);
+      setMachines(prev => [newMachine, ...prev]);
+    });
+
+    eventSource.addEventListener('defect_added', (e) => {
+      const newDefect = JSON.parse(e.data);
+      setDefects(prev => [...prev, newDefect]);
+    });
+
+    eventSource.addEventListener('defect_updated', (e) => {
+      const updated = JSON.parse(e.data);
+      setDefects(prev => {
+        const exists = prev.find(d => d.id === updated.id);
+        if (exists) return prev.map(d => d.id === updated.id ? { ...updated, order_number: d.order_number } : d);
+        return [...prev, updated];
+      });
+    });
+
+    eventSource.addEventListener('defect_deleted', (e) => {
+      const deleted = JSON.parse(e.data);
+      setDefects(prev => prev.filter(d => d.id !== deleted.id));
+    });
+
+    eventSource.addEventListener('machine_deleted', (e) => {
+      const deleted = JSON.parse(e.data);
+      setMachines(prev => prev.filter(m => m.id !== deleted.id));
+    });
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
+
+  const handleCreateMachine = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrderNumber.trim() || !newModelType.trim()) return;
+
+    try {
+      await fetch('http://localhost:8080/api/machines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          order_number: newOrderNumber,
+          model_type: newModelType 
+        })
+      });
+      setNewOrderNumber("");
+      setNewModelType("");
+    } catch (err) {
+      console.error("Failed to create machine:", err);
+    }
+  };
+
+  const handleDeleteMachine = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (window.confirm("Are you sure you want to permanently delete this project? All associated tasks, parts, and issues will be lost.")) {
+      try {
+        await fetch(`http://localhost:8080/api/machines/${id}`, { method: 'DELETE' });
+      } catch (err) {
+        console.error("Failed to delete machine:", err);
+      }
+    }
+  };
+
+  return (
+    <main className={styles.main}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2rem' }}>
+        <div className={`${styles.statusBadge} ${sseConnected ? styles.online : styles.offline}`}>
+          <span className={styles.indicator}></span>
+          {sseConnected ? "SYSTEM ONLINE" : "CONNECTING..."}
+        </div>
+      </div>
+      <section className={styles.controls}>
+        <form onSubmit={handleCreateMachine} className={styles.createForm}>
+          <input 
+            type="text" 
+            placeholder="Order Number (e.g. ORD-1024)" 
+            value={newOrderNumber}
+            onChange={(e) => setNewOrderNumber(e.target.value)}
+            className="vtr-input"
+          />
+          <select 
+            value={newModelType} 
+            onChange={(e) => setNewModelType(e.target.value)}
+            className="vtr-input"
+          >
+            <option value="" disabled>Select Model Type...</option>
+            <option value="VibroBowl 500">VibroBowl 500</option>
+            <option value="Linear Feeder X1">Linear Feeder X1</option>
+            <option value="Centrifugal Core">Centrifugal Core</option>
+          </select>
+          <button type="submit" className="vtr-btn" style={{ padding: '0.75rem 1.5rem', whiteSpace: 'nowrap' }}>INITIATE BUILD</button>
+        </form>
+      </section>
+
+      <section style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+        {loading ? (
+          <div className={styles.loading}>Syncing relational data...</div>
+        ) : machines.length === 0 ? (
+          <div className={styles.empty}>No active machines in production.</div>
+        ) : (
+          machines.map(machine => {
+            const machineDefects = defects.filter(d => d.machine_id === machine.id);
+            const openDefects = machineDefects.filter(d => d.status === 'open');
+            const fixedDefects = machineDefects.filter(d => d.status === 'fixed');
+
+            return (
+              <Link href={`/machine/${machine.id}`} key={machine.id} className={styles.card} style={{ 
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                textDecoration: 'none',
+                color: 'inherit',
+                position: 'relative'
+              }}>
+                {/* Delete Button */}
+                <button 
+                  onClick={(e) => handleDeleteMachine(e, machine.id)}
+                  style={{
+                    position: 'absolute',
+                    top: '1.2rem',
+                    right: '1.5rem',
+                    background: 'transparent',
+                    border: '1px solid var(--accent-red)',
+                    color: 'var(--accent-red)',
+                    borderRadius: '4px',
+                    padding: '0.25rem 0.5rem',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    zIndex: 10
+                  }}
+                  title="Delete Project"
+                >
+                  🗑️
+                </button>
+
+                {/* Project Header */}
+                <div style={{ 
+                  padding: '1.5rem', 
+                  borderBottom: '1px solid var(--vtr-card-border, var(--border-color))',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'rgba(255,255,255,0.02)',
+                  paddingRight: '5rem' // make room for the absolute delete button
+                }}>
+                  <div>
+                    <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--vtr-theme-primary)', fontSize: '1.5rem' }}>{machine.order_number}</h2>
+                    <p style={{ margin: 0, color: 'var(--vtr-theme-neutral, var(--text-secondary))', fontFamily: 'var(--font-mono)', fontSize: '0.875rem' }}>
+                      {machine.model_type} • Status: <span style={{ color: 'var(--vtr-theme-accent, var(--accent-cyan))' }}>{machine.status}</span>
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Defect List */}
+                <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--vtr-theme-primary, var(--text-primary))', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    Active Issues 
+                    <span style={{ 
+                      background: 'var(--vtr-theme-accent, var(--accent-red))', 
+                      color: '#000', 
+                      padding: '0.1rem 0.5rem', 
+                      borderRadius: '1rem', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 'bold' 
+                    }}>
+                      {openDefects.length} Open
+                    </span>
+                    <span style={{ 
+                      background: 'var(--accent-amber)', 
+                      color: '#000', 
+                      padding: '0.1rem 0.5rem', 
+                      borderRadius: '1rem', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 'bold' 
+                    }}>
+                      {fixedDefects.length} Pending Ver.
+                    </span>
+                  </h3>
+                  
+                  {machineDefects.length === 0 ? (
+                    <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)', fontSize: '0.875rem', margin: 0 }}>
+                      No tracked issues for this project.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                      {machineDefects.filter(d => d.status !== 'verified').map(defect => (
+                        <div key={defect.id} style={{ 
+                          background: 'rgba(255,255,255,0.03)', 
+                          border: `1px solid ${defect.status === 'open' ? 'var(--vtr-card-border, var(--border-color))' : 'var(--accent-amber)'}`, 
+                          padding: '1rem', 
+                          borderRadius: '6px' 
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ color: 'var(--vtr-theme-neutral, var(--text-secondary))', fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                              {defect.severity}
+                            </span>
+                            <span style={{ color: defect.status === 'open' ? 'var(--vtr-theme-primary, var(--accent-cyan))' : 'var(--accent-amber)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold' }}>
+                              {defect.status}
+                            </span>
+                          </div>
+                          <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', lineHeight: '1.4', color: 'var(--text-primary)' }}>
+                            {defect.description}
+                          </p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                            <span style={{ color: 'var(--vtr-theme-primary)' }}>Assigned: {defect.assigned_department}</span>
+                            <span style={{ color: 'var(--vtr-theme-neutral, var(--text-secondary))' }}>Src: {defect.source_department}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            );
+          })
+        )}
+      </section>
+    </main>
+  );
+}
