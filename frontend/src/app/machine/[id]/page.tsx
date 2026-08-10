@@ -22,6 +22,7 @@ interface Defect {
   description: string;
   severity: string;
   status: string;
+  notes?: string;
 }
 
 export default function MachineDetail() {
@@ -129,6 +130,69 @@ export default function MachineDetail() {
   const fixedDefects = defects.filter(d => d.status === 'fixed');
   const verifiedDefects = defects.filter(d => d.status === 'verified');
 
+  const deptOrder = [
+    { key: 'design', label: 'Design' },
+    { key: 'kitting', label: 'Kitting' },
+    { key: 'machine_shop', label: 'Machine Shop' },
+    { key: 'electrical_controls', label: 'Electrical', match: (d: Defect) => d.assigned_department === 'electrical_controls' || d.assigned_department === 'controls' },
+    { key: 'assembly', label: 'Assembly' },
+    { key: 'other', label: 'Other', match: (d: Defect) => !['design', 'kitting', 'machine_shop', 'electrical_controls', 'controls', 'assembly'].includes(d.assigned_department) }
+  ];
+
+  const renderGroupedDefects = (defectList: Defect[], renderActions: (defect: Defect) => React.ReactNode, getStyle?: (defect: Defect) => React.CSSProperties) => {
+    if (defectList.length === 0) {
+      return <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No issues.</p>;
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        {deptOrder.map(dept => {
+          const deptIssues = defectList.filter(d => dept.match ? dept.match(d) : d.assigned_department === dept.key);
+          if (deptIssues.length === 0) return null;
+
+          return (
+            <div key={dept.key}>
+              <h3 style={{ 
+                margin: '0 0 1rem 0', 
+                fontSize: '0.875rem', 
+                color: 'var(--text-secondary)', 
+                borderBottom: '1px solid var(--border-color)', 
+                paddingBottom: '0.5rem',
+                textTransform: 'uppercase',
+                display: 'flex',
+                justifyContent: 'space-between'
+              }}>
+                {dept.label}
+                <span>{deptIssues.length}</span>
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {deptIssues.map(defect => (
+                  <div key={defect.id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', cursor: 'pointer', transition: 'all 0.2s ease', ...getStyle?.(defect) }} onClick={() => openEditModal(defect)}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>{defect.severity.toUpperCase()}</span>
+                    </div>
+                    <p style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '0.875rem', lineHeight: '1.4' }}>{defect.description}</p>
+                    {defect.notes && (
+                      <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                        <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                      <div style={{ color: 'var(--text-secondary)' }}>Source: {defect.source_department}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {renderActions(defect)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <main className={styles.container}>
       <header className={styles.header}>
@@ -151,23 +215,11 @@ export default function MachineDetail() {
             Open Issues <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{openDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {openDefects.length === 0 ? (
-              <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No open issues.</p>
-            ) : openDefects.map(defect => (
-              <div key={defect.id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => openEditModal(defect)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{defect.severity.toUpperCase()}</span>
-                </div>
-                <p style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '0.875rem', lineHeight: '1.4' }}>{defect.description}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={{ color: 'var(--text-secondary)' }}>Source: {defect.source_department}</div>
-                  <div style={{ color: 'var(--vtr-theme-primary)' }}>Assigned: {defect.assigned_department}</div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'fixed')}>MARK FIXED</button>
-                  <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                </div>
-              </div>
+            {renderGroupedDefects(openDefects, (defect) => (
+              <>
+                <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'fixed')}>MARK FIXED</button>
+                <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
+              </>
             ))}
           </div>
         </section>
@@ -178,25 +230,13 @@ export default function MachineDetail() {
             Fixed (Pending Verification) <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{fixedDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {fixedDefects.length === 0 ? (
-              <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No fixes pending verification.</p>
-            ) : fixedDefects.map(defect => (
-              <div key={defect.id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--accent-amber)', borderRadius: '8px', padding: '1rem', cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => openEditModal(defect)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{defect.severity.toUpperCase()}</span>
-                </div>
-                <p style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '0.875rem', lineHeight: '1.4' }}>{defect.description}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={{ color: 'var(--text-secondary)' }}>Source: {defect.source_department}</div>
-                  <div style={{ color: 'var(--vtr-theme-primary)' }}>Assigned: {defect.assigned_department}</div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'verified')}>SIGN OFF</button>
-                  <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>REJECT</button>
-                  <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                </div>
-              </div>
-            ))}
+            {renderGroupedDefects(fixedDefects, (defect) => (
+              <>
+                <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'verified')}>SIGN OFF</button>
+                <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>REJECT</button>
+                <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
+              </>
+            ), () => ({ border: '1px solid var(--accent-amber)' }))}
           </div>
         </section>
 
@@ -206,24 +246,12 @@ export default function MachineDetail() {
             Verified & Cleared <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{verifiedDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {verifiedDefects.length === 0 ? (
-              <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No cleared issues.</p>
-            ) : verifiedDefects.map(defect => (
-              <div key={defect.id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', opacity: 0.6, cursor: 'pointer', transition: 'all 0.2s ease' }} onClick={() => openEditModal(defect)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{defect.severity.toUpperCase()}</span>
-                </div>
-                <p style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '0.875rem', lineHeight: '1.4' }}>{defect.description}</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={{ color: 'var(--text-secondary)' }}>Source: {defect.source_department}</div>
-                  <div style={{ color: 'var(--vtr-theme-primary)' }}>Assigned: {defect.assigned_department}</div>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>RE-OPEN</button>
-                  <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                </div>
-              </div>
-            ))}
+            {renderGroupedDefects(verifiedDefects, (defect) => (
+              <>
+                <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>RE-OPEN</button>
+                <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
+              </>
+            ), () => ({ opacity: 0.6 }))}
           </div>
         </section>
       </div>

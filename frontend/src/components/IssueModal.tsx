@@ -17,6 +17,7 @@ interface Defect {
   description: string;
   severity: string;
   status: string;
+  notes?: string;
 }
 
 interface IssueModalProps {
@@ -33,7 +34,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     source_department: defaultAssignedDept,
     assigned_department: defaultAssignedDept,
     severity: 'minor',
-    description: ''
+    description: '',
+    notes: ''
   });
 
   useEffect(() => {
@@ -54,7 +56,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           source_department: editingDefect.source_department,
           assigned_department: editingDefect.assigned_department || defaultAssignedDept,
           severity: editingDefect.severity,
-          description: editingDefect.description
+          description: editingDefect.description,
+          notes: editingDefect.notes || ''
         });
       } else {
         setFormData({
@@ -62,7 +65,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           source_department: defaultAssignedDept,
           assigned_department: defaultAssignedDept,
           severity: 'minor',
-          description: ''
+          description: '',
+          notes: ''
         });
       }
     }
@@ -169,6 +173,17 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               onChange={e => setFormData({...formData, description: e.target.value})}
               required
               rows={4}
+              className="vtr-input"
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>NOTES (OPTIONAL)</label>
+            <textarea 
+              value={formData.notes} 
+              onChange={e => setFormData({...formData, notes: e.target.value})}
+              rows={3}
               className="vtr-input"
               style={{ resize: 'vertical' }}
             />

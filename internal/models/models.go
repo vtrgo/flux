@@ -80,6 +80,7 @@ type Defect struct {
 	Description       string     `json:"description"`
 	Severity          string     `json:"severity"`
 	Status            string     `json:"status"`
+	Notes             *string    `json:"notes,omitempty"`
 	ResolvedBy        *string    `json:"resolved_by,omitempty"`
 	ResolvedAt        *time.Time `json:"resolved_at,omitempty"`
 }

@@ -39,7 +39,6 @@ export default function RootLayout({
               <Link href="/assembly" className="vtr-btn">Assembly</Link>
               <Link href="/electrical-controls" className="vtr-btn">Electrical / Controls</Link>
               <Link href="/machine-shop" className="vtr-btn">Machine Shop</Link>
-              <Link href="/quality" className="vtr-btn">Quality</Link>
               <Link href="/design" className="vtr-btn">Design</Link>
               <Link href="/admin" className="vtr-btn vtr-btn-secondary">System Admin</Link>
             </div>

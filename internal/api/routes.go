@@ -158,11 +158,6 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 
 	// Seed the relational tables to test our integration
 	db.DB.Exec(`
-		INSERT INTO kitting_parts (machine_id, department, part_number, description, qty_required) 
-		VALUES ($1, 'assembly', 'PART-100', 'Frame Chassis', 1)
-	`, newMachine.ID)
-
-	db.DB.Exec(`
 		INSERT INTO design_documents (machine_id, document_type, version, file_url)
 		VALUES ($1, 'cad_model', 'v1.0.0', 'https://pdm.vtr.internal/models/frame.step')
 	`, newMachine.ID)

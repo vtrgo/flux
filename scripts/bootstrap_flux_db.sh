@@ -17,17 +17,15 @@ echo "== [2/4] Initializing Logical Database Storage =="
 if psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
     echo "Database '$DB_NAME' already exists. We will wipe and re-apply."
     # We will drop and recreate to ensure a clean slate for the new schema
-    psql -d postgres -c "DROP DATABASE \"$DB_NAME\"" || sudo -u postgres psql -d postgres -c "DROP DATABASE \"$DB_NAME\""
+    psql -d postgres -c "DROP DATABASE \"$DB_NAME\"" 2>/dev/null || sudo -u postgres psql -d postgres -c "DROP DATABASE \"$DB_NAME\""
 fi
 
 echo "Creating database '$DB_NAME'..."
-createdb "$DB_NAME" || sudo -u postgres createdb "$DB_NAME"
+createdb "$DB_NAME" 2>/dev/null || sudo -u postgres createdb -O $(whoami) "$DB_NAME"
 
 
 echo "== [3/4] Enforcing Relational Schema Structures =="
 cat << 'EOF' > "$SCHEMA_PATH"
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Core Entity
 CREATE TABLE machines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

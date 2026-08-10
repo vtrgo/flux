@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Core Entity
 CREATE TABLE machines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -67,6 +65,7 @@ CREATE TABLE defects (
     description TEXT NOT NULL,
     severity VARCHAR(20) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'open',
+    notes TEXT,
     resolved_by VARCHAR(100),
     resolved_at TIMESTAMPTZ
 );

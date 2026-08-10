@@ -21,6 +21,7 @@ interface Defect {
   description: string;
   severity: string;
   status: string;
+  notes?: string;
 }
 
 export default function Home() {
@@ -203,7 +204,7 @@ export default function Home() {
                   <div>
                     <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--vtr-theme-primary)', fontSize: '1.5rem' }}>{machine.order_number}</h2>
                     <p style={{ margin: 0, color: 'var(--vtr-theme-neutral, var(--text-secondary))', fontFamily: 'var(--font-mono)', fontSize: '0.875rem' }}>
-                      {machine.model_type} • Status: <span style={{ color: 'var(--vtr-theme-accent, var(--accent-cyan))' }}>{machine.status}</span>
+                      {machine.model_type}
                     </p>
                   </div>
                 </div>
@@ -211,61 +212,44 @@ export default function Home() {
                 {/* Defect List */}
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--vtr-theme-primary, var(--text-primary))', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    Active Issues 
-                    <span style={{ 
-                      background: 'var(--vtr-theme-accent, var(--accent-red))', 
-                      color: '#000', 
-                      padding: '0.1rem 0.5rem', 
-                      borderRadius: '1rem', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 'bold' 
-                    }}>
-                      {openDefects.length} Open
-                    </span>
-                    <span style={{ 
-                      background: 'var(--accent-amber)', 
-                      color: '#000', 
-                      padding: '0.1rem 0.5rem', 
-                      borderRadius: '1rem', 
-                      fontSize: '0.75rem', 
-                      fontWeight: 'bold' 
-                    }}>
-                      {fixedDefects.length} Pending Ver.
-                    </span>
+                    Department Deficiency Status
                   </h3>
-                  
-                  {machineDefects.length === 0 ? (
-                    <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)', fontSize: '0.875rem', margin: 0 }}>
-                      No tracked issues for this project.
-                    </p>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                      {machineDefects.filter(d => d.status !== 'verified').map(defect => (
-                        <div key={defect.id} style={{ 
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                    {[
+                      { key: 'design', label: 'Design' },
+                      { key: 'machine_shop', label: 'Machine Shop' },
+                      { key: 'kitting', label: 'Kitting' },
+                      { key: 'assembly', label: 'Assembly' },
+                      { key: 'electrical_controls', label: 'Electrical / Controls', match: (d: any) => d.assigned_department === 'electrical_controls' || d.assigned_department === 'controls' }
+                    ].map(dept => {
+                      const deptDefects = machineDefects.filter(d => dept.match ? dept.match(d) : d.assigned_department === dept.key);
+                      const open = deptDefects.filter(d => d.status === 'open').length;
+                      const pending = deptDefects.filter(d => d.status === 'fixed').length;
+                      const closed = deptDefects.filter(d => d.status === 'verified').length;
+                      
+                      return (
+                        <div key={dept.key} style={{ 
                           background: 'rgba(255,255,255,0.03)', 
-                          border: `1px solid ${defect.status === 'open' ? 'var(--vtr-card-border, var(--border-color))' : 'var(--accent-amber)'}`, 
+                          border: '1px solid var(--vtr-card-border, var(--border-color))',
                           padding: '1rem', 
-                          borderRadius: '6px' 
+                          borderRadius: '6px'
                         }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <span style={{ color: 'var(--vtr-theme-neutral, var(--text-secondary))', fontSize: '0.75rem', textTransform: 'uppercase' }}>
-                              {defect.severity}
-                            </span>
-                            <span style={{ color: defect.status === 'open' ? 'var(--vtr-theme-primary, var(--accent-cyan))' : 'var(--accent-amber)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 'bold' }}>
-                              {defect.status}
-                            </span>
-                          </div>
-                          <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', lineHeight: '1.4', color: 'var(--text-primary)' }}>
-                            {defect.description}
-                          </p>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                            <span style={{ color: 'var(--vtr-theme-primary)' }}>Assigned: {defect.assigned_department}</span>
-                            <span style={{ color: 'var(--vtr-theme-neutral, var(--text-secondary))' }}>Src: {defect.source_department}</span>
+                          <div style={{ color: 'var(--vtr-theme-primary)', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.875rem' }}>{dept.label}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: open > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-neutral)' }}>
+                              <span>Open:</span> <span>{open}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: pending > 0 ? 'var(--accent-amber)' : 'var(--vtr-theme-neutral)' }}>
+                              <span>Pending:</span> <span>{pending}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: closed > 0 ? 'var(--accent-green)' : 'var(--vtr-theme-neutral)' }}>
+                              <span>Closed:</span> <span>{closed}</span>
+                            </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
               </Link>
             );

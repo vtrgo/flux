@@ -18,6 +18,7 @@ interface Defect {
   description: string;
   severity: string;
   status: string; // open, fixed, verified
+  notes?: string;
 }
 
 import { IssueModal } from "../../components/IssueModal";
@@ -142,6 +143,11 @@ export default function QualityResolutionHub() {
                   <span className={`${styles.severity} ${styles[defect.severity]}`}>{defect.severity}</span>
                 </div>
                 <p className={styles.description}>{defect.description}</p>
+                {defect.notes && (
+                  <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                    <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
+                  </div>
+                )}
                 <div className={styles.department}>
                   <span>Src: {defect.source_department}</span>
                   <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
@@ -171,6 +177,11 @@ export default function QualityResolutionHub() {
                   <span className={`${styles.severity} ${styles[defect.severity]}`}>{defect.severity}</span>
                 </div>
                 <p className={styles.description}>{defect.description}</p>
+                {defect.notes && (
+                  <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                    <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
+                  </div>
+                )}
                 <div className={styles.department}>
                   <span>Src: {defect.source_department}</span>
                   <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
@@ -201,6 +212,11 @@ export default function QualityResolutionHub() {
                   <span className={`${styles.severity} ${styles[defect.severity]}`}>{defect.severity}</span>
                 </div>
                 <p className={styles.description}>{defect.description}</p>
+                {defect.notes && (
+                  <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                    <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
+                  </div>
+                )}
                 <div className={styles.department}>
                   <span>Src: {defect.source_department}</span>
                   <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
