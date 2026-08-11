@@ -4,7 +4,10 @@
 set -euo pipefail
 
 DB_NAME="flux"
-SCHEMA_PATH="scripts/schema.sql"
+SCHEMA_PATH="/tmp/flux_schema.sql"
+
+# Identify the original user even if run via sudo
+TARGET_USER="${SUDO_USER:-$USER}"
 
 echo "== [1/4] Verifying Local PostgreSQL Instance State =="
 if ! pg_isready -q; then
@@ -14,14 +17,14 @@ if ! pg_isready -q; then
 fi
 
 echo "== [2/4] Initializing Logical Database Storage =="
-if psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
+# Check if db exists as the postgres user. We cd to /tmp to prevent the postgres user from complaining about directory permissions in /home
+if (cd /tmp && sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"); then
     echo "Database '$DB_NAME' already exists. We will wipe and re-apply."
-    # We will drop and recreate to ensure a clean slate for the new schema
-    psql -d postgres -c "DROP DATABASE \"$DB_NAME\"" 2>/dev/null || sudo -u postgres psql -d postgres -c "DROP DATABASE \"$DB_NAME\""
+    (cd /tmp && sudo -u postgres psql -d postgres -c "DROP DATABASE \"$DB_NAME\"")
 fi
 
-echo "Creating database '$DB_NAME'..."
-createdb "$DB_NAME" 2>/dev/null || sudo -u postgres createdb -O $(whoami) "$DB_NAME"
+echo "Creating database '$DB_NAME' with owner '$TARGET_USER'..."
+(cd /tmp && sudo -u postgres createdb -O "$TARGET_USER" "$DB_NAME")
 
 
 echo "== [3/4] Enforcing Relational Schema Structures =="
@@ -93,6 +96,7 @@ CREATE TABLE defects (
     description TEXT NOT NULL,
     severity VARCHAR(20) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'open',
+    notes TEXT,
     resolved_by VARCHAR(100),
     resolved_at TIMESTAMPTZ
 );
@@ -138,10 +142,19 @@ CREATE TABLE design_feedback (
 EOF
 
 echo "Applying schema to '$DB_NAME'..."
-psql -d "$DB_NAME" -f "$SCHEMA_PATH" || sudo -u postgres psql -d "$DB_NAME" -f "$SCHEMA_PATH"
+(cd /tmp && sudo -u postgres psql -d "$DB_NAME" < "$SCHEMA_PATH")
+
+# Fix permissions so the API user can actually access the tables created by the postgres role
+sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$TARGET_USER\";"
+sudo -u postgres psql -d "$DB_NAME" -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"$TARGET_USER\";"
+sudo -u postgres psql -d "$DB_NAME" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO \"$TARGET_USER\";"
+
 
 echo "== [4/4] Running Target Baseline Diagnostics =="
 echo "Verifying structural allocation for tables:"
-psql -d "$DB_NAME" -c "\dt" || sudo -u postgres psql -d "$DB_NAME" -c "\dt"
+(cd /tmp && sudo -u postgres psql -d "$DB_NAME" -c "\dt")
+
+# Copy the schema file back to the project directory for tracking purposes
+cp "$SCHEMA_PATH" "scripts/schema.sql"
 
 echo "== [Success] Database engine fully initialized and ready for application attachment =="
