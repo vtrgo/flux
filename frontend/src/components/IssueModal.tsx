@@ -47,7 +47,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         });
       } else {
         setFormData({
-          machine_id: preselectedMachineId || (machines.length > 0 ? machines[0].id : ''),
+          machine_id: preselectedMachineId || '',
           source_department: defaultAssignedDept,
           assigned_department: defaultAssignedDept,
           severity: 'minor',
