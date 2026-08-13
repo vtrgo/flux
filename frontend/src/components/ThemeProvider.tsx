@@ -48,12 +48,6 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [theme, mounted])
 
-  // Optional: Prevent hydration mismatch flash by not rendering children until mounted
-  // but standard VTR approach is fine if we just apply the class dynamically
-  if (!mounted) {
-    return <div style={{ visibility: 'hidden' }}>{children}</div>
-  }
-
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
