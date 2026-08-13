@@ -27,8 +27,6 @@ interface Defect {
 export default function Home() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [defects, setDefects] = useState<Defect[]>([]);
-  const [newOrderNumber, setNewOrderNumber] = useState("");
-  const [newModelType, setNewModelType] = useState("");
   const [loading, setLoading] = useState(true);
   const [sseConnected, setSseConnected] = useState(false);
 
@@ -86,25 +84,6 @@ export default function Home() {
     };
   }, []);
 
-  const handleCreateMachine = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newOrderNumber.trim() || !newModelType.trim()) return;
-
-    try {
-      await fetch('http://localhost:8080/api/machines', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          order_number: newOrderNumber,
-          model_type: newModelType 
-        })
-      });
-      setNewOrderNumber("");
-      setNewModelType("");
-    } catch (err) {
-      console.error("Failed to create machine:", err);
-    }
-  };
 
   const handleDeleteMachine = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -127,28 +106,6 @@ export default function Home() {
           {sseConnected ? "SYSTEM ONLINE" : "CONNECTING..."}
         </div>
       </div>
-      <section className={styles.controls}>
-        <form onSubmit={handleCreateMachine} className={styles.createForm}>
-          <input 
-            type="text" 
-            placeholder="Order Number (e.g. ORD-1024)" 
-            value={newOrderNumber}
-            onChange={(e) => setNewOrderNumber(e.target.value)}
-            className="vtr-input"
-          />
-          <select 
-            value={newModelType} 
-            onChange={(e) => setNewModelType(e.target.value)}
-            className="vtr-input"
-          >
-            <option value="" disabled>Select Model Type...</option>
-            <option value="VibroBowl 500">VibroBowl 500</option>
-            <option value="Linear Feeder X1">Linear Feeder X1</option>
-            <option value="Centrifugal Core">Centrifugal Core</option>
-          </select>
-          <button type="submit" className="vtr-btn" style={{ padding: '0.75rem 1.5rem', whiteSpace: 'nowrap' }}>INITIATE BUILD</button>
-        </form>
-      </section>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
         {loading ? (
