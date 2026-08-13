@@ -35,12 +35,12 @@ export default function RootLayout({
               <Logo width={45} height={45} />
             </Link>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <Link href="/design" className="vtr-btn">Design</Link>
               <Link href="/kitting" className="vtr-btn">Kitting</Link>
+              <Link href="/machine-shop" className="vtr-btn">Machine Shop</Link>
               <Link href="/assembly" className="vtr-btn">Assembly</Link>
               <Link href="/electrical-controls" className="vtr-btn">Electrical / Controls</Link>
               <Link href="/enclosures" className="vtr-btn">Enclosures</Link>
-              <Link href="/machine-shop" className="vtr-btn">Machine Shop</Link>
-              <Link href="/design" className="vtr-btn">Design</Link>
               <Link href="/admin" className="vtr-btn vtr-btn-secondary">System Admin</Link>
             </div>
           </header>
