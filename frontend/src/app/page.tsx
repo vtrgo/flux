@@ -124,7 +124,7 @@ export default function Home() {
   return (
     <main className={styles.main}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)' }}>Dashboard</h1>
+        <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)' }}>Active Pipeline</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <Link href="/kickoff" className="vtr-btn">Project Initialization</Link>
           <div className={`${styles.statusBadge} ${sseConnected ? styles.online : styles.offline}`}>
@@ -144,7 +144,7 @@ export default function Home() {
             const orderMachines = machines.filter(m => m.sales_order_id === order.id);
 
             return (
-              <div key={order.id} className={styles.card} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
+              <div key={order.id} className={styles.projectCard} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: 0 }}>
                 {/* Project Header */}
                 <div style={{ 
                   padding: '1.5rem', 
@@ -170,12 +170,9 @@ export default function Home() {
                     orderMachines.map(machine => {
                       const machineDefects = defects.filter(d => d.machine_id === machine.id);
                       return (
-                        <Link href={`/machine/${machine.id}`} key={machine.id} style={{ 
+                        <Link href={`/machine/${machine.id}`} key={machine.id} className={styles.card} style={{ 
                           textDecoration: 'none',
                           color: 'inherit',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '8px',
-                          padding: '1rem',
                           display: 'block',
                           background: 'rgba(0,0,0,0.1)',
                           position: 'relative'

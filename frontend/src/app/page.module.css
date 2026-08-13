@@ -127,6 +127,13 @@
   backdrop-filter: blur(8px);
 }
 
+.projectCard {
+  background-color: var(--vtr-card-bg, var(--bg-secondary));
+  border: 1px solid var(--vtr-card-border, var(--border-color));
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
 .card:hover {
   transform: translateY(-4px);
   border-color: var(--vtr-theme-primary, rgba(255, 255, 255, 0.2));
