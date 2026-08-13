@@ -24,7 +24,7 @@ func handleSalesOrders(w http.ResponseWriter, r *http.Request) {
 func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
 		SELECT 
-			id, customer_name, po_number, internal_project_number, project_name, responsible_person, sales_rep, target_ship_date, status, created_at
+			id, customer_name, po_number, internal_project_number, project_name, responsible_person, sales_rep, target_ship_date, actual_ship_date, status, created_at
 		FROM sales_orders
 		ORDER BY created_at DESC
 	`)
@@ -38,7 +38,7 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var o models.SalesOrder
 		if err := rows.Scan(
-			&o.ID, &o.CustomerName, &o.PONumber, &o.InternalProjectNumber, &o.ProjectName, &o.ResponsiblePerson, &o.SalesRep, &o.TargetShipDate, &o.Status, &o.CreatedAt,
+			&o.ID, &o.CustomerName, &o.PONumber, &o.InternalProjectNumber, &o.ProjectName, &o.ResponsiblePerson, &o.SalesRep, &o.TargetShipDate, &o.ActualShipDate, &o.Status, &o.CreatedAt,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
 			return

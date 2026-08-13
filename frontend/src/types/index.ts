@@ -8,8 +8,8 @@ export interface SalesOrder {
   sales_rep?: string;
   target_ship_date?: string;
   actual_ship_date?: string;
-  status: string;
-  created_at?: string;
+  status: 'open' | 'partially_shipped' | 'fulfilled';
+  created_at: string;
 }
 
 export interface Machine {
@@ -18,8 +18,8 @@ export interface Machine {
   order_number: string;
   model_type: string;
   status: string;
-  created_at?: string;
   actual_ship_date?: string;
+  created_at: string;
 }
 
 export interface Defect {

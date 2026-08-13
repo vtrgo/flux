@@ -179,7 +179,7 @@ export default function SalesDashboard() {
                       <div className={styles.formGroup}><label className={styles.label}>Project Name</label><input className={styles.input} value={editingOrder.project_name || ''} onChange={e => setEditingOrder({...editingOrder, project_name: e.target.value})} /></div>
                       <div className={styles.formGroup}><label className={styles.label}>PM</label><input className={styles.input} value={editingOrder.responsible_person || ''} onChange={e => setEditingOrder({...editingOrder, responsible_person: e.target.value})} /></div>
                       <div className={styles.formGroup}><label className={styles.label}>Status</label>
-                        <select className={styles.input} value={editingOrder.status} onChange={e => setEditingOrder({...editingOrder, status: e.target.value})}>
+                        <select className={styles.input} value={editingOrder.status} onChange={e => setEditingOrder({...editingOrder, status: e.target.value as 'open' | 'partially_shipped' | 'fulfilled'})}>
                           <option value="open">Open</option>
                           <option value="partially_shipped">Partially Shipped</option>
                           <option value="fulfilled">Fulfilled</option>

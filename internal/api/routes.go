@@ -105,7 +105,7 @@ func handleMachines(w http.ResponseWriter, r *http.Request) {
 func getMachines(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
 		SELECT 
-			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.created_at,
+			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.actual_ship_date, m.created_at,
 			COUNT(DISTINCT k.id) as kitting_count,
 			COUNT(DISTINCT a.id) as assembly_count,
 			COUNT(DISTINCT c.id) as controls_count,
@@ -128,7 +128,7 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m models.Machine
 		if err := rows.Scan(
-			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.CreatedAt,
+			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.ActualShipDate, &m.CreatedAt,
 			&m.KittingCount, &m.AssemblyCount, &m.ControlsCount, &m.QualityCount,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)

@@ -16,18 +16,20 @@ type SalesOrder struct {
 	ResponsiblePerson     *string    `json:"responsible_person,omitempty"`
 	SalesRep              *string    `json:"sales_rep,omitempty"`
 	TargetShipDate        *time.Time `json:"target_ship_date,omitempty"`
+	ActualShipDate        *time.Time `json:"actual_ship_date,omitempty"`
 	Status                string     `json:"status"` // open, partially_shipped, fulfilled
 	CreatedAt             time.Time  `json:"created_at"`
 }
 
 // Machine represents the core order/machine being built
 type Machine struct {
-	ID           uuid.UUID  `json:"id"`
-	SalesOrderID *uuid.UUID `json:"sales_order_id,omitempty"`
-	OrderNumber  string     `json:"order_number"`
-	ModelType    string     `json:"model_type"`
-	Status       string     `json:"status"` // engineering, kitting, assembly, controls, quality, shipped
-	CreatedAt    time.Time  `json:"created_at"`
+	ID             uuid.UUID  `json:"id"`
+	SalesOrderID   *uuid.UUID `json:"sales_order_id,omitempty"`
+	OrderNumber    string     `json:"order_number"`
+	ModelType      string     `json:"model_type"`
+	Status         string     `json:"status"` // engineering, kitting, assembly, controls, quality, shipped
+	ActualShipDate *time.Time `json:"actual_ship_date,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 
 	// Relational roll-ups for the UI dashboard
 	KittingCount  int `json:"kitting_count"`
