@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useSSE } from "../../../components/SSEProvider";
 import Link from "next/link";
 import styles from "./machine.module.css";
 
@@ -48,6 +49,28 @@ export default function MachineDetail() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
 
+  useSSE('defect_added', (newDefect: Defect) => {
+    if (newDefect.machine_id === id) {
+      setDefects(prev => [...prev, newDefect]);
+    }
+  });
+
+  useSSE('defect_updated', (updated: Defect) => {
+    if (updated.machine_id === id) {
+      setDefects(prev => prev.map(d => d.id === updated.id ? { ...updated, order_number: d.order_number } : d));
+    }
+  });
+
+  useSSE('defect_deleted', (deleted: { id: string }) => {
+    setDefects(prev => prev.filter(d => d.id !== deleted.id));
+  });
+
+  useSSE('machine_deleted', (deleted: { id: string }) => {
+    if (deleted.id === id) {
+      window.location.href = '/';
+    }
+  });
+
   useEffect(() => {
     if (!id) return;
 
@@ -83,38 +106,6 @@ export default function MachineDetail() {
     };
 
     fetchData();
-
-    const eventSource = new EventSource('http://localhost:8080/api/sse');
-    
-    eventSource.addEventListener('defect_added', (e) => {
-      const newDefect = JSON.parse(e.data);
-      if (newDefect.machine_id === id) {
-        setDefects(prev => [...prev, newDefect]);
-      }
-    });
-
-    eventSource.addEventListener('defect_updated', (e) => {
-      const updated = JSON.parse(e.data);
-      if (updated.machine_id === id) {
-        setDefects(prev => prev.map(d => d.id === updated.id ? { ...updated, order_number: d.order_number } : d));
-      }
-    });
-
-    eventSource.addEventListener('defect_deleted', (e) => {
-      const deleted = JSON.parse(e.data);
-      setDefects(prev => prev.filter(d => d.id !== deleted.id));
-    });
-
-    eventSource.addEventListener('machine_deleted', (e) => {
-      const deleted = JSON.parse(e.data);
-      if (deleted.id === id) {
-        window.location.href = '/';
-      }
-    });
-
-    return () => {
-      eventSource.close();
-    };
   }, [id]);
 
   const openNewModal = () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSSE } from "./SSEProvider";
 import Link from "next/link";
 import styles from "../app/quality/quality.module.css";
 import { IssueModal } from "./IssueModal";
@@ -29,6 +30,40 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
 
+  useSSE('defect_updated', (updated: Defect) => {
+    if (updated.assigned_department === departmentKey) {
+      setIssues(prev => {
+        const exists = prev.find(f => f.id === updated.id);
+        if (exists) return prev.map(f => f.id === updated.id ? { ...updated, order_number: f.order_number } : f);
+        return [...prev, updated];
+      });
+    } else {
+      setIssues(prev => prev.filter(f => f.id !== updated.id));
+    }
+  });
+
+  useSSE('defect_added', () => {
+    // Ideally we would fetch just this defect, but fetchData ensures we're perfectly in sync
+    // The previous implementation used fetchData() here. We can just call it directly.
+    fetch(`http://localhost:8080/api/defects`)
+      .then(res => res.json())
+      .then(allDefects => {
+        setIssues(allDefects.filter((d: Defect) => d.assigned_department === departmentKey));
+      });
+  });
+
+  useSSE('defect_deleted', (deleted: { id: string }) => {
+    setIssues(prev => prev.filter(d => d.id !== deleted.id));
+  });
+
+  useSSE('machine_deleted', () => {
+    fetch(`http://localhost:8080/api/defects`)
+      .then(res => res.json())
+      .then(allDefects => {
+        setIssues(allDefects.filter((d: Defect) => d.assigned_department === departmentKey));
+      });
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -43,32 +78,6 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
     };
 
     fetchData();
-
-    const eventSource = new EventSource('http://localhost:8080/api/sse');
-    
-    eventSource.addEventListener('defect_updated', (e) => {
-      const updated = JSON.parse(e.data);
-      if (updated.assigned_department === departmentKey) {
-        setIssues(prev => {
-          const exists = prev.find(f => f.id === updated.id);
-          if (exists) return prev.map(f => f.id === updated.id ? { ...updated, order_number: f.order_number } : f);
-          return [...prev, updated];
-        });
-      } else {
-        setIssues(prev => prev.filter(f => f.id !== updated.id));
-      }
-    });
-
-    eventSource.addEventListener('defect_added', () => fetchData());
-    eventSource.addEventListener('defect_deleted', (e) => {
-      const deleted = JSON.parse(e.data);
-      setIssues(prev => prev.filter(d => d.id !== deleted.id));
-    });
-    eventSource.addEventListener('machine_deleted', () => fetchData());
-
-    return () => {
-      eventSource.close();
-    };
   }, [departmentKey]);
 
   const openNewModal = () => {

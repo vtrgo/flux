@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useSSE, useSSEConnectionStatus } from '../components/SSEProvider';
 import Link from 'next/link';
 import styles from './page.module.css';
 
@@ -40,7 +41,7 @@ export default function Home() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [defects, setDefects] = useState<Defect[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sseConnected, setSseConnected] = useState(false);
+  const sseConnected = useSSEConnectionStatus();
 
   useEffect(() => {
     Promise.all([
@@ -58,66 +59,52 @@ export default function Home() {
         console.error("Failed to fetch data:", err);
         setLoading(false);
       });
-
-    const eventSource = new EventSource('http://localhost:8080/api/sse');
-
-    eventSource.onopen = () => setSseConnected(true);
-    eventSource.onerror = () => setSseConnected(false);
-
-    const refetchAll = async () => {
-      Promise.all([
-        fetch('http://localhost:8080/api/sales_orders').then(res => res.json()),
-        fetch('http://localhost:8080/api/machines').then(res => res.json()),
-        fetch('http://localhost:8080/api/defects').then(res => res.json())
-      ]).then(([ordData, macData, defData]) => {
-        setOrders(ordData || []);
-        setMachines(macData || []);
-        setDefects(defData || []);
-      });
-    };
-
-    const refetchOrders = async () => {
-      const res = await fetch('http://localhost:8080/api/sales_orders');
-      setOrders(await res.json() || []);
-    };
-
-    eventSource.addEventListener('sales_order_created', refetchOrders);
-    eventSource.addEventListener('sales_order_updated', refetchOrders);
-    eventSource.addEventListener('sales_order_deleted', refetchAll);
-
-    eventSource.addEventListener('machine_created', (e) => {
-      const newMachine: Machine = JSON.parse(e.data);
-      setMachines(prev => [newMachine, ...prev]);
-    });
-
-    eventSource.addEventListener('defect_added', (e) => {
-      const newDefect = JSON.parse(e.data);
-      setDefects(prev => [...prev, newDefect]);
-    });
-
-    eventSource.addEventListener('defect_updated', (e) => {
-      const updated = JSON.parse(e.data);
-      setDefects(prev => {
-        const exists = prev.find(d => d.id === updated.id);
-        if (exists) return prev.map(d => d.id === updated.id ? { ...updated, order_number: d.order_number } : d);
-        return [...prev, updated];
-      });
-    });
-
-    eventSource.addEventListener('defect_deleted', (e) => {
-      const deleted = JSON.parse(e.data);
-      setDefects(prev => prev.filter(d => d.id !== deleted.id));
-    });
-
-    eventSource.addEventListener('machine_deleted', (e) => {
-      const deleted = JSON.parse(e.data);
-      setMachines(prev => prev.filter(m => m.id !== deleted.id));
-    });
-
-    return () => {
-      eventSource.close();
-    };
   }, []);
+
+  const refetchAll = async () => {
+    Promise.all([
+      fetch('http://localhost:8080/api/sales_orders').then(res => res.json()),
+      fetch('http://localhost:8080/api/machines').then(res => res.json()),
+      fetch('http://localhost:8080/api/defects').then(res => res.json())
+    ]).then(([ordData, macData, defData]) => {
+      setOrders(ordData || []);
+      setMachines(macData || []);
+      setDefects(defData || []);
+    });
+  };
+
+  const refetchOrders = async () => {
+    const res = await fetch('http://localhost:8080/api/sales_orders');
+    setOrders(await res.json() || []);
+  };
+
+  useSSE('sales_order_created', refetchOrders);
+  useSSE('sales_order_updated', refetchOrders);
+  useSSE('sales_order_deleted', refetchAll);
+
+  useSSE('machine_created', (newMachine: Machine) => {
+    setMachines(prev => [newMachine, ...prev]);
+  });
+
+  useSSE('machine_deleted', (deleted: { id: string }) => {
+    setMachines(prev => prev.filter(m => m.id !== deleted.id));
+  });
+
+  useSSE('defect_added', (newDefect: Defect) => {
+    setDefects(prev => [...prev, newDefect]);
+  });
+
+  useSSE('defect_updated', (updated: Defect) => {
+    setDefects(prev => {
+      const exists = prev.find(d => d.id === updated.id);
+      if (exists) return prev.map(d => d.id === updated.id ? { ...updated, order_number: d.order_number } : d);
+      return [...prev, updated];
+    });
+  });
+
+  useSSE('defect_deleted', (deleted: { id: string }) => {
+    setDefects(prev => prev.filter(d => d.id !== deleted.id));
+  });
 
 
   const handleDeleteMachine = async (e: React.MouseEvent, id: string) => {

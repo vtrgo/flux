@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSSE } from "../../components/SSEProvider";
 import Link from "next/link";
 import styles from "./quality.module.css";
 
@@ -31,48 +32,38 @@ export default function QualityResolutionHub() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
 
+  const fetchData = async () => {
+    try {
+      const [defRes, macRes] = await Promise.all([
+        fetch(`http://localhost:8080/api/defects`),
+        fetch(`http://localhost:8080/api/machines`)
+      ]);
+      setDefects(await defRes.json() || []);
+      setMachines(await macRes.json() || []);
+    } catch (err) {
+      console.error("Failed to load data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useSSE('defect_updated', (updatedDefect: Defect) => {
+    setDefects(prev => prev.map(d => 
+      d.id === updatedDefect.id ? { ...updatedDefect, order_number: d.order_number } : d
+    ));
+  });
+
+  useSSE('defect_added', () => fetchData());
+  
+  useSSE('defect_deleted', (deleted: { id: string }) => {
+    setDefects(prev => prev.filter(d => d.id !== deleted.id));
+  });
+
+  useSSE('machine_created', () => fetchData());
+  useSSE('machine_deleted', () => fetchData());
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [defRes, macRes] = await Promise.all([
-          fetch(`http://localhost:8080/api/defects`),
-          fetch(`http://localhost:8080/api/machines`)
-        ]);
-        setDefects(await defRes.json() || []);
-        setMachines(await macRes.json() || []);
-      } catch (err) {
-        console.error("Failed to load data", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-
-    const eventSource = new EventSource('http://localhost:8080/api/sse');
-    
-    eventSource.addEventListener('defect_updated', (e) => {
-      const updatedDefect = JSON.parse(e.data);
-      setDefects(prev => prev.map(d => 
-        d.id === updatedDefect.id ? { ...updatedDefect, order_number: d.order_number } : d
-      ));
-    });
-
-    eventSource.addEventListener('defect_added', (e) => {
-      fetchData(); 
-    });
-
-    eventSource.addEventListener('defect_deleted', (e) => {
-      const deleted = JSON.parse(e.data);
-      setDefects(prev => prev.filter(d => d.id !== deleted.id));
-    });
-
-    eventSource.addEventListener('machine_created', () => fetchData());
-    eventSource.addEventListener('machine_deleted', () => fetchData());
-
-    return () => {
-      eventSource.close();
-    };
   }, []);
 
   const openNewModal = () => {

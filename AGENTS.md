@@ -60,3 +60,22 @@ To guarantee operational status after every iteration, all updates must include 
 3. **Test-Driven Operations:**
    - Never consider a feature "done" until its tests pass. 
    - When modifying an existing feature, update its tests *first* if the expected behavior has changed.
+
+# Frontend Architecture Guidelines
+
+## Server-Sent Events (SSE)
+All frontend real-time updates must be managed through the centralized `SSEProvider` service to avoid multiple concurrent connections and to gracefully handle network reconnections and orphaned states.
+
+1. **Global Provider:** The application root (`layout.tsx`) must be wrapped with `<SSEProvider>`.
+2. **Hook-Based Subscription:** Individual components must subscribe to specific events using the `useSSE` hook. Never instantiate a raw `EventSource` in a page or component.
+   ```tsx
+   import { useSSE } from '../components/SSEProvider';
+
+   export default function MyComponent() {
+     useSSE('machine_updated', (updatedMachine) => {
+       // update local state
+     });
+   }
+   ```
+3. **Connection Status:** Use `useSSEConnectionStatus()` to determine if the realtime pipe is active and display a warning or fallback UI if disconnected.
+4. **Re-fetching vs Patching:** For high-throughput events, patch the local state dynamically using the hook's payload. For destructive cascading events (like `sales_order_deleted`), perform a full refetch of the affected resources to ensure no orphaned state persists.

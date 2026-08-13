@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 import { ThemeProvider } from "../components/ThemeProvider";
+import { SSEProvider } from "../components/SSEProvider";
 import Link from 'next/link';
 import { Logo } from "../components/Logo";
 import { Navigation } from "../components/Navigation";
@@ -24,20 +25,22 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
-          <header style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            padding: '1rem 2rem', 
-            borderBottom: '1px solid var(--vtr-card-border, var(--border-color))',
-            background: 'var(--vtr-card-bg, transparent)'
-          }}>
-            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-              <Logo width={45} height={45} />
-            </Link>
-            <Navigation />
-          </header>
-          {children}
+          <SSEProvider>
+            <header style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              padding: '1rem 2rem', 
+              borderBottom: '1px solid var(--vtr-card-border, var(--border-color))',
+              background: 'var(--vtr-card-bg, transparent)'
+            }}>
+              <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                <Logo width={45} height={45} />
+              </Link>
+              <Navigation />
+            </header>
+            {children}
+          </SSEProvider>
         </ThemeProvider>
       </body>
     </html>

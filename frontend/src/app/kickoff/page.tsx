@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSSE } from "../../components/SSEProvider";
 import styles from "./kickoff.module.css";
 import Link from "next/link";
 
@@ -41,29 +42,34 @@ export default function SalesDashboard() {
   const [newMachineModel, setNewMachineModel] = useState("");
   const [newMachineSN, setNewMachineSN] = useState("");
 
-  useEffect(() => {
-    fetchOrders();
-    fetchMachines();
-
-    const eventSource = new EventSource('http://localhost:8080/api/sse');
-    eventSource.addEventListener('sales_order_created', () => fetchOrders());
-    eventSource.addEventListener('sales_order_updated', () => fetchOrders());
-    eventSource.addEventListener('sales_order_deleted', () => fetchOrders());
-    eventSource.addEventListener('machine_created', () => fetchMachines());
-    eventSource.addEventListener('machine_deleted', () => fetchMachines());
-
-    return () => eventSource.close();
-  }, []);
-
   const fetchOrders = async () => {
-    const res = await fetch("http://localhost:8080/api/sales_orders");
-    setOrders(await res.json() || []);
+    try {
+      const res = await fetch("http://localhost:8080/api/sales_orders");
+      setOrders(await res.json() || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const fetchMachines = async () => {
-    const res = await fetch("http://localhost:8080/api/machines");
-    setMachines(await res.json() || []);
+    try {
+      const res = await fetch("http://localhost:8080/api/machines");
+      setMachines(await res.json() || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
+
+  useSSE('sales_order_created', fetchOrders);
+  useSSE('sales_order_updated', fetchOrders);
+  useSSE('sales_order_deleted', fetchOrders);
+  useSSE('machine_created', fetchMachines);
+  useSSE('machine_deleted', fetchMachines);
+
+  useEffect(() => {
+    fetchOrders();
+    fetchMachines();
+  }, []);
 
   const createOrder = async (e: React.FormEvent) => {
     e.preventDefault();
