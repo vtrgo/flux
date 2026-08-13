@@ -1,9 +1,12 @@
 "use client";
+import { API_BASE } from "../lib/api";
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
+export type SSECallback = (data: any) => void;
+
 type SSEContextType = {
-  subscribe: (event: string, callback: (data: any) => void) => () => void;
+  subscribe: (event: string, callback: SSECallback) => () => void;
   isConnected: boolean;
 };
 
@@ -11,7 +14,7 @@ const SSEContext = createContext<SSEContextType | null>(null);
 
 export function SSEProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
-  const listenersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
+  const listenersRef = useRef<Map<string, Set<SSECallback>>>(new Map());
   const eventSourceRef = useRef<EventSource | null>(null);
   
   const handleEvent = useRef((e: Event) => {
@@ -25,11 +28,11 @@ export function SSEProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
     let reconnectTimeout: NodeJS.Timeout;
 
     const connect = () => {
-      const es = new EventSource(`${apiUrl}/api/sse`);
+      const url = `${API_BASE.replace(/\/api$/, '')}/api/sse`;
+      const es = new EventSource(url);
       eventSourceRef.current = es;
 
       es.onopen = () => {
@@ -94,7 +97,7 @@ export function useSSE(event: string, callback: (data: any) => void) {
   }, [callback]);
 
   useEffect(() => {
-    const unsubscribe = context.subscribe(event, (data) => callbackRef.current(data));
+    const unsubscribe = context.subscribe(event, (data: any) => callbackRef.current(data));
     return () => unsubscribe();
   }, [event, context]);
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSSE } from "../../components/SSEProvider";
+import { fetchApi } from "../../lib/api";
 import styles from "./kickoff.module.css";
 import Link from "next/link";
 
@@ -26,8 +27,8 @@ export default function SalesDashboard() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/sales_orders");
-      setOrders(await res.json() || []);
+      const res = await fetchApi<SalesOrder[]>("sales_orders");
+      setOrders(res || []);
     } catch (err) {
       console.error(err);
     }
@@ -35,8 +36,8 @@ export default function SalesDashboard() {
 
   const fetchMachines = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/machines");
-      setMachines(await res.json() || []);
+      const res = await fetchApi<Machine[]>("machines");
+      setMachines(res || []);
     } catch (err) {
       console.error(err);
     }
@@ -55,9 +56,8 @@ export default function SalesDashboard() {
 
   const createOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch("http://localhost:8080/api/sales_orders", {
+    await fetchApi("sales_orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         customer_name: customerName,
         po_number: poNumber,
@@ -80,9 +80,8 @@ export default function SalesDashboard() {
   const updateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrder) return;
-    await fetch(`http://localhost:8080/api/sales_orders/${editingOrder.id}`, {
+    await fetchApi(`sales_orders/${editingOrder.id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(editingOrder),
     });
     setEditingOrder(null);
@@ -90,7 +89,7 @@ export default function SalesDashboard() {
 
   const deleteOrder = async (id: string) => {
     if (!window.confirm("Are you sure you want to permanently delete this project? This cannot be undone.")) return;
-    await fetch(`http://localhost:8080/api/sales_orders/${id}`, {
+    await fetchApi(`sales_orders/${id}`, {
       method: "DELETE",
     });
   };
@@ -99,16 +98,15 @@ export default function SalesDashboard() {
     e.preventDefault();
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to delete this part/machine?")) return;
-    await fetch(`http://localhost:8080/api/machines/${id}`, {
+    await fetchApi(`machines/${id}`, {
       method: "DELETE",
     });
   };
 
   const spawnMachine = async (orderId: string) => {
     if (!newMachineModel || !newMachineSN) return;
-    await fetch("http://localhost:8080/api/machines", {
+    await fetchApi("machines", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         sales_order_id: orderId,
         order_number: newMachineSN,

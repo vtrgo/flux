@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSSE } from "../../components/SSEProvider";
+import { fetchApi } from "../../lib/api";
 import Link from "next/link";
 import styles from "./quality.module.css";
 import { Machine, Defect } from "../../types";
@@ -19,11 +20,11 @@ export default function QualityResolutionHub() {
   const fetchData = async () => {
     try {
       const [defRes, macRes] = await Promise.all([
-        fetch(`http://localhost:8080/api/defects`),
-        fetch(`http://localhost:8080/api/machines`)
+        fetchApi<Defect[]>(`defects`),
+        fetchApi<Machine[]>(`machines`)
       ]);
-      setDefects(await defRes.json() || []);
-      setMachines(await macRes.json() || []);
+      setDefects(defRes || []);
+      setMachines(macRes || []);
     } catch (err) {
       console.error("Failed to load data", err);
     } finally {
@@ -64,7 +65,7 @@ export default function QualityResolutionHub() {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to permanently delete this issue?")) return;
     try {
-      await fetch(`http://localhost:8080/api/defects/${defectId}`, { method: 'DELETE' });
+      await fetchApi(`defects/${defectId}`, { method: 'DELETE' });
     } catch (err) {
       console.error("Failed to delete defect", err);
     }
@@ -73,9 +74,8 @@ export default function QualityResolutionHub() {
   const handleStatusChange = async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
     try {
-      await fetch(`http://localhost:8080/api/defects/${defect.id}`, {
+      await fetchApi(`defects/${defect.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           status: nextStatus,
           assigned_department: defect.assigned_department

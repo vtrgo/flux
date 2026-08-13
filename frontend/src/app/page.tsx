@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSSE, useSSEConnectionStatus } from '../components/SSEProvider';
+import { fetchApi } from '../lib/api';
 import Link from 'next/link';
 import styles from './page.module.css';
 
@@ -16,9 +17,9 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8080/api/sales_orders').then(res => res.json()),
-      fetch('http://localhost:8080/api/machines').then(res => res.json()),
-      fetch('http://localhost:8080/api/defects').then(res => res.json())
+      fetchApi('sales_orders'),
+      fetchApi('machines'),
+      fetchApi('defects')
     ])
       .then(([ordData, macData, defData]) => {
         setOrders(ordData || []);
@@ -34,9 +35,9 @@ export default function Home() {
 
   const refetchAll = async () => {
     Promise.all([
-      fetch('http://localhost:8080/api/sales_orders').then(res => res.json()),
-      fetch('http://localhost:8080/api/machines').then(res => res.json()),
-      fetch('http://localhost:8080/api/defects').then(res => res.json())
+      fetchApi('sales_orders'),
+      fetchApi('machines'),
+      fetchApi('defects')
     ]).then(([ordData, macData, defData]) => {
       setOrders(ordData || []);
       setMachines(macData || []);
@@ -45,8 +46,8 @@ export default function Home() {
   };
 
   const refetchOrders = async () => {
-    const res = await fetch('http://localhost:8080/api/sales_orders');
-    setOrders(await res.json() || []);
+    const res = await fetchApi<SalesOrder[]>('sales_orders');
+    setOrders(res || []);
   };
 
   useSSE('sales_order_created', refetchOrders);
@@ -84,7 +85,7 @@ export default function Home() {
     
     if (window.confirm("Are you sure you want to permanently delete this project? All associated tasks, parts, and issues will be lost.")) {
       try {
-        await fetch(`http://localhost:8080/api/machines/${id}`, { method: 'DELETE' });
+        await fetchApi(`machines/${id}`, { method: 'DELETE' });
       } catch (err) {
         console.error("Failed to delete machine:", err);
       }

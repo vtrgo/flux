@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchApi } from "../lib/api";
 import { useSSE } from "./SSEProvider";
 import Link from "next/link";
 import styles from "../app/quality/quality.module.css";
@@ -34,11 +35,10 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
 
   useSSE('defect_added', () => {
     // Ideally we would fetch just this defect, but fetchData ensures we're perfectly in sync
-    // The previous implementation used fetchData() here. We can just call it directly.
-    fetch(`http://localhost:8080/api/defects`)
-      .then(res => res.json())
+    // The previous implementation used fetchData() here. We can just call it  useEffect(() => {
+    fetchApi<Defect[]>(`defects`)
       .then(allDefects => {
-        setIssues(allDefects.filter((d: Defect) => d.assigned_department === departmentKey));
+        setIssues((allDefects || []).filter((d: Defect) => d.assigned_department === departmentKey));
       });
   });
 
@@ -47,8 +47,7 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
   });
 
   useSSE('machine_deleted', () => {
-    fetch(`http://localhost:8080/api/defects`)
-      .then(res => res.json())
+    fetchApi<Defect[]>(`defects`)
       .then(allDefects => {
         setIssues(allDefects.filter((d: Defect) => d.assigned_department === departmentKey));
       });
@@ -57,9 +56,8 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const defectsRes = await fetch(`http://localhost:8080/api/defects`);
-        const allDefects: Defect[] = await defectsRes.json() || [];
-        setIssues(allDefects.filter(d => d.assigned_department === departmentKey));
+        const allDefects = await fetchApi<Defect[]>(`defects`);
+        setIssues((allDefects || []).filter(d => d.assigned_department === departmentKey));
       } catch (err) {
         console.error(`Failed to load data for ${departmentKey}`, err);
       } finally {
@@ -85,7 +83,7 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
     e.stopPropagation();
     if (!confirm("Are you sure you want to delete this issue?")) return;
     try {
-      await fetch(`http://localhost:8080/api/defects/${defectId}`, { method: 'DELETE' });
+      await fetchApi(`defects/${defectId}`, { method: 'DELETE' });
     } catch (err) {
       console.error("Failed to delete defect", err);
     }
@@ -94,9 +92,8 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
   const handleStatusChange = async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
     try {
-      await fetch(`http://localhost:8080/api/defects/${defect.id}`, {
+      await fetchApi(`defects/${defect.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
       });
     } catch (err) {

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { fetchApi } from "../lib/api";
 import styles from "../app/quality/quality.module.css";
 
 import { Machine, Defect } from "../types";
@@ -25,8 +26,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
 
   useEffect(() => {
     if (isOpen) {
-      fetch('http://localhost:8080/api/machines')
-        .then(res => res.json())
+      fetchApi<Machine[]>('machines')
         .then(data => {
           setMachines(data || []);
           if (!editingDefect && data && data.length > 0) {
@@ -61,15 +61,13 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     e.preventDefault();
     try {
       if (editingDefect) {
-        await fetch(`http://localhost:8080/api/defects/${editingDefect.id}/edit`, {
+        await fetchApi(`defects/${editingDefect.id}/edit`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)
         });
       } else {
-        await fetch(`http://localhost:8080/api/machines/${formData.machine_id}/defects`, {
+        await fetchApi(`machines/${formData.machine_id}/defects`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)
         });
       }

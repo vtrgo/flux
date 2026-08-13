@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useSSE } from "../../../components/SSEProvider";
+import { fetchApi } from "../../../lib/api";
 import Link from "next/link";
 import styles from "./machine.module.css";
 
@@ -49,19 +50,17 @@ export default function MachineDetail() {
 
     const fetchData = async () => {
       try {
-        const [macRes, defRes] = await Promise.all([
-          fetch(`http://localhost:8080/api/machines`), 
-          fetch(`http://localhost:8080/api/machines/${id}/defects`)
+        const [machines, defects] = await Promise.all([
+          fetchApi<Machine[]>(`machines`), 
+          fetchApi<Defect[]>(`machines/${id}/defects`)
         ]);
 
-        const machines: Machine[] = await macRes.json();
         const found = machines.find(m => m.id === id);
         if (found) {
           setMachine(found);
           if (found.sales_order_id) {
             try {
-              const salesRes = await fetch(`http://localhost:8080/api/sales_orders`);
-              const orders: SalesOrder[] = await salesRes.json();
+              const orders = await fetchApi<SalesOrder[]>(`sales_orders`);
               const foundOrder = orders.find(o => o.id === found.sales_order_id);
               if (foundOrder) setSalesOrder(foundOrder);
             } catch (err) {
@@ -70,7 +69,7 @@ export default function MachineDetail() {
           }
         }
 
-        setDefects(await defRes.json() || []);
+        setDefects(defects || []);
       } catch (err) {
         console.error("Failed to load machine data", err);
       } finally {
@@ -96,7 +95,7 @@ export default function MachineDetail() {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to permanently delete this issue?")) return;
     try {
-      await fetch(`http://localhost:8080/api/defects/${defectId}`, { method: 'DELETE' });
+      await fetchApi(`defects/${defectId}`, { method: 'DELETE' });
     } catch (err) {
       console.error("Failed to delete defect", err);
     }
@@ -105,9 +104,8 @@ export default function MachineDetail() {
   const handleStatusChange = async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
     try {
-      await fetch(`http://localhost:8080/api/defects/${defect.id}`, {
+      await fetchApi(`defects/${defect.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           status: nextStatus,
           assigned_department: defect.assigned_department
