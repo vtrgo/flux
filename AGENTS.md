@@ -61,6 +61,25 @@ To guarantee operational status after every iteration, all updates must include 
    - Never consider a feature "done" until its tests pass. 
    - When modifying an existing feature, update its tests *first* if the expected behavior has changed.
 
+# Backend Architecture Guidelines
+
+## API Response Standardization
+To guarantee accurate `Content-Type` headers and to prevent internal data leakage, **all HTTP handlers must use the unified response utilities** found in `internal/api/response.go`.
+
+1. **Successful Responses (`respondJSON`):**
+   Never use `json.NewEncoder(w).Encode(data)` directly. Always use:
+   ```go
+   respondJSON(w, http.StatusOK, data)
+   ```
+   This ensures the `Content-Type: application/json` header is reliably applied.
+
+2. **Error Responses (`respondError`):**
+   Never use `http.Error(w, err.Error(), 500)`. Always use:
+   ```go
+   respondError(w, http.StatusInternalServerError, "User-facing error message", err)
+   ```
+   This guarantees that the raw `err` is securely logged to the backend's stdout, but the frontend only receives a sanitized JSON payload like `{"error": "User-facing error message"}`.
+
 # Frontend Architecture Guidelines
 
 ## Server-Sent Events (SSE)
