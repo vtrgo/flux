@@ -5,25 +5,7 @@ import { useSSE } from "../../components/SSEProvider";
 import styles from "./kickoff.module.css";
 import Link from "next/link";
 
-interface SalesOrder {
-  id: string;
-  customer_name: string;
-  po_number: string;
-  internal_project_number?: string;
-  project_name?: string;
-  responsible_person?: string;
-  sales_rep?: string;
-  target_ship_date: string;
-  status: string;
-}
-
-interface Machine {
-  id: string;
-  sales_order_id: string;
-  order_number: string;
-  model_type: string;
-  status: string;
-}
+import { SalesOrder, Machine } from "../../types";
 
 export default function SalesDashboard() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);

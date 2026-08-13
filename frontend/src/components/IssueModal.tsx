@@ -3,22 +3,7 @@
 import React, { useState, useEffect } from "react";
 import styles from "../app/quality/quality.module.css";
 
-interface Machine {
-  id: string;
-  order_number: string;
-}
-
-interface Defect {
-  id: string;
-  machine_id: string;
-  order_number: string;
-  source_department: string;
-  assigned_department: string;
-  description: string;
-  severity: string;
-  status: string;
-  notes?: string;
-}
+import { Machine, Defect } from "../types";
 
 interface IssueModalProps {
   isOpen: boolean;

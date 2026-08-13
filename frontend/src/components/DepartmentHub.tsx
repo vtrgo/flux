@@ -6,17 +6,7 @@ import Link from "next/link";
 import styles from "../app/quality/quality.module.css";
 import { IssueModal } from "./IssueModal";
 
-interface Defect {
-  id: string;
-  machine_id: string;
-  order_number: string;
-  source_department: string;
-  assigned_department: string;
-  description: string;
-  severity: string;
-  status: string;
-  notes?: string;
-}
+import { Defect } from "../types";
 
 interface DepartmentHubProps {
   title: string;

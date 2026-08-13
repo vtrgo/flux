@@ -4,23 +4,7 @@ import { useEffect, useState } from "react";
 import { useSSE } from "../../components/SSEProvider";
 import Link from "next/link";
 import styles from "./quality.module.css";
-
-interface Machine {
-  id: string;
-  order_number: string;
-}
-
-interface Defect {
-  id: string;
-  machine_id: string;
-  order_number: string;
-  source_department: string;
-  assigned_department: string;
-  description: string;
-  severity: string;
-  status: string; // open, fixed, verified
-  notes?: string;
-}
+import { Machine, Defect } from "../../types";
 
 import { IssueModal } from "../../components/IssueModal";
 

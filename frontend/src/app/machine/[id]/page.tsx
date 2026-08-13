@@ -8,34 +8,7 @@ import styles from "./machine.module.css";
 
 import { IssueModal } from "../../../components/IssueModal";
 
-interface Machine {
-  id: string;
-  sales_order_id?: string;
-  order_number: string;
-  model_type: string;
-}
-
-interface SalesOrder {
-  id: string;
-  customer_name: string;
-  po_number: string;
-  internal_project_number?: string;
-  project_name?: string;
-  responsible_person?: string;
-  target_ship_date: string;
-}
-
-interface Defect {
-  id: string;
-  machine_id: string;
-  order_number: string;
-  source_department: string;
-  assigned_department: string;
-  description: string;
-  severity: string;
-  status: string;
-  notes?: string;
-}
+import { Machine, SalesOrder, Defect } from "../../../types";
 
 export default function MachineDetail() {
   const params = useParams();
