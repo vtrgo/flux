@@ -39,6 +39,23 @@
   --vtr-glow-color: rgba(48, 192, 205, 0.8);
 }
 
+/* === VOLCANO (VTR Molten Gold & Coral) === */
+.theme-volcano {
+  --vtr-title-bg: linear-gradient(135deg, #FFC52F 0%, #FF7F50 50%, #FFC52F 100%);
+  --vtr-title-bg-size: 200% 200%;
+  --vtr-title-bg-clip: text;
+  --vtr-title-color: transparent;
+  --vtr-title-shadow: 0 0 15px rgba(255, 197, 47, 0.5), 0 0 30px rgba(255, 127, 80, 0.3);
+  --vtr-title-animation: vtr-shimmer 5s ease-in-out infinite;
+  --vtr-theme-primary: #FF7F50; /* Coral */
+  --vtr-theme-secondary: #FFC52F;
+  --vtr-theme-bg: #0b0402;
+  --vtr-theme-accent: #FF7F50;
+  --vtr-card-bg: rgba(14, 5, 2, 0.85);
+  --vtr-card-border: rgba(255, 127, 80, 0.25);
+  --vtr-glow-color: rgba(255, 127, 80, 0.6);
+}
+
 /* === VTR DEFAULT (PLAIN / UNSTYLED) === */
 .theme-unstyled {
   --vtr-theme-bg: #050b11;

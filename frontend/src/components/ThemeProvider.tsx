@@ -5,7 +5,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 export const THEMES = [
   { id: 'theme-unstyled', name: '⚪ VTR Default (Plain)' },
   { id: 'theme-synthwave', name: '🌆 Synthwave Cyber' },
-  { id: 'theme-terminal', name: '💻 Matrix Terminal' }
+  { id: 'theme-terminal', name: '💻 Matrix Terminal' },
+  { id: 'theme-volcano', name: '🌋 Volcano Coral' }
 ];
 
 type ThemeContextType = {
