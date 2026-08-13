@@ -106,6 +106,15 @@ export default function SalesDashboard() {
     });
   };
 
+  const deleteMachine = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this part/machine?")) return;
+    await fetch(`http://localhost:8080/api/machines/${id}`, {
+      method: "DELETE",
+    });
+  };
+
   const spawnMachine = async (orderId: string) => {
     if (!newMachineModel || !newMachineSN) return;
     await fetch("http://localhost:8080/api/machines", {
@@ -229,9 +238,16 @@ export default function SalesDashboard() {
                   <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     {orderMachines.map(m => (
                       <Link key={m.id} href={`/machine/${m.id}`} style={{ textDecoration: 'none' }}>
-                        <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '0.875rem' }}>
+                        <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', paddingRight: '2.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '0.875rem', position: 'relative' }}>
                           <strong style={{ color: 'var(--vtr-theme-primary)' }}>{m.order_number}</strong>
                           <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{m.model_type} • {m.status}</div>
+                          <button 
+                            onClick={(e) => deleteMachine(e, m.id)}
+                            style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'transparent', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '1rem' }}
+                            title="Delete Part"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </Link>
                     ))}
