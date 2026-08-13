@@ -300,6 +300,8 @@ func handleGetMachineDefectsSummary(w http.ResponseWriter, r *http.Request) {
 		}
 		
 		s := summaryMap[dept]
+		
+		s.Total += count
 
 		if status == "open" {
 			if severity == "critical" {
@@ -374,6 +376,8 @@ func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 		}
 		
 		s := summaryMap[key]
+		
+		s.Total += count
 
 		if status == "open" {
 			if severity == "critical" {

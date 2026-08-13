@@ -220,14 +220,23 @@ export default function Home() {
                                 >
                                   <div style={{ color: 'var(--vtr-theme-primary)', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.8rem' }}>{dept.label}</div>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: openTotal > 0 ? borderColor : 'var(--vtr-theme-neutral)' }}>
-                                      <span>Open:</span> 
-                                      <span style={{ fontWeight: openCritical > 0 ? 'bold' : 'normal' }}>
-                                        {openTotal} {openCritical > 0 && `(${openCritical} Crit)`}
-                                      </span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-primary)' }}>
+                                      <span>Total:</span> <span>{summary?.total || 0}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: pending > 0 ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: openCritical > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-neutral)' }}>
+                                      <span>Critical:</span> <span>{openCritical}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: openModerate > 0 ? 'var(--accent-amber)' : 'var(--vtr-theme-neutral)' }}>
+                                      <span>Moderate:</span> <span>{openModerate}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: openMinor > 0 ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)' }}>
+                                      <span>Minor:</span> <span>{openMinor}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: pending > 0 ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)', marginTop: '0.25rem' }}>
                                       <span>Pending:</span> <span>{pending}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: closed > 0 ? 'var(--vtr-theme-neutral)' : 'var(--vtr-theme-neutral)' }}>
+                                      <span>Closed:</span> <span>{closed}</span>
                                     </div>
                                   </div>
                                 </div>

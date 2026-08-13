@@ -118,6 +118,7 @@ type Defect struct {
 type DefectSummary struct {
 	MachineID          uuid.UUID `json:"machine_id"`
 	AssignedDepartment string    `json:"assigned_department"`
+	Total              int       `json:"total"`
 	OpenCritical       int       `json:"open_critical"`
 	OpenModerate       int       `json:"open_moderate"`
 	OpenMinor          int       `json:"open_minor"`

@@ -40,6 +40,7 @@ export interface Defect {
 export interface DefectSummary {
   machine_id: string;
   assigned_department: string;
+  total: number;
   open_critical: number;
   open_moderate: number;
   open_minor: number;
