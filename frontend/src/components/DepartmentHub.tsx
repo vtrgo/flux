@@ -120,6 +120,9 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
         <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>{title}</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button className="vtr-btn" onClick={openNewModal}>+ ADD ISSUE</button>
+          <Link href="/" className="vtr-btn vtr-btn-secondary">
+            ← Back to Dashboard
+          </Link>
         </div>
       </header>
 
