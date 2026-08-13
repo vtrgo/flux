@@ -8,7 +8,10 @@ interface SalesOrder {
   id: string;
   customer_name: string;
   po_number: string;
-  sales_rep: string;
+  internal_project_number?: string;
+  project_name?: string;
+  responsible_person?: string;
+  sales_rep?: string;
   target_ship_date: string;
   status: string;
 }
@@ -27,6 +30,9 @@ export default function SalesDashboard() {
   
   const [customerName, setCustomerName] = useState("");
   const [poNumber, setPoNumber] = useState("");
+  const [internalProjectNumber, setInternalProjectNumber] = useState("");
+  const [projectName, setProjectName] = useState("");
+  const [responsiblePerson, setResponsiblePerson] = useState("");
   const [salesRep, setSalesRep] = useState("");
   const [targetDate, setTargetDate] = useState("");
 
@@ -63,12 +69,18 @@ export default function SalesDashboard() {
       body: JSON.stringify({
         customer_name: customerName,
         po_number: poNumber,
+        internal_project_number: internalProjectNumber,
+        project_name: projectName,
+        responsible_person: responsiblePerson,
         sales_rep: salesRep,
         target_ship_date: targetDate ? new Date(targetDate).toISOString() : undefined,
       }),
     });
     setCustomerName("");
     setPoNumber("");
+    setInternalProjectNumber("");
+    setProjectName("");
+    setResponsiblePerson("");
     setSalesRep("");
     setTargetDate("");
   };
@@ -108,6 +120,18 @@ export default function SalesDashboard() {
               <input required className={styles.input} value={poNumber} onChange={e => setPoNumber(e.target.value)} placeholder="PO-12345" />
             </div>
             <div className={styles.formGroup}>
+              <label className={styles.label}>Internal Project #</label>
+              <input className={styles.input} value={internalProjectNumber} onChange={e => setInternalProjectNumber(e.target.value)} placeholder="PRJ-9942" />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Project Name</label>
+              <input className={styles.input} value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="VibroBowl Automation" />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Responsible Person (PM)</label>
+              <input className={styles.input} value={responsiblePerson} onChange={e => setResponsiblePerson(e.target.value)} placeholder="Bob Manager" />
+            </div>
+            <div className={styles.formGroup}>
               <label className={styles.label}>Sales Rep</label>
               <input className={styles.input} value={salesRep} onChange={e => setSalesRep(e.target.value)} placeholder="Jane Doe" />
             </div>
@@ -129,8 +153,12 @@ export default function SalesDashboard() {
               <div key={order.id} className={styles.orderCard}>
                 <div className={styles.orderHeader}>
                   <div>
-                    <h3 className={styles.orderTitle}>{order.customer_name} (PO: {order.po_number})</h3>
-                    <div className={styles.orderSubtitle}>Target Ship: {order.target_ship_date ? new Date(order.target_ship_date).toLocaleDateString() : 'TBD'} | Status: {order.status}</div>
+                    <h3 className={styles.orderTitle}>{order.customer_name} {order.project_name ? `- ${order.project_name}` : ''} (PO: {order.po_number})</h3>
+                    <div className={styles.orderSubtitle}>
+                      {order.internal_project_number && <span style={{marginRight: '1rem'}}>Project #: {order.internal_project_number}</span>}
+                      {order.responsible_person && <span style={{marginRight: '1rem'}}>PM: {order.responsible_person}</span>}
+                      Target Ship: {order.target_ship_date ? new Date(order.target_ship_date).toLocaleDateString() : 'TBD'} | Status: {order.status}
+                    </div>
                   </div>
                   <button className="vtr-btn vtr-btn-secondary" onClick={() => setSpawningOrder(spawningOrder === order.id ? null : order.id)}>
                     + Spawn Machine

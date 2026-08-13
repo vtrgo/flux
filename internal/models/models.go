@@ -8,13 +8,16 @@ import (
 
 // SalesOrder represents a commercial customer order
 type SalesOrder struct {
-	ID             uuid.UUID  `json:"id"`
-	CustomerName   string     `json:"customer_name"`
-	PONumber       string     `json:"po_number"`
-	SalesRep       *string    `json:"sales_rep,omitempty"`
-	TargetShipDate *time.Time `json:"target_ship_date,omitempty"`
-	Status         string     `json:"status"` // open, partially_shipped, fulfilled
-	CreatedAt      time.Time  `json:"created_at"`
+	ID                    uuid.UUID  `json:"id"`
+	CustomerName          string     `json:"customer_name"`
+	PONumber              string     `json:"po_number"`
+	InternalProjectNumber *string    `json:"internal_project_number,omitempty"`
+	ProjectName           *string    `json:"project_name,omitempty"`
+	ResponsiblePerson     *string    `json:"responsible_person,omitempty"`
+	SalesRep              *string    `json:"sales_rep,omitempty"`
+	TargetShipDate        *time.Time `json:"target_ship_date,omitempty"`
+	Status                string     `json:"status"` // open, partially_shipped, fulfilled
+	CreatedAt             time.Time  `json:"created_at"`
 }
 
 // Machine represents the core order/machine being built

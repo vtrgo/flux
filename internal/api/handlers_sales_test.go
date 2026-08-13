@@ -35,10 +35,13 @@ func TestSalesOrders(t *testing.T) {
 
 	t.Run("Create Sales Order - Success", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"customer_name": "Test Corp",
-			"po_number":     "PO-TEST-123",
-			"sales_rep":     "Alice",
-			"target_ship_date": time.Now().AddDate(0, 1, 0).Format(time.RFC3339),
+			"customer_name":           "Test Corp",
+			"po_number":               "PO-TEST-123",
+			"internal_project_number": "PRJ-9942",
+			"project_name":            "VibroBowl Automation",
+			"responsible_person":      "Bob Manager",
+			"sales_rep":               "Alice",
+			"target_ship_date":        time.Now().AddDate(0, 1, 0).Format(time.RFC3339),
 		}
 		
 		body, _ := json.Marshal(payload)

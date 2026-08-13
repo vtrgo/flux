@@ -18,6 +18,9 @@ interface SalesOrder {
   id: string;
   customer_name: string;
   po_number: string;
+  internal_project_number?: string;
+  project_name?: string;
+  responsible_person?: string;
   target_ship_date: string;
 }
 
@@ -244,12 +247,24 @@ export default function MachineDetail() {
             }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Customer</div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{salesOrder.customer_name}</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{salesOrder.customer_name} {salesOrder.project_name ? `(${salesOrder.project_name})` : ''}</div>
               </div>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>PO Number</div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{salesOrder.po_number}</div>
               </div>
+              {salesOrder.internal_project_number && (
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Internal Project #</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{salesOrder.internal_project_number}</div>
+                </div>
+              )}
+              {salesOrder.responsible_person && (
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>PM / Responsible</div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{salesOrder.responsible_person}</div>
+                </div>
+              )}
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Target Ship Date</div>
                 <div style={{ fontSize: '0.875rem', color: salesOrder.target_ship_date ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>

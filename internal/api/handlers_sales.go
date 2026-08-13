@@ -25,7 +25,7 @@ func handleSalesOrders(w http.ResponseWriter, r *http.Request) {
 func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
 		SELECT 
-			id, customer_name, po_number, sales_rep, target_ship_date, status, created_at
+			id, customer_name, po_number, internal_project_number, project_name, responsible_person, sales_rep, target_ship_date, status, created_at
 		FROM sales_orders
 		ORDER BY created_at DESC
 	`)
@@ -39,7 +39,7 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var o models.SalesOrder
 		if err := rows.Scan(
-			&o.ID, &o.CustomerName, &o.PONumber, &o.SalesRep, &o.TargetShipDate, &o.Status, &o.CreatedAt,
+			&o.ID, &o.CustomerName, &o.PONumber, &o.InternalProjectNumber, &o.ProjectName, &o.ResponsiblePerson, &o.SalesRep, &o.TargetShipDate, &o.Status, &o.CreatedAt,
 		); err != nil {
 			http.Error(w, "Error scanning row: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -56,10 +56,13 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 
 func createSalesOrder(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		CustomerName   string     `json:"customer_name"`
-		PONumber       string     `json:"po_number"`
-		SalesRep       *string    `json:"sales_rep"`
-		TargetShipDate *time.Time `json:"target_ship_date"`
+		CustomerName          string     `json:"customer_name"`
+		PONumber              string     `json:"po_number"`
+		InternalProjectNumber *string    `json:"internal_project_number"`
+		ProjectName           *string    `json:"project_name"`
+		ResponsiblePerson     *string    `json:"responsible_person"`
+		SalesRep              *string    `json:"sales_rep"`
+		TargetShipDate        *time.Time `json:"target_ship_date"`
 	}
 	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -74,11 +77,11 @@ func createSalesOrder(w http.ResponseWriter, r *http.Request) {
 
 	var newOrder models.SalesOrder
 	err := db.DB.QueryRow(`
-		INSERT INTO sales_orders (customer_name, po_number, sales_rep, target_ship_date, status) 
-		VALUES ($1, $2, $3, $4, 'open') 
-		RETURNING id, customer_name, po_number, sales_rep, target_ship_date, status, created_at
-	`, req.CustomerName, req.PONumber, req.SalesRep, req.TargetShipDate).Scan(
-		&newOrder.ID, &newOrder.CustomerName, &newOrder.PONumber, &newOrder.SalesRep, &newOrder.TargetShipDate, &newOrder.Status, &newOrder.CreatedAt,
+		INSERT INTO sales_orders (customer_name, po_number, internal_project_number, project_name, responsible_person, sales_rep, target_ship_date, status) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 'open') 
+		RETURNING id, customer_name, po_number, internal_project_number, project_name, responsible_person, sales_rep, target_ship_date, status, created_at
+	`, req.CustomerName, req.PONumber, req.InternalProjectNumber, req.ProjectName, req.ResponsiblePerson, req.SalesRep, req.TargetShipDate).Scan(
+		&newOrder.ID, &newOrder.CustomerName, &newOrder.PONumber, &newOrder.InternalProjectNumber, &newOrder.ProjectName, &newOrder.ResponsiblePerson, &newOrder.SalesRep, &newOrder.TargetShipDate, &newOrder.Status, &newOrder.CreatedAt,
 	)
 
 	if err != nil {
