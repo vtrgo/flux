@@ -79,3 +79,14 @@ All frontend real-time updates must be managed through the centralized `SSEProvi
    ```
 3. **Connection Status:** Use `useSSEConnectionStatus()` to determine if the realtime pipe is active and display a warning or fallback UI if disconnected.
 4. **Re-fetching vs Patching:** For high-throughput events, patch the local state dynamically using the hook's payload. For destructive cascading events (like `sales_order_deleted`), perform a full refetch of the affected resources to ensure no orphaned state persists.
+
+## API Client & Data Fetching
+All data fetching must be routed through the centralized `fetchApi` wrapper located at `frontend/src/lib/api.ts`.
+1. **No Raw Fetches:** Never use raw `fetch('http://localhost:8080/api/...')` in components.
+2. **Robust JSON Parsing:** The backend may occasionally omit `Content-Type: application/json` on successful responses. `fetchApi` explicitly attempts to parse all successful responses via `JSON.parse()` before falling back to text, preventing string-map runtime crashes.
+3. **Environment Parity:** `fetchApi` automatically references `NEXT_PUBLIC_API_URL` to ensure safe promotion across environments without code changes.
+
+## Separation of Concerns (Interfaces)
+To maintain a scalable Next.js codebase, do not inline duplicate TypeScript interfaces (e.g. `Machine`, `SalesOrder`, `Defect`) at the top of page components.
+1. **Central Types Directory:** All shared entity types must be defined and exported from `frontend/src/types/index.ts`.
+2. **Component Imports:** Import these shared types wherever needed to ensure single-source-of-truth accuracy as the database schema evolves.
