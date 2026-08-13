@@ -41,6 +41,7 @@ export default function RootLayout({
               <Link href="/enclosures" className="vtr-btn">Enclosures</Link>
               <Link href="/machine-shop" className="vtr-btn">Machine Shop</Link>
               <Link href="/design" className="vtr-btn">Design</Link>
+              <Link href="/sales" className="vtr-btn vtr-btn-secondary" style={{borderColor: 'var(--vtr-theme-primary)', color: 'var(--vtr-theme-primary)'}}>Sales Kickoff</Link>
               <Link href="/admin" className="vtr-btn vtr-btn-secondary">System Admin</Link>
             </div>
           </header>

@@ -9,8 +9,16 @@ import { IssueModal } from "../../../components/IssueModal";
 
 interface Machine {
   id: string;
+  sales_order_id?: string;
   order_number: string;
   model_type: string;
+}
+
+interface SalesOrder {
+  id: string;
+  customer_name: string;
+  po_number: string;
+  target_ship_date: string;
 }
 
 interface Defect {
@@ -30,6 +38,7 @@ export default function MachineDetail() {
   const id = params.id as string;
 
   const [machine, setMachine] = useState<Machine | null>(null);
+  const [salesOrder, setSalesOrder] = useState<SalesOrder | null>(null);
   const [defects, setDefects] = useState<Defect[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +57,19 @@ export default function MachineDetail() {
 
         const machines: Machine[] = await macRes.json();
         const found = machines.find(m => m.id === id);
-        if (found) setMachine(found);
+        if (found) {
+          setMachine(found);
+          if (found.sales_order_id) {
+            try {
+              const salesRes = await fetch(`http://localhost:8080/api/sales_orders`);
+              const orders: SalesOrder[] = await salesRes.json();
+              const foundOrder = orders.find(o => o.id === found.sales_order_id);
+              if (foundOrder) setSalesOrder(foundOrder);
+            } catch (err) {
+              console.error("Failed to load sales order data", err);
+            }
+          }
+        }
 
         setDefects(await defRes.json() || []);
       } catch (err) {
@@ -197,15 +218,46 @@ export default function MachineDetail() {
   return (
     <main className={styles.container}>
       <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>{machine.order_number}</h1>
-          <div className={styles.subtitle}>{machine.model_type} - Project Deficiency Portal</div>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button className="vtr-btn" onClick={openNewModal}>+ ADD ISSUE</button>
-          <Link href="/" className="vtr-btn vtr-btn-secondary">
-            ← Back to Dashboard
-          </Link>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h1 className={styles.title}>{machine.order_number}</h1>
+              <div className={styles.subtitle}>{machine.model_type} - Project Deficiency Portal</div>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <button className="vtr-btn" onClick={openNewModal}>+ ADD ISSUE</button>
+              <Link href="/" className="vtr-btn vtr-btn-secondary">
+                ← Back to Dashboard
+              </Link>
+            </div>
+          </div>
+          
+          {salesOrder && (
+            <div style={{ 
+              background: 'rgba(255,255,255,0.05)', 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '8px', 
+              padding: '1rem',
+              display: 'flex',
+              gap: '2rem',
+              fontFamily: 'var(--font-mono)'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Customer</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{salesOrder.customer_name}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>PO Number</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{salesOrder.po_number}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Target Ship Date</div>
+                <div style={{ fontSize: '0.875rem', color: salesOrder.target_ship_date ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
+                  {salesOrder.target_ship_date ? new Date(salesOrder.target_ship_date).toLocaleDateString() : 'TBD'}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
