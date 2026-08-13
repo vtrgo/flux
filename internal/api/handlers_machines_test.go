@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+	"fmt"
 
 	"github.com/vtrgo/flux/internal/models"
 )
@@ -16,9 +18,13 @@ func TestMachines(t *testing.T) {
 	mux := http.NewServeMux()
 	RegisterRoutes(mux)
 
+	var createdMachineID string
+	var uniqueOrderNumber string
+
 	t.Run("Create Machine - Success", func(t *testing.T) {
+		uniqueOrderNumber = fmt.Sprintf("M-TEST-%d", time.Now().UnixNano())
 		payload := map[string]interface{}{
-			"order_number": "M-TEST-001",
+			"order_number": uniqueOrderNumber,
 			"model_type":   "ModelX",
 		}
 
@@ -38,9 +44,11 @@ func TestMachines(t *testing.T) {
 			t.Errorf("failed to decode response: %v", err)
 		}
 
-		if resp.OrderNumber != "M-TEST-001" {
-			t.Errorf("expected machine order number M-TEST-001, got %v", resp.OrderNumber)
+		if resp.OrderNumber != uniqueOrderNumber {
+			t.Errorf("expected machine order number %v, got %v", uniqueOrderNumber, resp.OrderNumber)
 		}
+		
+		createdMachineID = resp.ID.String()
 	})
 
 	t.Run("Create Machine - Missing Fields (Failure)", func(t *testing.T) {
@@ -76,6 +84,19 @@ func TestMachines(t *testing.T) {
 
 		if len(resp) == 0 {
 			t.Errorf("expected at least 1 machine, got 0")
+		}
+	})
+
+	t.Run("Delete Machine - Success", func(t *testing.T) {
+		if createdMachineID == "" {
+			t.Skip("Skipping delete test because machine was not created")
+		}
+		req := httptest.NewRequest(http.MethodDelete, "/api/machines/"+createdMachineID, nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 		}
 	})
 }
