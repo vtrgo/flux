@@ -225,7 +225,7 @@ export default function MachineDetail() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <h1 className={styles.title}>{machine.order_number}</h1>
-              <div className={styles.subtitle}>{machine.model_type} - Project Deficiency Portal</div>
+              <div className={styles.subtitle}>{machine.model_type} - Project Portal</div>
             </div>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
               <button className="vtr-btn" onClick={openNewModal}>+ ADD ISSUE</button>
