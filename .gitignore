@@ -48,3 +48,6 @@ backend/data/
 
 # Go vendor directory
 /backend/vendor/
+
+# Binaries
+/flux

@@ -136,7 +136,8 @@ export default function MachineDetail() {
     { key: 'machine_shop', label: 'Machine Shop' },
     { key: 'electrical_controls', label: 'Electrical', match: (d: Defect) => d.assigned_department === 'electrical_controls' || d.assigned_department === 'controls' },
     { key: 'assembly', label: 'Assembly' },
-    { key: 'other', label: 'Other', match: (d: Defect) => !['design', 'kitting', 'machine_shop', 'electrical_controls', 'controls', 'assembly'].includes(d.assigned_department) }
+    { key: 'enclosures', label: 'Enclosures' },
+    { key: 'other', label: 'Other', match: (d: Defect) => !['design', 'kitting', 'machine_shop', 'electrical_controls', 'controls', 'assembly', 'enclosures'].includes(d.assigned_department) }
   ];
 
   const renderGroupedDefects = (defectList: Defect[], renderActions: (defect: Defect) => React.ReactNode, getStyle?: (defect: Defect) => React.CSSProperties) => {

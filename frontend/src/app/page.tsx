@@ -220,6 +220,7 @@ export default function Home() {
                       { key: 'machine_shop', label: 'Machine Shop' },
                       { key: 'kitting', label: 'Kitting' },
                       { key: 'assembly', label: 'Assembly' },
+                      { key: 'enclosures', label: 'Enclosures' },
                       { key: 'electrical_controls', label: 'Electrical / Controls', match: (d: any) => d.assigned_department === 'electrical_controls' || d.assigned_department === 'controls' }
                     ].map(dept => {
                       const deptDefects = machineDefects.filter(d => dept.match ? dept.match(d) : d.assigned_department === dept.key);

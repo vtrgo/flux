@@ -29,6 +29,9 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/machines", handleMachines)
 	mux.HandleFunc("DELETE /api/machines/{id}", handleDeleteMachine)
 	
+	// Sales endpoints
+	mux.HandleFunc("/api/sales_orders", handleSalesOrders)
+	
 	// Kitting endpoints
 	mux.HandleFunc("GET /api/kitting", handleGetAllKitting)
 	mux.HandleFunc("GET /api/machines/{id}/kitting", handleGetKitting)
@@ -40,6 +43,12 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/machines/{id}/assembly", handleGetAssembly)
 	mux.HandleFunc("POST /api/machines/{id}/assembly", handleAddAssemblyTask)
 	mux.HandleFunc("PUT /api/assembly/{task_id}", handleUpdateAssemblyTask)
+
+	// Enclosures endpoints
+	mux.HandleFunc("GET /api/enclosures", handleGetAllEnclosures)
+	mux.HandleFunc("GET /api/machines/{id}/enclosures", handleGetEnclosures)
+	mux.HandleFunc("POST /api/machines/{id}/enclosures", handleAddEnclosuresTask)
+	mux.HandleFunc("PUT /api/enclosures/{task_id}", handleUpdateEnclosuresTask)
 
 	// Controls endpoints
 	mux.HandleFunc("GET /api/controls", handleGetAllControls)
@@ -92,7 +101,7 @@ func handleMachines(w http.ResponseWriter, r *http.Request) {
 func getMachines(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
 		SELECT 
-			m.id, m.order_number, m.model_type, m.status, m.created_at,
+			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.created_at,
 			COUNT(DISTINCT k.id) as kitting_count,
 			COUNT(DISTINCT a.id) as assembly_count,
 			COUNT(DISTINCT c.id) as controls_count,
@@ -115,7 +124,7 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m models.Machine
 		if err := rows.Scan(
-			&m.ID, &m.OrderNumber, &m.ModelType, &m.Status, &m.CreatedAt,
+			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.CreatedAt,
 			&m.KittingCount, &m.AssemblyCount, &m.ControlsCount, &m.QualityCount,
 		); err != nil {
 			http.Error(w, "Error scanning row: "+err.Error(), http.StatusInternalServerError)
@@ -129,8 +138,9 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 
 func createMachine(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		OrderNumber string `json:"order_number"`
-		ModelType   string `json:"model_type"`
+		SalesOrderID *string `json:"sales_order_id"`
+		OrderNumber  string  `json:"order_number"`
+		ModelType    string  `json:"model_type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -143,13 +153,24 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var newMachine models.Machine
-	err := db.DB.QueryRow(`
-		INSERT INTO machines (order_number, model_type, status) 
-		VALUES ($1, $2, 'kitting') 
-		RETURNING id, order_number, model_type, status, created_at
-	`, req.OrderNumber, req.ModelType).Scan(
-		&newMachine.ID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt,
-	)
+	var err error
+	if req.SalesOrderID != nil && *req.SalesOrderID != "" {
+		err = db.DB.QueryRow(`
+			INSERT INTO machines (sales_order_id, order_number, model_type, status) 
+			VALUES ($1, $2, $3, 'engineering') 
+			RETURNING id, sales_order_id, order_number, model_type, status, created_at
+		`, req.SalesOrderID, req.OrderNumber, req.ModelType).Scan(
+			&newMachine.ID, &newMachine.SalesOrderID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt,
+		)
+	} else {
+		err = db.DB.QueryRow(`
+			INSERT INTO machines (order_number, model_type, status) 
+			VALUES ($1, $2, 'engineering') 
+			RETURNING id, order_number, model_type, status, created_at
+		`, req.OrderNumber, req.ModelType).Scan(
+			&newMachine.ID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt,
+		)
+	}
 
 	if err != nil {
 		http.Error(w, "Failed to insert machine: "+err.Error(), http.StatusInternalServerError)

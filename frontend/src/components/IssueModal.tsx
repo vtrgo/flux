@@ -131,6 +131,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                 <option value="assembly">Assembly</option>
                 <option value="machine_shop">Machine Shop</option>
                 <option value="electrical_controls">Electrical / Controls</option>
+                <option value="enclosures">Enclosures</option>
               </select>
             </div>
             
@@ -148,6 +149,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                 <option value="assembly">Assembly</option>
                 <option value="machine_shop">Machine Shop</option>
                 <option value="electrical_controls">Electrical / Controls</option>
+                <option value="enclosures">Enclosures</option>
               </select>
             </div>
           </div>

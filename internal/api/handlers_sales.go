@@ -1,0 +1,95 @@
+package api
+
+import (
+	"database/sql"
+	"encoding/json"
+	"net/http"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/vtrgo/flux/internal/db"
+	"github.com/vtrgo/flux/internal/models"
+)
+
+func handleSalesOrders(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	
+	switch r.Method {
+	case http.MethodGet:
+		getSalesOrders(w, r)
+	case http.MethodPost:
+		createSalesOrder(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func getSalesOrders(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.DB.Query(`
+		SELECT 
+			id, customer_name, po_number, sales_rep, target_ship_date, status, created_at
+		FROM sales_orders
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var orders []models.SalesOrder
+	for rows.Next() {
+		var o models.SalesOrder
+		if err := rows.Scan(
+			&o.ID, &o.CustomerName, &o.PONumber, &o.SalesRep, &o.TargetShipDate, &o.Status, &o.CreatedAt,
+		); err != nil {
+			http.Error(w, "Error scanning row: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		orders = append(orders, o)
+	}
+	
+	if orders == nil {
+		orders = []models.SalesOrder{}
+	}
+
+	json.NewEncoder(w).Encode(orders)
+}
+
+func createSalesOrder(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		CustomerName   string     `json:"customer_name"`
+		PONumber       string     `json:"po_number"`
+		SalesRep       *string    `json:"sales_rep"`
+		TargetShipDate *time.Time `json:"target_ship_date"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.CustomerName == "" || req.PONumber == "" {
+		http.Error(w, "CustomerName and PONumber are required", http.StatusBadRequest)
+		return
+	}
+
+	var newOrder models.SalesOrder
+	err := db.DB.QueryRow(`
+		INSERT INTO sales_orders (customer_name, po_number, sales_rep, target_ship_date, status) 
+		VALUES ($1, $2, $3, $4, 'open') 
+		RETURNING id, customer_name, po_number, sales_rep, target_ship_date, status, created_at
+	`, req.CustomerName, req.PONumber, req.SalesRep, req.TargetShipDate).Scan(
+		&newOrder.ID, &newOrder.CustomerName, &newOrder.PONumber, &newOrder.SalesRep, &newOrder.TargetShipDate, &newOrder.Status, &newOrder.CreatedAt,
+	)
+
+	if err != nil {
+		http.Error(w, "Failed to insert sales order: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	BroadcastEvent("sales_order_created", newOrder)
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(newOrder)
+}

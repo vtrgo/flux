@@ -6,12 +6,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// SalesOrder represents a commercial customer order
+type SalesOrder struct {
+	ID             uuid.UUID  `json:"id"`
+	CustomerName   string     `json:"customer_name"`
+	PONumber       string     `json:"po_number"`
+	SalesRep       *string    `json:"sales_rep,omitempty"`
+	TargetShipDate *time.Time `json:"target_ship_date,omitempty"`
+	Status         string     `json:"status"` // open, partially_shipped, fulfilled
+	CreatedAt      time.Time  `json:"created_at"`
+}
+
 // Machine represents the core order/machine being built
 type Machine struct {
-	ID            uuid.UUID `json:"id"`
-	OrderNumber   string    `json:"order_number"`
-	ModelType     string    `json:"model_type"`
-	Status        string    `json:"status"` // kitting, assembly, controls, quality, shipped
+	ID            uuid.UUID  `json:"id"`
+	SalesOrderID  *uuid.UUID `json:"sales_order_id,omitempty"`
+	OrderNumber   string     `json:"order_number"`
+	ModelType     string     `json:"model_type"`
+	Status        string     `json:"status"` // engineering, kitting, assembly, controls, quality, shipped
 	CreatedAt     time.Time `json:"created_at"`
 	
 	// Relational roll-ups for the UI dashboard
@@ -37,6 +49,18 @@ type KittingPart struct {
 
 // AssemblyTask represents a mechanical build step
 type AssemblyTask struct {
+	ID          uuid.UUID  `json:"id"`
+	MachineID   uuid.UUID  `json:"machine_id"`
+	TaskName    string     `json:"task_name"`
+	Status      string     `json:"status"` // pending, in_progress, complete
+	StartedAt   *time.Time `json:"started_at,omitempty"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+	SignedOffBy *string    `json:"signed_off_by,omitempty"`
+	Notes       *string    `json:"notes,omitempty"`
+}
+
+// EnclosuresTask represents a task in the enclosures department
+type EnclosuresTask struct {
 	ID          uuid.UUID  `json:"id"`
 	MachineID   uuid.UUID  `json:"machine_id"`
 	TaskName    string     `json:"task_name"`
