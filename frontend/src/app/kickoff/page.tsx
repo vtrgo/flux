@@ -50,6 +50,7 @@ export default function SalesDashboard() {
     eventSource.addEventListener('sales_order_updated', () => fetchOrders());
     eventSource.addEventListener('sales_order_deleted', () => fetchOrders());
     eventSource.addEventListener('machine_created', () => fetchMachines());
+    eventSource.addEventListener('machine_deleted', () => fetchMachines());
 
     return () => eventSource.close();
   }, []);
