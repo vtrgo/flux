@@ -174,11 +174,11 @@ export default function Home() {
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
                             {[
                               { key: 'design', label: 'Design' },
-                              { key: 'machine_shop', label: 'Machine Shop' },
                               { key: 'kitting', label: 'Kitting' },
+                              { key: 'machine_shop', label: 'Machine Shop' },
                               { key: 'assembly', label: 'Assembly' },
-                              { key: 'enclosures', label: 'Enclosures' },
-                              { key: 'electrical_controls', label: 'Controls', match: (d: any) => d.assigned_department === 'electrical_controls' || d.assigned_department === 'controls' }
+                              { key: 'electrical_controls', label: 'Controls', match: (d: any) => d.assigned_department === 'electrical_controls' || d.assigned_department === 'controls' },
+                              { key: 'enclosures', label: 'Enclosures' }
                             ].map(dept => {
                               const deptDefects = machineDefects.filter(d => dept.match ? dept.match(d) : d.assigned_department === dept.key);
                               const open = deptDefects.filter(d => d.status === 'open').length;

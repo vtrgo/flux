@@ -6,7 +6,7 @@ echo "== [1/2] Running Go Backend Tests & Linter =="
 PACKAGES=$(go list ./... | grep -v /node_modules/)
 
 echo "-> Running golangci-lint..."
-go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run $PACKAGES
+go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run ./...
 
 echo "-> Running Go Unit Tests..."
 # -count=1 disables test caching to guarantee fresh execution
