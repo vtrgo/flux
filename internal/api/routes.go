@@ -65,8 +65,10 @@ func RegisterRoutes(mux *http.ServeMux) {
 	// Quality endpoints
 	mux.HandleFunc("GET /api/machines/{id}/quality", handleGetQuality)
 	mux.HandleFunc("GET /api/machines/{id}/defects", handleGetMachineDefects)
+	mux.HandleFunc("GET /api/machines/{id}/defects/summary", handleGetMachineDefectsSummary)
 	mux.HandleFunc("POST /api/machines/{id}/defects", handleAddDefect)
 	mux.HandleFunc("GET /api/defects", handleGetAllDefects)
+	mux.HandleFunc("GET /api/defects/summary", handleGetAllDefectsSummary)
 	mux.HandleFunc("PUT /api/defects/{defect_id}", handleUpdateDefect)
 	mux.HandleFunc("PUT /api/defects/{defect_id}/edit", handleEditDefect)
 	mux.HandleFunc("DELETE /api/defects/{defect_id}", handleDeleteDefect)

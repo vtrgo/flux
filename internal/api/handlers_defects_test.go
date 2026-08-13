@@ -51,4 +51,14 @@ func TestDefects(t *testing.T) {
 			t.Errorf("expected 500 error on foreign key violation, got %v", status)
 		}
 	})
+
+	t.Run("Get Machine Defects Summary - Success", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/machines/00000000-0000-0000-0000-000000000000/defects/summary", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+	})
 }

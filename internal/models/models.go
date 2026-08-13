@@ -114,6 +114,17 @@ type Defect struct {
 	ResolvedAt         *time.Time `json:"resolved_at,omitempty"`
 }
 
+// DefectSummary represents aggregated backend counts for defects per department
+type DefectSummary struct {
+	MachineID          uuid.UUID `json:"machine_id"`
+	AssignedDepartment string    `json:"assigned_department"`
+	OpenCritical       int       `json:"open_critical"`
+	OpenModerate       int       `json:"open_moderate"`
+	OpenMinor          int       `json:"open_minor"`
+	Pending            int       `json:"pending"`
+	Closed             int       `json:"closed"`
+}
+
 type MachineShopTask struct {
 	ID          uuid.UUID  `json:"id"`
 	MachineID   uuid.UUID  `json:"machine_id"`

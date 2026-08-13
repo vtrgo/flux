@@ -20,7 +20,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     machine_id: '',
     source_department: defaultAssignedDept,
     assigned_department: defaultAssignedDept,
-    severity: 'minor',
+    severity: 'moderate',
     description: '',
     notes: ''
   });
@@ -50,7 +50,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           machine_id: preselectedMachineId || '',
           source_department: defaultAssignedDept,
           assigned_department: defaultAssignedDept,
-          severity: 'minor',
+          severity: 'moderate',
           description: '',
           notes: ''
         });
@@ -145,10 +145,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               onChange={e => setFormData({...formData, severity: e.target.value})}
               className="vtr-input"
             >
-              <option value="critical">Critical (Blocker)</option>
-              <option value="major">Major (Needs Fix)</option>
-              <option value="minor">Minor (Tweak)</option>
-              <option value="info">Info / Note</option>
+              <option value="critical">Critical</option>
+              <option value="moderate">Moderate</option>
+              <option value="minor">Minor</option>
             </select>
           </div>
 

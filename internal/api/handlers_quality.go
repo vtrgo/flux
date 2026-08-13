@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
@@ -247,6 +249,155 @@ func handleDeleteDefect(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleGetMachineDefectsSummary aggregates defect counts by department on the backend
+func handleGetMachineDefectsSummary(w http.ResponseWriter, r *http.Request) {
+	machineID := r.PathValue("id")
+	if machineID == "" {
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
+		return
+	}
+
+	rows, err := db.DB.Query(`
+		SELECT assigned_department, status, severity, COUNT(*) 
+		FROM defects 
+		WHERE machine_id = $1 
+		GROUP BY assigned_department, status, severity
+	`, machineID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to query defect summary: ", err)
+		return
+	}
+	defer rows.Close()
+
+	// Initialize summary map grouped by department
+	summaryMap := make(map[string]*models.DefectSummary)
+
+	for rows.Next() {
+		var assigned sql.NullString
+		var status, severity string
+		var count int
+
+		if err := rows.Scan(&assigned, &status, &severity, &count); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to scan summary row: ", err)
+			return
+		}
+
+		dept := ""
+		if assigned.Valid {
+			dept = assigned.String
+		}
+		if dept == "" {
+			continue // skip unassigned
+		}
+
+		if _, exists := summaryMap[dept]; !exists {
+			summaryMap[dept] = &models.DefectSummary{
+				MachineID:          uuid.MustParse(machineID),
+				AssignedDepartment: dept,
+			}
+		}
+		
+		s := summaryMap[dept]
+
+		if status == "open" {
+			if severity == "critical" {
+				s.OpenCritical += count
+			} else if severity == "minor" {
+				s.OpenMinor += count
+			} else {
+				s.OpenModerate += count
+			}
+		} else if status == "fixed" {
+			s.Pending += count
+		} else if status == "verified" {
+			s.Closed += count
+		}
+	}
+
+	// Convert map to slice
+	var summaries []models.DefectSummary
+	for _, v := range summaryMap {
+		summaries = append(summaries, *v)
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	respondJSON(w, http.StatusOK, summaries)
+}
+
+// handleGetAllDefectsSummary aggregates defect counts by department for all machines
+func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.DB.Query(`
+		SELECT machine_id, assigned_department, status, severity, COUNT(*) 
+		FROM defects 
+		GROUP BY machine_id, assigned_department, status, severity
+	`)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to query all defect summaries: ", err)
+		return
+	}
+	defer rows.Close()
+
+	// Initialize summary map grouped by machine_id + department
+	type summaryKey struct {
+		MachineID uuid.UUID
+		Dept      string
+	}
+	summaryMap := make(map[summaryKey]*models.DefectSummary)
+
+	for rows.Next() {
+		var machineID uuid.UUID
+		var assigned sql.NullString
+		var status, severity string
+		var count int
+
+		if err := rows.Scan(&machineID, &assigned, &status, &severity, &count); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to scan summary row: ", err)
+			return
+		}
+
+		dept := ""
+		if assigned.Valid {
+			dept = assigned.String
+		}
+		if dept == "" {
+			continue // skip unassigned
+		}
+
+		key := summaryKey{MachineID: machineID, Dept: dept}
+		if _, exists := summaryMap[key]; !exists {
+			summaryMap[key] = &models.DefectSummary{
+				MachineID:          machineID,
+				AssignedDepartment: dept,
+			}
+		}
+		
+		s := summaryMap[key]
+
+		if status == "open" {
+			if severity == "critical" {
+				s.OpenCritical += count
+			} else if severity == "minor" {
+				s.OpenMinor += count
+			} else {
+				s.OpenModerate += count
+			}
+		} else if status == "fixed" {
+			s.Pending += count
+		} else if status == "verified" {
+			s.Closed += count
+		}
+	}
+
+	// Convert map to slice
+	var summaries []models.DefectSummary
+	for _, v := range summaryMap {
+		summaries = append(summaries, *v)
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	respondJSON(w, http.StatusOK, summaries)
 }
 
 // handleEditDefect fully updates a defect

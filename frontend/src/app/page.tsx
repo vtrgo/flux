@@ -6,12 +6,14 @@ import { fetchApi } from '../lib/api';
 import Link from 'next/link';
 import styles from './page.module.css';
 
-import { SalesOrder, Machine, Defect } from "../types";
+import { DefectModal } from '../components/DefectModal';
+import { SalesOrder, Machine, DefectSummary } from "../types";
 
 export default function Home() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [defects, setDefects] = useState<Defect[]>([]);
+  const [defectSummaries, setDefectSummaries] = useState<DefectSummary[]>([]);
+  const [selectedMachineDept, setSelectedMachineDept] = useState<{ machineId: string, dept: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const sseConnected = useSSEConnectionStatus();
 
@@ -19,12 +21,12 @@ export default function Home() {
     Promise.all([
       fetchApi('sales_orders'),
       fetchApi('machines'),
-      fetchApi('defects')
+      fetchApi('defects/summary')
     ])
       .then(([ordData, macData, defData]) => {
         setOrders(ordData || []);
         setMachines(macData || []);
-        setDefects(defData || []);
+        setDefectSummaries(defData || []);
         setLoading(false);
       })
       .catch(err => {
@@ -37,17 +39,22 @@ export default function Home() {
     Promise.all([
       fetchApi('sales_orders'),
       fetchApi('machines'),
-      fetchApi('defects')
+      fetchApi('defects/summary')
     ]).then(([ordData, macData, defData]) => {
       setOrders(ordData || []);
       setMachines(macData || []);
-      setDefects(defData || []);
+      setDefectSummaries(defData || []);
     });
   };
 
   const refetchOrders = async () => {
     const res = await fetchApi<SalesOrder[]>('sales_orders');
     setOrders(res || []);
+  };
+
+  const refetchSummaries = async () => {
+    const res = await fetchApi<DefectSummary[]>('defects/summary');
+    setDefectSummaries(res || []);
   };
 
   useSSE('sales_order_created', refetchOrders);
@@ -60,23 +67,13 @@ export default function Home() {
 
   useSSE('machine_deleted', (deleted: { id: string }) => {
     setMachines(prev => prev.filter(m => m.id !== deleted.id));
+    refetchSummaries();
   });
 
-  useSSE('defect_added', (newDefect: Defect) => {
-    setDefects(prev => [...prev, newDefect]);
-  });
-
-  useSSE('defect_updated', (updated: Defect) => {
-    setDefects(prev => {
-      const exists = prev.find(d => d.id === updated.id);
-      if (exists) return prev.map(d => d.id === updated.id ? { ...updated, order_number: d.order_number } : d);
-      return [...prev, updated];
-    });
-  });
-
-  useSSE('defect_deleted', (deleted: { id: string }) => {
-    setDefects(prev => prev.filter(d => d.id !== deleted.id));
-  });
+  // Since summaries are aggregated, just refetch them on any defect mutation
+  useSSE('defect_added', refetchSummaries);
+  useSSE('defect_updated', refetchSummaries);
+  useSSE('defect_deleted', refetchSummaries);
 
 
   const handleDeleteMachine = async (e: React.MouseEvent, id: string) => {
@@ -139,7 +136,7 @@ export default function Home() {
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontStyle: 'italic' }}>No machines spawned for this project yet.</div>
                   ) : (
                     orderMachines.map(machine => {
-                      const machineDefects = defects.filter(d => d.machine_id === machine.id);
+
                       return (
                         <Link href={`/machine?id=${machine.id}`} key={machine.id} className={styles.card} style={{ 
                           textDecoration: 'none',
@@ -177,27 +174,59 @@ export default function Home() {
                               { key: 'kitting', label: 'Kitting' },
                               { key: 'machine_shop', label: 'Machine Shop' },
                               { key: 'assembly', label: 'Assembly' },
-                              { key: 'electrical_controls', label: 'Controls', match: (d: any) => d.assigned_department === 'electrical_controls' || d.assigned_department === 'controls' },
+                              { key: 'electrical_controls', label: 'Controls' },
                               { key: 'enclosures', label: 'Enclosures' }
                             ].map(dept => {
-                              const deptDefects = machineDefects.filter(d => dept.match ? dept.match(d) : d.assigned_department === dept.key);
-                              const open = deptDefects.filter(d => d.status === 'open').length;
-                              const pending = deptDefects.filter(d => d.status === 'fixed').length;
-                              const closed = deptDefects.filter(d => d.status === 'verified').length;
+                              // Find summary for this department (handle electrical_controls alias if needed)
+                              const summary = defectSummaries.find(s => 
+                                s.machine_id === machine.id && 
+                                (s.assigned_department === dept.key || (dept.key === 'electrical_controls' && s.assigned_department === 'controls'))
+                              );
+                              
+                              const openCritical = summary?.open_critical || 0;
+                              const openModerate = summary?.open_moderate || 0;
+                              const openMinor = summary?.open_minor || 0;
+                              const openTotal = openCritical + openModerate + openMinor;
+                              const pending = summary?.pending || 0;
+                              const closed = summary?.closed || 0;
+                              
+                              // Determine border/pulse based on severity
+                              let borderColor = 'var(--border-color)';
+                              if (openCritical > 0) {
+                                borderColor = 'var(--accent-red)';
+                              } else if (openModerate > 0) {
+                                borderColor = 'var(--accent-amber)';
+                              } else if (openMinor > 0) {
+                                borderColor = 'var(--vtr-theme-primary)';
+                              }
                               
                               return (
-                                <div key={dept.key} style={{ 
-                                  background: 'rgba(255,255,255,0.02)', 
-                                  border: '1px solid var(--border-color)',
-                                  padding: '0.75rem', 
-                                  borderRadius: '6px'
-                                }}>
+                                <div key={dept.key} 
+                                  style={{ 
+                                    background: 'rgba(255,255,255,0.02)', 
+                                    border: `1px solid ${borderColor}`,
+                                    padding: '0.75rem', 
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setSelectedMachineDept({ machineId: machine.id, dept: dept.key });
+                                  }}
+                                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                                >
                                   <div style={{ color: 'var(--vtr-theme-primary)', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.8rem' }}>{dept.label}</div>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: open > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-neutral)' }}>
-                                      <span>Open:</span> <span>{open}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: openTotal > 0 ? borderColor : 'var(--vtr-theme-neutral)' }}>
+                                      <span>Open:</span> 
+                                      <span style={{ fontWeight: openCritical > 0 ? 'bold' : 'normal' }}>
+                                        {openTotal} {openCritical > 0 && `(${openCritical} Crit)`}
+                                      </span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: pending > 0 ? 'var(--accent-amber)' : 'var(--vtr-theme-neutral)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: pending > 0 ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)' }}>
                                       <span>Pending:</span> <span>{pending}</span>
                                     </div>
                                   </div>
@@ -215,6 +244,14 @@ export default function Home() {
           })
         )}
       </section>
+
+      {selectedMachineDept && (
+        <DefectModal
+          machineId={selectedMachineDept.machineId}
+          department={selectedMachineDept.dept}
+          onClose={() => setSelectedMachineDept(null)}
+        />
+      )}
     </main>
   );
 }

@@ -32,5 +32,17 @@ export interface Defect {
   severity: string;
   status: string;
   notes?: string;
+  resolved_by?: string;
+  resolved_at?: string;
   created_at?: string;
+}
+
+export interface DefectSummary {
+  machine_id: string;
+  assigned_department: string;
+  open_critical: number;
+  open_moderate: number;
+  open_minor: number;
+  pending: number;
+  closed: number;
 }
