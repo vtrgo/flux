@@ -11,9 +11,10 @@ interface IssueModalProps {
   onClose: () => void;
   editingDefect: Defect | null;
   defaultAssignedDept?: string;
+  preselectedMachineId?: string;
 }
 
-export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality' }: IssueModalProps) {
+export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality', preselectedMachineId }: IssueModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [formData, setFormData] = useState({
     machine_id: '',
@@ -30,7 +31,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         .then(data => {
           setMachines(data || []);
           if (!editingDefect && data && data.length > 0) {
-            setFormData(prev => ({ ...prev, machine_id: data[0].id }));
+            setFormData(prev => ({ ...prev, machine_id: preselectedMachineId || data[0].id }));
           }
         })
         .catch(err => console.error("Failed to fetch machines", err));
@@ -46,7 +47,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         });
       } else {
         setFormData({
-          machine_id: machines.length > 0 ? machines[0].id : '',
+          machine_id: preselectedMachineId || (machines.length > 0 ? machines[0].id : ''),
           source_department: defaultAssignedDept,
           assigned_department: defaultAssignedDept,
           severity: 'minor',
@@ -55,7 +56,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         });
       }
     }
-  }, [isOpen, editingDefect, defaultAssignedDept]);
+  }, [isOpen, editingDefect, defaultAssignedDept, preselectedMachineId]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

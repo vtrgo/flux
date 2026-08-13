@@ -298,6 +298,7 @@ export default function MachineDetail() {
         onClose={() => setIsModalOpen(false)} 
         editingDefect={editingDefect} 
         defaultAssignedDept="quality"
+        preselectedMachineId={machine.id}
       />
     </main>
   );
