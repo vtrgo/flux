@@ -109,3 +109,20 @@ All data fetching must be routed through the centralized `fetchApi` wrapper loca
 To maintain a scalable Next.js codebase, do not inline duplicate TypeScript interfaces (e.g. `Machine`, `SalesOrder`, `Defect`) at the top of page components.
 1. **Central Types Directory:** All shared entity types must be defined and exported from `frontend/src/types/index.ts`.
 2. **Component Imports:** Import these shared types wherever needed to ensure single-source-of-truth accuracy as the database schema evolves.
+
+# Build & Deployment Guidelines
+
+## Single Executable Strategy (Go:Embed)
+To simplify deployment, this project strictly uses a single-executable paradigm powered by Go's `//go:embed` directive. The Next.js frontend is baked directly into the Go backend binary.
+
+When making deployment-related modifications or writing build scripts, agents must enforce the following sequence:
+
+1. **Static Frontend Export**: 
+   - The Next.js frontend must be built as a purely static HTML/CSS/JS export.
+   - Run `npm run build` with Next.js configured for `output: 'export'`. This populates the `frontend/out` directory.
+2. **Embedded Go Binary**:
+   - The Go backend utilizes `//go:embed all:frontend/out` to package the static assets.
+   - The Go HTTP router serves the `/api/*` endpoints for business logic, and falls back to serving the embedded file system for all other routes.
+3. **Build Execution**:
+   - A complete build is accomplished by sequentially running the frontend build, followed by `go build` in the backend. 
+   - Never attempt to deploy Node.js / Next.js server runtimes to production. The Go binary is the solitary production artifact.
