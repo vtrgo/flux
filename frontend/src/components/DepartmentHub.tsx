@@ -135,7 +135,7 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
             <div key={machineId}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                 <h2 style={{ margin: 0 }}>{group.order_number} <span className={styles.badge}>{group.issues.length}</span></h2>
-                <Link href={`/machine/${machineId}`} className="vtr-btn vtr-btn-secondary">{group.order_number} Portal →</Link>
+                <Link href={`/machine?id=${machineId}`} className="vtr-btn vtr-btn-secondary">{group.order_number} Portal →</Link>
               </div>
               <div className={styles.grid}>
                 {/* OPEN COLUMN */}

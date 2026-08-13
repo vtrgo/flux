@@ -1,10 +1,12 @@
 package main
 
 import (
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/vtrgo/flux"
 	"github.com/vtrgo/flux/internal/api"
 	"github.com/vtrgo/flux/internal/db"
 )
@@ -25,6 +27,12 @@ func main() {
 
 	mux := http.NewServeMux()
 	api.RegisterRoutes(mux)
+
+	uiFS, err := fs.Sub(flux.UIFS, "frontend/out")
+	if err != nil {
+		log.Fatalf("Failed to initialize embedded UI filesystem: %v", err)
+	}
+	mux.Handle("/", http.FileServer(http.FS(uiFS)))
 
 	port := os.Getenv("PORT")
 	if port == "" {

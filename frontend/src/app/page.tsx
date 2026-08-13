@@ -141,7 +141,7 @@ export default function Home() {
                     orderMachines.map(machine => {
                       const machineDefects = defects.filter(d => d.machine_id === machine.id);
                       return (
-                        <Link href={`/machine/${machine.id}`} key={machine.id} className={styles.card} style={{ 
+                        <Link href={`/machine?id=${machine.id}`} key={machine.id} className={styles.card} style={{ 
                           textDecoration: 'none',
                           color: 'inherit',
                           display: 'block',

@@ -224,7 +224,7 @@ export default function SalesDashboard() {
                 {orderMachines.length > 0 && (
                   <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     {orderMachines.map(m => (
-                      <Link key={m.id} href={`/machine/${m.id}`} style={{ textDecoration: 'none' }}>
+                      <Link key={m.id} href={`/machine?id=${m.id}`} style={{ textDecoration: 'none' }}>
                         <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', paddingRight: '2.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '0.875rem', position: 'relative' }}>
                           <strong style={{ color: 'var(--vtr-theme-primary)' }}>{m.order_number}</strong>
                           <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{m.model_type} • {m.status}</div>

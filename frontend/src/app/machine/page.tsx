@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { useSSE } from "../../../components/SSEProvider";
-import { fetchApi } from "../../../lib/api";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useSSE } from "../../components/SSEProvider";
+import { fetchApi } from "../../lib/api";
 import Link from "next/link";
 import styles from "./machine.module.css";
 
-import { IssueModal } from "../../../components/IssueModal";
+import { IssueModal } from "../../components/IssueModal";
 
-import { Machine, SalesOrder, Defect } from "../../../types";
+import { Machine, SalesOrder, Defect } from "../../types";
 
-export default function MachineDetail() {
-  const params = useParams();
-  const id = params.id as string;
+function MachineDetailContent() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") as string;
 
   const [machine, setMachine] = useState<Machine | null>(null);
   const [salesOrder, setSalesOrder] = useState<SalesOrder | null>(null);
@@ -301,5 +301,13 @@ export default function MachineDetail() {
         preselectedMachineId={machine.id}
       />
     </main>
+  );
+}
+
+export default function MachineDetail() {
+  return (
+    <Suspense fallback={<div>Loading machine...</div>}>
+      <MachineDetailContent />
+    </Suspense>
   );
 }
