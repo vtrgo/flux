@@ -42,3 +42,21 @@ To ensure a professionally tracked and version-controlled workflow, all agents m
    Regularly use `git status` and `git diff` to ensure you are not committing unintended files (like temporary scripts or `.env` files). Use `.gitignore` appropriately.
 4. **Agent Handoff:**
    Before stopping work or handing off to another agent/user, ensure the current working tree is clean (committed or stashed).
+
+# Testing & Verification Guidelines
+
+## Mandatory Testing
+To guarantee operational status after every iteration, all updates must include corresponding tests:
+
+1. **Backend Testing (Go):**
+   - Every new REST API endpoint must have an integration test using `httptest` (e.g., `handlers_sales_test.go`).
+   - Validate both successful requests (200/201 HTTP status) and expected failures (400/404 HTTP status).
+   - Ensure you run `go test ./...` and verify passing output before committing backend code.
+
+2. **Frontend Testing (Next.js):**
+   - Critical business logic and complex UI states should be tested.
+   - For rapid iteration, ensure that `npm run build` succeeds locally, catching any TypeScript compilation errors before committing.
+
+3. **Test-Driven Operations:**
+   - Never consider a feature "done" until its tests pass. 
+   - When modifying an existing feature, update its tests *first* if the expected behavior has changed.
