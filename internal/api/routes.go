@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/vtrgo/flux/internal/db"
@@ -182,10 +183,14 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Seed the relational tables to test our integration
-	db.DB.Exec(`
+	_, seedErr := db.DB.Exec(`
 		INSERT INTO design_documents (machine_id, document_type, version, file_url)
 		VALUES ($1, 'cad_model', 'v1.0.0', 'https://pdm.vtr.internal/models/frame.step')
 	`, newMachine.ID)
+	if seedErr != nil {
+		// Log but don't fail the request since this is just seed data
+		fmt.Printf("Failed to seed relational data for machine %s: %v\n", newMachine.ID, seedErr)
+	}
 
 	BroadcastEvent("machine_created", newMachine)
 

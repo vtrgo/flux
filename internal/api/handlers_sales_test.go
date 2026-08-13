@@ -119,12 +119,17 @@ func TestSalesOrders(t *testing.T) {
 
 		// Verify update in DB
 		var updatedName, updatedStatus string
-		db.DB.QueryRow("SELECT customer_name, status FROM sales_orders WHERE id = $1", createdOrder.ID).Scan(&updatedName, &updatedStatus)
+		if err := db.DB.QueryRow("SELECT customer_name, status FROM sales_orders WHERE id = $1", createdOrder.ID).Scan(&updatedName, &updatedStatus); err != nil {
+			t.Fatalf("failed to query updated sales order: %v", err)
+		}
 		if updatedName != "Updated Corp" || updatedStatus != "partially_shipped" {
 			t.Errorf("expected updated values, got %s and %s", updatedName, updatedStatus)
 		}
 
-		db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", createdOrder.ID)
+		_, err = db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", createdOrder.ID)
+		if err != nil {
+			t.Logf("cleanup failed: %v", err)
+		}
 	})
 
 	t.Run("Delete Sales Order - Success", func(t *testing.T) {
@@ -149,7 +154,9 @@ func TestSalesOrders(t *testing.T) {
 
 		// Verify deletion
 		var count int
-		db.DB.QueryRow("SELECT COUNT(*) FROM sales_orders WHERE id = $1", createdOrder.ID).Scan(&count)
+		if err := db.DB.QueryRow("SELECT COUNT(*) FROM sales_orders WHERE id = $1", createdOrder.ID).Scan(&count); err != nil {
+			t.Fatalf("failed to query sales order count: %v", err)
+		}
 		if count != 0 {
 			t.Errorf("expected record to be deleted, but it still exists")
 		}

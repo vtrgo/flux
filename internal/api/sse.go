@@ -78,7 +78,7 @@ func SSEHandler(w http.ResponseWriter, r *http.Request) {
 	clientChan := make(chan []byte, 10)
 	Hub.register <- clientChan
 	notify := r.Context().Done()
-	w.Write([]byte("event: connected\ndata: {\"status\": \"ok\"}\n\n"))
+	_, _ = w.Write([]byte("event: connected\ndata: {\"status\": \"ok\"}\n\n"))
 	w.(http.Flusher).Flush()
 
 	for {
@@ -87,7 +87,7 @@ func SSEHandler(w http.ResponseWriter, r *http.Request) {
 			Hub.unregister <- clientChan
 			return
 		case msg := <-clientChan:
-			w.Write(msg)
+			_, _ = w.Write(msg)
 			w.(http.Flusher).Flush()
 		}
 	}

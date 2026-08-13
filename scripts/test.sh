@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "== [1/2] Running Go Backend Tests & Linter =="
-go vet ./...
+go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run ./...
 go test ./... -v -count=1
 
 echo "== [2/2] Validating Frontend Type Integrity & Linter =="

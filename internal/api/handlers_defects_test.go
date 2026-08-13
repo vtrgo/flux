@@ -47,8 +47,8 @@ func TestDefects(t *testing.T) {
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, req)
 
-		if status := rr.Code; status == http.StatusOK || status == http.StatusCreated {
-			// This might fail foreign key constraint if machine doesn't exist, expecting error
+		if status := rr.Code; status != http.StatusInternalServerError {
+			t.Errorf("expected 500 error on foreign key violation, got %v", status)
 		}
 	})
 }
