@@ -8,6 +8,7 @@ import styles from './page.module.css';
 
 import { DefectModal } from '../components/DefectModal';
 import { SalesOrder, Machine, DefectSummary } from "../types";
+import { ACTIVE_DEPARTMENTS } from '../lib/departments';
 
 export default function Home() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
@@ -169,14 +170,7 @@ export default function Home() {
                           <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{machine.model_type}</div>
                           
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
-                            {[
-                              { key: 'design', label: 'Design' },
-                              { key: 'kitting', label: 'Kitting' },
-                              { key: 'machine_shop', label: 'Machine Shop' },
-                              { key: 'assembly', label: 'Assembly' },
-                              { key: 'electrical_controls', label: 'Controls' },
-                              { key: 'enclosures', label: 'Enclosures' }
-                            ].map(dept => {
+                            {ACTIVE_DEPARTMENTS.map(dept => {
                               // Find summary for this department (handle electrical_controls alias if needed)
                               const summary = defectSummaries.find(s => 
                                 s.machine_id === machine.id && 

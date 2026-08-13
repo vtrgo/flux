@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { fetchApi } from "../lib/api";
+import { ACTIVE_DEPARTMENTS, formatDepartmentName } from "../lib/departments";
 import styles from "../app/quality/quality.module.css";
 
 import { Machine, Defect } from "../types";
@@ -110,12 +111,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                 className="vtr-input"
               >
                 <option value="quality">Quality</option>
-                <option value="design">Design</option>
-                <option value="kitting">Kitting</option>
-                <option value="assembly">Assembly</option>
-                <option value="machine_shop">Machine Shop</option>
-                <option value="electrical_controls">Electrical / Controls</option>
-                <option value="enclosures">Enclosures</option>
+                {ACTIVE_DEPARTMENTS.map(d => (
+                  <option key={d.key} value={d.key}>{d.label}</option>
+                ))}
               </select>
             </div>
             
@@ -128,12 +126,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                 style={{ borderColor: 'var(--vtr-theme-primary)', color: 'var(--vtr-theme-primary)' }}
               >
                 <option value="quality">Quality</option>
-                <option value="design">Design (ECR)</option>
-                <option value="kitting">Kitting</option>
-                <option value="assembly">Assembly</option>
-                <option value="machine_shop">Machine Shop</option>
-                <option value="electrical_controls">Electrical / Controls</option>
-                <option value="enclosures">Enclosures</option>
+                {ACTIVE_DEPARTMENTS.map(d => (
+                  <option key={d.key} value={d.key}>{d.key === 'design' ? 'Design (ECR)' : d.label}</option>
+                ))}
               </select>
             </div>
           </div>

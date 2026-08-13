@@ -6,6 +6,7 @@ import { useSSE } from "../../components/SSEProvider";
 import { fetchApi } from "../../lib/api";
 import Link from "next/link";
 import styles from "./machine.module.css";
+import { ACTIVE_DEPARTMENTS } from "../../lib/departments";
 
 import { IssueModal } from "../../components/IssueModal";
 
@@ -124,13 +125,12 @@ function MachineDetailContent() {
   const verifiedDefects = defects.filter(d => d.status === 'verified');
 
   const deptOrder = [
-    { key: 'design', label: 'Design' },
-    { key: 'kitting', label: 'Kitting' },
-    { key: 'machine_shop', label: 'Machine Shop' },
-    { key: 'electrical_controls', label: 'Electrical', match: (d: Defect) => d.assigned_department === 'electrical_controls' || d.assigned_department === 'controls' },
-    { key: 'assembly', label: 'Assembly' },
-    { key: 'enclosures', label: 'Enclosures' },
-    { key: 'other', label: 'Other', match: (d: Defect) => !['design', 'kitting', 'machine_shop', 'electrical_controls', 'controls', 'assembly', 'enclosures'].includes(d.assigned_department) }
+    ...ACTIVE_DEPARTMENTS.map(d => ({
+      key: d.key,
+      label: d.label,
+      match: d.key === 'electrical_controls' ? (def: Defect) => def.assigned_department === 'electrical_controls' || def.assigned_department === 'controls' : undefined
+    })),
+    { key: 'other', label: 'Other', match: (d: Defect) => !ACTIVE_DEPARTMENTS.map(ad => ad.key).concat('controls').includes(d.assigned_department) }
   ];
 
   const renderGroupedDefects = (defectList: Defect[], renderActions: (defect: Defect) => React.ReactNode, getStyle?: (defect: Defect) => React.CSSProperties) => {
