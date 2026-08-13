@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 import { ThemeProvider } from "../components/ThemeProvider";
 import Link from 'next/link';
 import { Logo } from "../components/Logo";
+import { Navigation } from "../components/Navigation";
 
 export default function RootLayout({
   children,
@@ -34,15 +35,7 @@ export default function RootLayout({
             <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               <Logo width={45} height={45} />
             </Link>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <Link href="/design" className="vtr-btn">Design</Link>
-              <Link href="/kitting" className="vtr-btn">Kitting</Link>
-              <Link href="/machine-shop" className="vtr-btn">Machine Shop</Link>
-              <Link href="/assembly" className="vtr-btn">Assembly</Link>
-              <Link href="/electrical-controls" className="vtr-btn">Electrical / Controls</Link>
-              <Link href="/enclosures" className="vtr-btn">Enclosures</Link>
-              <Link href="/admin" className="vtr-btn vtr-btn-secondary">System Admin</Link>
-            </div>
+            <Navigation />
           </header>
           {children}
         </ThemeProvider>
