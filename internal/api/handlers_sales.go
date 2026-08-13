@@ -94,3 +94,60 @@ func createSalesOrder(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(newOrder)
 }
+
+func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	var req struct {
+		CustomerName          string     `json:"customer_name"`
+		PONumber              string     `json:"po_number"`
+		InternalProjectNumber *string    `json:"internal_project_number"`
+		ProjectName           *string    `json:"project_name"`
+		ResponsiblePerson     *string    `json:"responsible_person"`
+		SalesRep              *string    `json:"sales_rep"`
+		TargetShipDate        *time.Time `json:"target_ship_date"`
+		Status                string     `json:"status"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid input: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err := db.DB.Exec(`
+		UPDATE sales_orders 
+		SET customer_name = $1, po_number = $2, internal_project_number = $3, project_name = $4, responsible_person = $5, sales_rep = $6, target_ship_date = $7, status = $8
+		WHERE id = $9
+	`, req.CustomerName, req.PONumber, req.InternalProjectNumber, req.ProjectName, req.ResponsiblePerson, req.SalesRep, req.TargetShipDate, req.Status, id)
+
+	if err != nil {
+		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	BroadcastEvent("sales_order_updated", map[string]string{"id": id})
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+func deleteSalesOrder(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "Missing ID", http.StatusBadRequest)
+		return
+	}
+
+	_, err := db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", id)
+	if err != nil {
+		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	BroadcastEvent("sales_order_deleted", map[string]string{"id": id})
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+}

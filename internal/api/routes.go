@@ -44,6 +44,12 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/machines/{id}/assembly", handleAddAssemblyTask)
 	mux.HandleFunc("PUT /api/assembly/{task_id}", handleUpdateAssemblyTask)
 
+	// Sales Orders
+	mux.HandleFunc("GET /api/sales_orders", getSalesOrders)
+	mux.HandleFunc("POST /api/sales_orders", createSalesOrder)
+	mux.HandleFunc("PUT /api/sales_orders/{id}", updateSalesOrder)
+	mux.HandleFunc("DELETE /api/sales_orders/{id}", deleteSalesOrder)
+
 	// Enclosures endpoints
 	mux.HandleFunc("GET /api/enclosures", handleGetAllEnclosures)
 	mux.HandleFunc("GET /api/machines/{id}/enclosures", handleGetEnclosures)

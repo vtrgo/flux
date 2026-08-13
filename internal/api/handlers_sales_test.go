@@ -88,4 +88,70 @@ func TestSalesOrders(t *testing.T) {
 			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusBadRequest)
 		}
 	})
+
+	t.Run("Update Sales Order - Success", func(t *testing.T) {
+		// First create an order to update
+		var createdOrder models.SalesOrder
+		err := db.DB.QueryRow(`
+			INSERT INTO sales_orders (customer_name, po_number, status) 
+			VALUES ('Update Test', 'PO-UP', 'open') 
+			RETURNING id
+		`).Scan(&createdOrder.ID)
+		if err != nil {
+			t.Fatalf("failed to create test order for update: %v", err)
+		}
+
+		updatePayload := map[string]interface{}{
+			"customer_name": "Updated Corp",
+			"po_number":     "PO-UPDATED",
+			"status":        "partially_shipped",
+		}
+		body, _ := json.Marshal(updatePayload)
+		req := httptest.NewRequest(http.MethodPut, "/api/sales_orders/"+createdOrder.ID.String(), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+
+		// Verify update in DB
+		var updatedName, updatedStatus string
+		db.DB.QueryRow("SELECT customer_name, status FROM sales_orders WHERE id = $1", createdOrder.ID).Scan(&updatedName, &updatedStatus)
+		if updatedName != "Updated Corp" || updatedStatus != "partially_shipped" {
+			t.Errorf("expected updated values, got %s and %s", updatedName, updatedStatus)
+		}
+
+		db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", createdOrder.ID)
+	})
+
+	t.Run("Delete Sales Order - Success", func(t *testing.T) {
+		// First create an order to delete
+		var createdOrder models.SalesOrder
+		err := db.DB.QueryRow(`
+			INSERT INTO sales_orders (customer_name, po_number, status) 
+			VALUES ('Delete Test', 'PO-DEL', 'open') 
+			RETURNING id
+		`).Scan(&createdOrder.ID)
+		if err != nil {
+			t.Fatalf("failed to create test order for delete: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodDelete, "/api/sales_orders/"+createdOrder.ID.String(), nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		}
+
+		// Verify deletion
+		var count int
+		db.DB.QueryRow("SELECT COUNT(*) FROM sales_orders WHERE id = $1", createdOrder.ID).Scan(&count)
+		if count != 0 {
+			t.Errorf("expected record to be deleted, but it still exists")
+		}
+	})
 }

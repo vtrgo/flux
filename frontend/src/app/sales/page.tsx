@@ -37,6 +37,7 @@ export default function SalesDashboard() {
   const [targetDate, setTargetDate] = useState("");
 
   const [spawningOrder, setSpawningOrder] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<SalesOrder | null>(null);
   const [newMachineModel, setNewMachineModel] = useState("");
   const [newMachineSN, setNewMachineSN] = useState("");
 
@@ -46,6 +47,8 @@ export default function SalesDashboard() {
 
     const eventSource = new EventSource('http://localhost:8080/api/sse');
     eventSource.addEventListener('sales_order_created', () => fetchOrders());
+    eventSource.addEventListener('sales_order_updated', () => fetchOrders());
+    eventSource.addEventListener('sales_order_deleted', () => fetchOrders());
     eventSource.addEventListener('machine_created', () => fetchMachines());
 
     return () => eventSource.close();
@@ -83,6 +86,24 @@ export default function SalesDashboard() {
     setResponsiblePerson("");
     setSalesRep("");
     setTargetDate("");
+  };
+
+  const updateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOrder) return;
+    await fetch(`http://localhost:8080/api/sales_orders/${editingOrder.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editingOrder),
+    });
+    setEditingOrder(null);
+  };
+
+  const deleteOrder = async (id: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this project? This cannot be undone.")) return;
+    await fetch(`http://localhost:8080/api/sales_orders/${id}`, {
+      method: "DELETE",
+    });
   };
 
   const spawnMachine = async (orderId: string) => {
@@ -149,6 +170,35 @@ export default function SalesDashboard() {
         <div className={styles.orderList}>
           {orders.map(order => {
             const orderMachines = machines.filter(m => m.sales_order_id === order.id);
+            const isEditing = editingOrder?.id === order.id;
+
+            if (isEditing) {
+              return (
+                <div key={order.id} className={styles.orderCard}>
+                  <form onSubmit={updateOrder}>
+                    <div className={styles.formGrid}>
+                      <div className={styles.formGroup}><label className={styles.label}>Customer Name</label><input required className={styles.input} value={editingOrder.customer_name} onChange={e => setEditingOrder({...editingOrder, customer_name: e.target.value})} /></div>
+                      <div className={styles.formGroup}><label className={styles.label}>PO Number</label><input required className={styles.input} value={editingOrder.po_number} onChange={e => setEditingOrder({...editingOrder, po_number: e.target.value})} /></div>
+                      <div className={styles.formGroup}><label className={styles.label}>Internal Project #</label><input className={styles.input} value={editingOrder.internal_project_number || ''} onChange={e => setEditingOrder({...editingOrder, internal_project_number: e.target.value})} /></div>
+                      <div className={styles.formGroup}><label className={styles.label}>Project Name</label><input className={styles.input} value={editingOrder.project_name || ''} onChange={e => setEditingOrder({...editingOrder, project_name: e.target.value})} /></div>
+                      <div className={styles.formGroup}><label className={styles.label}>PM</label><input className={styles.input} value={editingOrder.responsible_person || ''} onChange={e => setEditingOrder({...editingOrder, responsible_person: e.target.value})} /></div>
+                      <div className={styles.formGroup}><label className={styles.label}>Status</label>
+                        <select className={styles.input} value={editingOrder.status} onChange={e => setEditingOrder({...editingOrder, status: e.target.value})}>
+                          <option value="open">Open</option>
+                          <option value="partially_shipped">Partially Shipped</option>
+                          <option value="fulfilled">Fulfilled</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                      <button type="submit" className="vtr-btn">Save Changes</button>
+                      <button type="button" className="vtr-btn vtr-btn-secondary" onClick={() => setEditingOrder(null)}>Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              );
+            }
+
             return (
               <div key={order.id} className={styles.orderCard}>
                 <div className={styles.orderHeader}>
@@ -160,9 +210,11 @@ export default function SalesDashboard() {
                       Target Ship: {order.target_ship_date ? new Date(order.target_ship_date).toLocaleDateString() : 'TBD'} | Status: {order.status}
                     </div>
                   </div>
-                  <button className="vtr-btn vtr-btn-secondary" onClick={() => setSpawningOrder(spawningOrder === order.id ? null : order.id)}>
-                    + Spawn Machine
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="vtr-btn vtr-btn-secondary" onClick={() => setEditingOrder(order)}>Edit</button>
+                    <button className="vtr-btn vtr-btn-secondary" onClick={() => setSpawningOrder(spawningOrder === order.id ? null : order.id)}>+ Spawn</button>
+                    <button className="vtr-btn vtr-btn-secondary" style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }} onClick={() => deleteOrder(order.id)}>🗑️</button>
+                  </div>
                 </div>
 
                 {spawningOrder === order.id && (
