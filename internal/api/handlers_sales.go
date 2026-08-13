@@ -1,12 +1,10 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
