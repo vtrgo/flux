@@ -167,7 +167,23 @@ export default function Home() {
                           </button>
                           
                           <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: 'var(--text-primary)' }}>{machine.order_number}</h3>
-                          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{machine.model_type}</div>
+                          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>{machine.model_type}</div>
+                          
+                          {(() => {
+                            const machineSummaries = defectSummaries.filter(s => s.machine_id === machine.id);
+                            const totalOpen = machineSummaries.reduce((sum, s) => sum + s.open_critical + s.open_moderate + s.open_minor, 0);
+                            const totalPending = machineSummaries.reduce((sum, s) => sum + s.pending_critical + s.pending_moderate + s.pending_minor, 0);
+                            const totalClosed = machineSummaries.reduce((sum, s) => sum + s.closed, 0);
+                            
+                            return (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontFamily: 'var(--font-mono)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                <span style={{ color: totalOpen > 0 ? 'var(--accent-red)' : 'inherit' }}>Open: {totalOpen}</span>
+                                <span style={{ color: totalPending > 0 ? 'var(--accent-amber)' : 'inherit' }}>Pending: {totalPending}</span>
+                                <span>&rarr;</span>
+                                <span style={{ color: totalClosed > 0 ? 'var(--vtr-theme-primary)' : 'inherit' }}>Closed: {totalClosed}</span>
+                              </div>
+                            );
+                          })()}
                           
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
                             {ACTIVE_DEPARTMENTS.map(dept => {
