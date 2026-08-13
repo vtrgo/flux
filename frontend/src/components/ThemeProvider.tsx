@@ -22,15 +22,37 @@ const ThemeContext = createContext<ThemeContextType>({
 export const useTheme = () => useContext(ThemeContext)
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState('theme-unstyled')
+  const [theme, setThemeState] = useState('theme-unstyled')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Apply class to body
-    document.body.className = `vtr-theme-container ${theme}`
-    
-    // Dispatch global theme changed event for SVG rendering pipeline if any SVGs listen
-    document.dispatchEvent(new CustomEvent('vtr-theme-changed', { detail: { themeId: theme } }));
-  }, [theme])
+    setMounted(true)
+    const stored = localStorage.getItem('vtr_theme')
+    if (stored) {
+      setThemeState(stored)
+    }
+  }, [])
+
+  const setTheme = (newTheme: string) => {
+    setThemeState(newTheme)
+    localStorage.setItem('vtr_theme', newTheme)
+  }
+
+  useEffect(() => {
+    if (mounted) {
+      // Apply class to body
+      document.body.className = `vtr-theme-container ${theme}`
+      
+      // Dispatch global theme changed event for SVG rendering pipeline if any SVGs listen
+      document.dispatchEvent(new CustomEvent('vtr-theme-changed', { detail: { themeId: theme } }));
+    }
+  }, [theme, mounted])
+
+  // Optional: Prevent hydration mismatch flash by not rendering children until mounted
+  // but standard VTR approach is fine if we just apply the class dynamically
+  if (!mounted) {
+    return <div style={{ visibility: 'hidden' }}>{children}</div>
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
