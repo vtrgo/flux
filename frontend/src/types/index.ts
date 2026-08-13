@@ -44,6 +44,8 @@ export interface DefectSummary {
   open_critical: number;
   open_moderate: number;
   open_minor: number;
-  pending: number;
+  pending_critical: number;
+  pending_moderate: number;
+  pending_minor: number;
   closed: number;
 }

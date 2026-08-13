@@ -122,7 +122,9 @@ type DefectSummary struct {
 	OpenCritical       int       `json:"open_critical"`
 	OpenModerate       int       `json:"open_moderate"`
 	OpenMinor          int       `json:"open_minor"`
-	Pending            int       `json:"pending"`
+	PendingCritical    int       `json:"pending_critical"`
+	PendingModerate    int       `json:"pending_moderate"`
+	PendingMinor       int       `json:"pending_minor"`
 	Closed             int       `json:"closed"`
 }
 

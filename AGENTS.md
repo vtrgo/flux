@@ -42,6 +42,8 @@ To ensure a professionally tracked and version-controlled workflow, all agents m
    Regularly use `git status` and `git diff` to ensure you are not committing unintended files (like temporary scripts or `.env` files). Use `.gitignore` appropriately.
 4. **Agent Handoff:**
    Before stopping work or handing off to another agent/user, ensure the current working tree is clean (committed or stashed).
+5. **Continuous Deployment & Pushing:**
+   Never push to the remote repository (e.g., `git push`) or merge feature branches into `main` unless the user has explicitly commanded you to do so. This is a strict, user-driven decision.
 
 # Testing & Verification Guidelines
 

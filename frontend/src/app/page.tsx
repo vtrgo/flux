@@ -186,20 +186,25 @@ export default function Home() {
                               const openCritical = summary?.open_critical || 0;
                               const openModerate = summary?.open_moderate || 0;
                               const openMinor = summary?.open_minor || 0;
-                              const openTotal = openCritical + openModerate + openMinor;
-                              const pending = summary?.pending || 0;
+                              
+                              const pendingCritical = summary?.pending_critical || 0;
+                              const pendingModerate = summary?.pending_moderate || 0;
+                              const pendingMinor = summary?.pending_minor || 0;
+                              
                               const closed = summary?.closed || 0;
                               
-                              // Determine border/pulse based on severity
+                              const totalOpenAndPending = openCritical + openModerate + openMinor + pendingCritical + pendingModerate + pendingMinor;
+                              
+                              // Determine border based on highest severity open or pending
                               let borderColor = 'var(--border-color)';
-                              if (openCritical > 0) {
+                              if (openCritical > 0 || pendingCritical > 0) {
                                 borderColor = 'var(--accent-red)';
-                              } else if (openModerate > 0) {
+                              } else if (openModerate > 0 || pendingModerate > 0) {
                                 borderColor = 'var(--accent-amber)';
-                              } else if (openMinor > 0) {
+                              } else if (openMinor > 0 || pendingMinor > 0) {
                                 borderColor = 'var(--vtr-theme-primary)';
                               }
-                              
+
                               return (
                                 <div key={dept.key} 
                                   style={{ 
@@ -218,25 +223,22 @@ export default function Home() {
                                   onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
                                   onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                                 >
-                                  <div style={{ color: 'var(--vtr-theme-primary)', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.8rem' }}>{dept.label}</div>
+                                  <div style={{ color: 'var(--vtr-theme-primary)', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
+                                    {dept.label} (Total Open: {totalOpenAndPending})
+                                  </div>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-primary)' }}>
-                                      <span>Total:</span> <span>{summary?.total || 0}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: (openCritical > 0 || pendingCritical > 0) ? 'var(--accent-red)' : 'var(--vtr-theme-neutral)' }}>
+                                      <span>• Critical:</span> <span>{openCritical + pendingCritical} ({pendingCritical} pending)</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: openCritical > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-neutral)' }}>
-                                      <span>Critical:</span> <span>{openCritical}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: (openModerate > 0 || pendingModerate > 0) ? 'var(--accent-amber)' : 'var(--vtr-theme-neutral)' }}>
+                                      <span>• Moderate:</span> <span>{openModerate + pendingModerate} ({pendingModerate} pending)</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: openModerate > 0 ? 'var(--accent-amber)' : 'var(--vtr-theme-neutral)' }}>
-                                      <span>Moderate:</span> <span>{openModerate}</span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: (openMinor > 0 || pendingMinor > 0) ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)' }}>
+                                      <span>• Minor:</span> <span>{openMinor + pendingMinor} ({pendingMinor} pending)</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: openMinor > 0 ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)' }}>
-                                      <span>Minor:</span> <span>{openMinor}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: pending > 0 ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)', marginTop: '0.25rem' }}>
-                                      <span>Pending:</span> <span>{pending}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: closed > 0 ? 'var(--vtr-theme-neutral)' : 'var(--vtr-theme-neutral)' }}>
-                                      <span>Closed:</span> <span>{closed}</span>
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0.25rem 0' }}></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--vtr-theme-neutral)' }}>
+                                      <span>• Closed:</span> <span>{closed}</span>
                                     </div>
                                   </div>
                                 </div>

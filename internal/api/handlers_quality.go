@@ -312,7 +312,13 @@ func handleGetMachineDefectsSummary(w http.ResponseWriter, r *http.Request) {
 				s.OpenModerate += count
 			}
 		} else if status == "fixed" {
-			s.Pending += count
+			if severity == "critical" {
+				s.PendingCritical += count
+			} else if severity == "minor" {
+				s.PendingMinor += count
+			} else {
+				s.PendingModerate += count
+			}
 		} else if status == "verified" {
 			s.Closed += count
 		}
@@ -388,7 +394,13 @@ func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 				s.OpenModerate += count
 			}
 		} else if status == "fixed" {
-			s.Pending += count
+			if severity == "critical" {
+				s.PendingCritical += count
+			} else if severity == "minor" {
+				s.PendingMinor += count
+			} else {
+				s.PendingModerate += count
+			}
 		} else if status == "verified" {
 			s.Closed += count
 		}
