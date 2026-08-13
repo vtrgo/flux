@@ -64,6 +64,7 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
       const deleted = JSON.parse(e.data);
       setIssues(prev => prev.filter(d => d.id !== deleted.id));
     });
+    eventSource.addEventListener('machine_deleted', () => fetchData());
 
     return () => {
       eventSource.close();

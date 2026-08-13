@@ -67,6 +67,9 @@ export default function QualityResolutionHub() {
       setDefects(prev => prev.filter(d => d.id !== deleted.id));
     });
 
+    eventSource.addEventListener('machine_created', () => fetchData());
+    eventSource.addEventListener('machine_deleted', () => fetchData());
+
     return () => {
       eventSource.close();
     };

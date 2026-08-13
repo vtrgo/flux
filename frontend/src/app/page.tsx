@@ -64,6 +64,18 @@ export default function Home() {
     eventSource.onopen = () => setSseConnected(true);
     eventSource.onerror = () => setSseConnected(false);
 
+    const refetchAll = async () => {
+      Promise.all([
+        fetch('http://localhost:8080/api/sales_orders').then(res => res.json()),
+        fetch('http://localhost:8080/api/machines').then(res => res.json()),
+        fetch('http://localhost:8080/api/defects').then(res => res.json())
+      ]).then(([ordData, macData, defData]) => {
+        setOrders(ordData || []);
+        setMachines(macData || []);
+        setDefects(defData || []);
+      });
+    };
+
     const refetchOrders = async () => {
       const res = await fetch('http://localhost:8080/api/sales_orders');
       setOrders(await res.json() || []);
@@ -71,7 +83,7 @@ export default function Home() {
 
     eventSource.addEventListener('sales_order_created', refetchOrders);
     eventSource.addEventListener('sales_order_updated', refetchOrders);
-    eventSource.addEventListener('sales_order_deleted', refetchOrders);
+    eventSource.addEventListener('sales_order_deleted', refetchAll);
 
     eventSource.addEventListener('machine_created', (e) => {
       const newMachine: Machine = JSON.parse(e.data);

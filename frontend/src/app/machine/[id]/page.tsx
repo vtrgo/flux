@@ -105,6 +105,13 @@ export default function MachineDetail() {
       setDefects(prev => prev.filter(d => d.id !== deleted.id));
     });
 
+    eventSource.addEventListener('machine_deleted', (e) => {
+      const deleted = JSON.parse(e.data);
+      if (deleted.id === id) {
+        window.location.href = '/';
+      }
+    });
+
     return () => {
       eventSource.close();
     };
