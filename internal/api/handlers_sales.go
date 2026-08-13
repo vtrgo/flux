@@ -10,15 +10,14 @@ import (
 )
 
 func handleSalesOrders(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	
+
 	switch r.Method {
 	case http.MethodGet:
 		getSalesOrders(w, r)
 	case http.MethodPost:
 		createSalesOrder(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		respondError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
 	}
 }
 
@@ -30,7 +29,7 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 		ORDER BY created_at DESC
 	`)
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -41,17 +40,17 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&o.ID, &o.CustomerName, &o.PONumber, &o.InternalProjectNumber, &o.ProjectName, &o.ResponsiblePerson, &o.SalesRep, &o.TargetShipDate, &o.Status, &o.CreatedAt,
 		); err != nil {
-			http.Error(w, "Error scanning row: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
 			return
 		}
 		orders = append(orders, o)
 	}
-	
+
 	if orders == nil {
 		orders = []models.SalesOrder{}
 	}
 
-	json.NewEncoder(w).Encode(orders)
+	respondJSON(w, http.StatusOK, orders)
 }
 
 func createSalesOrder(w http.ResponseWriter, r *http.Request) {
@@ -64,14 +63,14 @@ func createSalesOrder(w http.ResponseWriter, r *http.Request) {
 		SalesRep              *string    `json:"sales_rep"`
 		TargetShipDate        *time.Time `json:"target_ship_date"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
 	if req.CustomerName == "" || req.PONumber == "" {
-		http.Error(w, "CustomerName and PONumber are required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "CustomerName and PONumber are required", nil)
 		return
 	}
 
@@ -85,20 +84,20 @@ func createSalesOrder(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to insert sales order: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to insert sales order: ", err)
 		return
 	}
 
 	BroadcastEvent("sales_order_created", newOrder)
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newOrder)
+	respondJSON(w, http.StatusOK, newOrder)
 }
 
 func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Missing ID", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Missing ID", nil)
 		return
 	}
 
@@ -114,7 +113,7 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid input: "+err.Error(), http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid input: ", err)
 		return
 	}
 
@@ -125,29 +124,29 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 	`, req.CustomerName, req.PONumber, req.InternalProjectNumber, req.ProjectName, req.ResponsiblePerson, req.SalesRep, req.TargetShipDate, req.Status, id)
 
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 
 	BroadcastEvent("sales_order_updated", map[string]string{"id": id})
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+	respondJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
 func deleteSalesOrder(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Missing ID", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Missing ID", nil)
 		return
 	}
 
 	_, err := db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", id)
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 
 	BroadcastEvent("sales_order_deleted", map[string]string{"id": id})
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }

@@ -12,7 +12,7 @@ import (
 func handleGetControls(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -22,9 +22,9 @@ func handleGetControls(w http.ResponseWriter, r *http.Request) {
 		WHERE machine_id = $1
 		ORDER BY status ASC, checkpoint_type ASC
 	`, machineID)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -33,18 +33,17 @@ func handleGetControls(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c models.ControlsCheckpoint
 		if err := rows.Scan(
-			&c.ID, &c.MachineID, &c.CheckpointType, &c.Description, 
+			&c.ID, &c.MachineID, &c.CheckpointType, &c.Description,
 			&c.ExpectedValue, &c.ActualValue, &c.Status, &c.SignedOffBy, &c.SignedOffAt,
 		); err != nil {
-			http.Error(w, "Error scanning row: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
 			return
 		}
 		checkpoints = append(checkpoints, c)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(checkpoints)
+	respondJSON(w, http.StatusOK, checkpoints)
 }
 
 // handleGetAllControls fetches all controls checkpoints across all active machines
@@ -56,9 +55,9 @@ func handleGetAllControls(w http.ResponseWriter, r *http.Request) {
 		WHERE m.status != 'shipped'
 		ORDER BY c.status DESC, m.created_at DESC
 	`)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -72,25 +71,24 @@ func handleGetAllControls(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var c ControlsWithMachine
 		if err := rows.Scan(
-			&c.ID, &c.MachineID, &c.OrderNumber, &c.CheckpointType, &c.Description, 
+			&c.ID, &c.MachineID, &c.OrderNumber, &c.CheckpointType, &c.Description,
 			&c.ExpectedValue, &c.ActualValue, &c.Status, &c.SignedOffBy, &c.SignedOffAt,
 		); err != nil {
-			http.Error(w, "Error scanning checkpoint: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning checkpoint: ", err)
 			return
 		}
 		checks = append(checks, c)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(checks)
+	respondJSON(w, http.StatusOK, checks)
 }
 
 // handleAddControlsCheckpoint adds a controls checkpoint for a machine
 func handleAddControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -101,7 +99,7 @@ func handleAddControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -111,28 +109,27 @@ func handleAddControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, machine_id, checkpoint_type, description, expected_value, actual_value, status
 	`, machineID, req.CheckpointType, req.Description, req.ExpectedValue).Scan(
-		&newCheckpoint.ID, &newCheckpoint.MachineID, &newCheckpoint.CheckpointType, 
+		&newCheckpoint.ID, &newCheckpoint.MachineID, &newCheckpoint.CheckpointType,
 		&newCheckpoint.Description, &newCheckpoint.ExpectedValue, &newCheckpoint.ActualValue, &newCheckpoint.Status,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to insert checkpoint: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to insert checkpoint: ", err)
 		return
 	}
 
 	BroadcastEvent("controls_checkpoint_added", newCheckpoint)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newCheckpoint)
+	respondJSON(w, http.StatusOK, newCheckpoint)
 }
 
 // handleUpdateControlsCheckpoint marks a checkpoint as passed and records the actual value
 func handleUpdateControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 	checkID := r.PathValue("check_id")
 	if checkID == "" {
-		http.Error(w, "Check ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Check ID is required", nil)
 		return
 	}
 
@@ -141,7 +138,7 @@ func handleUpdateControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -152,19 +149,18 @@ func handleUpdateControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1
 		RETURNING id, machine_id, checkpoint_type, description, expected_value, actual_value, status, signed_off_by, signed_off_at
 	`, checkID, req.ActualValue).Scan(
-		&updatedCheck.ID, &updatedCheck.MachineID, &updatedCheck.CheckpointType, &updatedCheck.Description, 
-		&updatedCheck.ExpectedValue, &updatedCheck.ActualValue, &updatedCheck.Status, 
+		&updatedCheck.ID, &updatedCheck.MachineID, &updatedCheck.CheckpointType, &updatedCheck.Description,
+		&updatedCheck.ExpectedValue, &updatedCheck.ActualValue, &updatedCheck.Status,
 		&updatedCheck.SignedOffBy, &updatedCheck.SignedOffAt,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to update checkpoint: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to update checkpoint: ", err)
 		return
 	}
 
 	BroadcastEvent("controls_checkpoint_updated", updatedCheck)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(updatedCheck)
+	respondJSON(w, http.StatusOK, updatedCheck)
 }

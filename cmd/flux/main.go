@@ -16,7 +16,7 @@ func main() {
 	if connStr == "" {
 		connStr = "host=/var/run/postgresql dbname=flux sslmode=disable"
 	}
-	
+
 	if err := db.InitDB(connStr); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}

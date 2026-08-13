@@ -12,7 +12,7 @@ import (
 func handleGetKitting(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -22,9 +22,9 @@ func handleGetKitting(w http.ResponseWriter, r *http.Request) {
 		WHERE machine_id = $1
 		ORDER BY part_number ASC
 	`, machineID)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -33,18 +33,17 @@ func handleGetKitting(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var p models.KittingPart
 		if err := rows.Scan(
-			&p.ID, &p.MachineID, &p.Department, &p.PartNumber, &p.Description, 
+			&p.ID, &p.MachineID, &p.Department, &p.PartNumber, &p.Description,
 			&p.QtyRequired, &p.QtyPicked, &p.Status, &p.FulfilledAt, &p.FulfilledBy,
 		); err != nil {
-			http.Error(w, "Error scanning row", http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning row", nil)
 			return
 		}
 		parts = append(parts, p)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(parts)
+	respondJSON(w, http.StatusOK, parts)
 }
 
 // handleGetAllKitting fetches all kitting parts across all active machines
@@ -56,9 +55,9 @@ func handleGetAllKitting(w http.ResponseWriter, r *http.Request) {
 		WHERE m.status != 'shipped'
 		ORDER BY k.status DESC, m.created_at DESC
 	`)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -72,25 +71,24 @@ func handleGetAllKitting(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var p KittingWithMachine
 		if err := rows.Scan(
-			&p.ID, &p.MachineID, &p.OrderNumber, &p.Department, &p.PartNumber, &p.Description, 
+			&p.ID, &p.MachineID, &p.OrderNumber, &p.Department, &p.PartNumber, &p.Description,
 			&p.QtyRequired, &p.QtyPicked, &p.Status, &p.FulfilledAt, &p.FulfilledBy,
 		); err != nil {
-			http.Error(w, "Error scanning part: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning part: ", err)
 			return
 		}
 		parts = append(parts, p)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(parts)
+	respondJSON(w, http.StatusOK, parts)
 }
 
 // handleAddKittingPart adds a part to a machine's BOM
 func handleAddKittingPart(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -102,7 +100,7 @@ func handleAddKittingPart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -112,28 +110,27 @@ func handleAddKittingPart(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, machine_id, department, part_number, description, qty_required, qty_picked, status
 	`, machineID, req.Department, req.PartNumber, req.Description, req.QtyRequired).Scan(
-		&newPart.ID, &newPart.MachineID, &newPart.Department, &newPart.PartNumber, 
+		&newPart.ID, &newPart.MachineID, &newPart.Department, &newPart.PartNumber,
 		&newPart.Description, &newPart.QtyRequired, &newPart.QtyPicked, &newPart.Status,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to insert part: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to insert part: ", err)
 		return
 	}
 
 	BroadcastEvent("kitting_part_added", newPart)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newPart)
+	respondJSON(w, http.StatusOK, newPart)
 }
 
 // handleUpdateKittingPart marks a part as fulfilled
 func handleUpdateKittingPart(w http.ResponseWriter, r *http.Request) {
 	partID := r.PathValue("part_id")
 	if partID == "" {
-		http.Error(w, "Part ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Part ID is required", nil)
 		return
 	}
 
@@ -142,7 +139,7 @@ func handleUpdateKittingPart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -157,20 +154,19 @@ func handleUpdateKittingPart(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1
 		RETURNING id, machine_id, department, part_number, description, qty_required, qty_picked, status, fulfilled_at, fulfilled_by
 	`, partID, req.QtyPicked).Scan(
-		&updatedPart.ID, &updatedPart.MachineID, &updatedPart.Department, &updatedPart.PartNumber, 
-		&updatedPart.Description, &updatedPart.QtyRequired, &updatedPart.QtyPicked, &updatedPart.Status, 
+		&updatedPart.ID, &updatedPart.MachineID, &updatedPart.Department, &updatedPart.PartNumber,
+		&updatedPart.Description, &updatedPart.QtyRequired, &updatedPart.QtyPicked, &updatedPart.Status,
 		&updatedPart.FulfilledAt, &updatedPart.FulfilledBy,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to update part: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to update part: ", err)
 		return
 	}
 
 	// This is the communications hub: Broadcast the update so Assembly knows immediately!
 	BroadcastEvent("kitting_part_updated", updatedPart)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(updatedPart)
+	respondJSON(w, http.StatusOK, updatedPart)
 }

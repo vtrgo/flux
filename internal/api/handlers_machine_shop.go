@@ -15,9 +15,9 @@ func handleGetAllMachineShopTasks(w http.ResponseWriter, r *http.Request) {
 		FROM machine_shop_tasks
 		ORDER BY status DESC, created_at DESC
 	`)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -26,18 +26,17 @@ func handleGetAllMachineShopTasks(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var t models.MachineShopTask
 		if err := rows.Scan(
-			&t.ID, &t.MachineID, &t.DefectID, &t.PartName, &t.Material, 
+			&t.ID, &t.MachineID, &t.DefectID, &t.PartName, &t.Material,
 			&t.Status, &t.MachinedBy, &t.CompletedAt, &t.CreatedAt,
 		); err != nil {
-			http.Error(w, "Error scanning task: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning task: ", err)
 			return
 		}
 		tasks = append(tasks, t)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(tasks)
+	respondJSON(w, http.StatusOK, tasks)
 }
 
 // handleAddMachineShopTask creates a new machine shop task
@@ -50,7 +49,7 @@ func handleAddMachineShopTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -60,28 +59,27 @@ func handleAddMachineShopTask(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3, $4, 'pending')
 		RETURNING id, machine_id, defect_id, part_name, material, status, created_at
 	`, req.MachineID, req.DefectID, req.PartName, req.Material).Scan(
-		&newTask.ID, &newTask.MachineID, &newTask.DefectID, &newTask.PartName, 
+		&newTask.ID, &newTask.MachineID, &newTask.DefectID, &newTask.PartName,
 		&newTask.Material, &newTask.Status, &newTask.CreatedAt,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to create task: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to create task: ", err)
 		return
 	}
 
 	BroadcastEvent("machine_shop_task_added", newTask)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newTask)
+	respondJSON(w, http.StatusOK, newTask)
 }
 
 // handleUpdateMachineShopTask updates task status
 func handleUpdateMachineShopTask(w http.ResponseWriter, r *http.Request) {
 	taskID := r.PathValue("task_id")
 	if taskID == "" {
-		http.Error(w, "Task ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Task ID is required", nil)
 		return
 	}
 
@@ -90,7 +88,7 @@ func handleUpdateMachineShopTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -103,19 +101,18 @@ func handleUpdateMachineShopTask(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1
 		RETURNING id, machine_id, defect_id, part_name, material, status, machined_by, completed_at, created_at
 	`, taskID, req.Status).Scan(
-		&updatedTask.ID, &updatedTask.MachineID, &updatedTask.DefectID, &updatedTask.PartName, 
-		&updatedTask.Material, &updatedTask.Status, &updatedTask.MachinedBy, 
+		&updatedTask.ID, &updatedTask.MachineID, &updatedTask.DefectID, &updatedTask.PartName,
+		&updatedTask.Material, &updatedTask.Status, &updatedTask.MachinedBy,
 		&updatedTask.CompletedAt, &updatedTask.CreatedAt,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to update task: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to update task: ", err)
 		return
 	}
 
 	BroadcastEvent("machine_shop_task_updated", updatedTask)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(updatedTask)
+	respondJSON(w, http.StatusOK, updatedTask)
 }

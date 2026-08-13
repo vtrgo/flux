@@ -14,30 +14,29 @@ func CorsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		
+
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		next.ServeHTTP(w, r)
 	})
 }
 
-
 func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/machines", handleMachines)
 	mux.HandleFunc("DELETE /api/machines/{id}", handleDeleteMachine)
-	
+
 	// Sales endpoints
 	mux.HandleFunc("/api/sales_orders", handleSalesOrders)
-	
+
 	// Kitting endpoints
 	mux.HandleFunc("GET /api/kitting", handleGetAllKitting)
 	mux.HandleFunc("GET /api/machines/{id}/kitting", handleGetKitting)
 	mux.HandleFunc("POST /api/machines/{id}/kitting", handleAddKittingPart)
 	mux.HandleFunc("PUT /api/kitting/{part_id}", handleUpdateKittingPart)
-	
+
 	// Assembly endpoints
 	mux.HandleFunc("GET /api/assembly", handleGetAllAssembly)
 	mux.HandleFunc("GET /api/machines/{id}/assembly", handleGetAssembly)
@@ -84,7 +83,6 @@ func RegisterRoutes(mux *http.ServeMux) {
 }
 
 func handleMachines(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	if r.Method == http.MethodOptions {
@@ -100,7 +98,7 @@ func handleMachines(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		createMachine(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		respondError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
 	}
 }
 
@@ -121,7 +119,7 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 		ORDER BY m.created_at DESC
 	`)
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -133,13 +131,13 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.CreatedAt,
 			&m.KittingCount, &m.AssemblyCount, &m.ControlsCount, &m.QualityCount,
 		); err != nil {
-			http.Error(w, "Error scanning row: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
 			return
 		}
 		machines = append(machines, m)
 	}
 
-	json.NewEncoder(w).Encode(machines)
+	respondJSON(w, http.StatusOK, machines)
 }
 
 func createMachine(w http.ResponseWriter, r *http.Request) {
@@ -149,12 +147,12 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 		ModelType    string  `json:"model_type"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
 	if req.OrderNumber == "" || req.ModelType == "" {
-		http.Error(w, "OrderNumber and ModelType are required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "OrderNumber and ModelType are required", nil)
 		return
 	}
 
@@ -179,7 +177,7 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, "Failed to insert machine: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to insert machine: ", err)
 		return
 	}
 
@@ -192,22 +190,22 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("machine_created", newMachine)
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newMachine)
+	respondJSON(w, http.StatusOK, newMachine)
 }
 
 func handleDeleteMachine(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
-	
+
 	_, err := db.DB.Exec("DELETE FROM machines WHERE id = $1", id)
 	if err != nil {
-		http.Error(w, "Failed to delete machine: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to delete machine: ", err)
 		return
 	}
-	
+
 	BroadcastEvent("machine_deleted", map[string]string{"id": id})
 	w.WriteHeader(http.StatusOK)
 }

@@ -13,7 +13,7 @@ import (
 func handleGetQuality(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -24,9 +24,9 @@ func handleGetQuality(w http.ResponseWriter, r *http.Request) {
 		WHERE machine_id = $1
 		ORDER BY status ASC
 	`, machineID)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -37,7 +37,7 @@ func handleGetQuality(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&i.ID, &i.MachineID, &i.InspectionType, &i.InspectorName, &i.Status, &i.CompletedAt,
 		); err != nil {
-			http.Error(w, "Error scanning inspection: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning inspection: ", err)
 			return
 		}
 		inspections = append(inspections, i)
@@ -46,16 +46,15 @@ func handleGetQuality(w http.ResponseWriter, r *http.Request) {
 	// We could also fetch defects here and bundle them, or leave it as a separate endpoint.
 	// For simplicity, we just return the inspections in this endpoint.
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(inspections)
+	respondJSON(w, http.StatusOK, inspections)
 }
 
 // handleGetMachineDefects fetches defects for a specific machine
 func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -65,9 +64,9 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		WHERE machine_id = $1
 		ORDER BY status ASC
 	`, machineID)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -77,10 +76,10 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		var d models.Defect
 		var assigned sql.NullString
 		if err := rows.Scan(
-			&d.ID, &d.MachineID, &d.InspectionID, &d.SourceDepartment, &assigned, &d.Description, 
+			&d.ID, &d.MachineID, &d.InspectionID, &d.SourceDepartment, &assigned, &d.Description,
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt,
 		); err != nil {
-			http.Error(w, "Error scanning defect: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning defect: ", err)
 			return
 		}
 		if assigned.Valid {
@@ -89,29 +88,28 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		defects = append(defects, d)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(defects)
+	respondJSON(w, http.StatusOK, defects)
 }
 
 // handleAddDefect adds a new defect to the machine
 func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
 	var req struct {
-		SourceDepartment string `json:"source_department"`
+		SourceDepartment   string `json:"source_department"`
 		AssignedDepartment string `json:"assigned_department"`
-		Description      string `json:"description"`
-		Severity         string `json:"severity"`
-		Notes            string `json:"notes"`
+		Description        string `json:"description"`
+		Severity           string `json:"severity"`
+		Notes              string `json:"notes"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -121,22 +119,21 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3, $4, $5, 'open', $6)
 		RETURNING id, machine_id, source_department, assigned_department, description, severity, status, notes, resolved_by, resolved_at
 	`, machineID, req.SourceDepartment, req.AssignedDepartment, req.Description, req.Severity, req.Notes).Scan(
-		&newDefect.ID, &newDefect.MachineID, &newDefect.SourceDepartment, &newDefect.AssignedDepartment, 
+		&newDefect.ID, &newDefect.MachineID, &newDefect.SourceDepartment, &newDefect.AssignedDepartment,
 		&newDefect.Description, &newDefect.Severity, &newDefect.Status, &newDefect.Notes,
 		&newDefect.ResolvedBy, &newDefect.ResolvedAt,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to log defect: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to log defect: ", err)
 		return
 	}
 
 	BroadcastEvent("defect_added", newDefect)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newDefect)
+	respondJSON(w, http.StatusOK, newDefect)
 }
 
 // handleGetAllDefects fetches all defects across all machines for the Quality Resolution Hub
@@ -147,9 +144,9 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 		JOIN machines m ON d.machine_id = m.id
 		ORDER BY d.status ASC, m.created_at DESC
 	`)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -166,10 +163,10 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 		// Coalesce NULL assigned_department to empty string to avoid scan errors if we don't use pointers
 		var assigned sql.NullString
 		if err := rows.Scan(
-			&d.ID, &d.MachineID, &d.OrderNumber, &d.SourceDepartment, &assigned, &d.Description, 
+			&d.ID, &d.MachineID, &d.OrderNumber, &d.SourceDepartment, &assigned, &d.Description,
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt,
 		); err != nil {
-			http.Error(w, "Error scanning defect: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning defect: ", err)
 			return
 		}
 		if assigned.Valid {
@@ -178,34 +175,33 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 		defects = append(defects, d)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(defects)
+	respondJSON(w, http.StatusOK, defects)
 }
 
 // handleUpdateDefect allows updating a defect's status and assignment
 func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 	defectID := r.PathValue("defect_id")
 	if defectID == "" {
-		http.Error(w, "Defect ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Defect ID is required", nil)
 		return
 	}
 
 	var req struct {
-		Status string `json:"status"` // 'fixed' or 'verified'
+		Status             string `json:"status"`              // 'fixed' or 'verified'
 		AssignedDepartment string `json:"assigned_department"` // optional routing
-		Notes string `json:"notes"`
+		Notes              string `json:"notes"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
 	var updatedDefect models.Defect
 	// If assigning department, update it. If updating status, update it.
 	// For simplicity, we just dynamically update what is passed.
-	
+
 	err := db.DB.QueryRow(`
 		UPDATE defects 
 		SET status = COALESCE(NULLIF($2, ''), status),
@@ -222,28 +218,27 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to update defect: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to update defect: ", err)
 		return
 	}
 
 	BroadcastEvent("defect_updated", updatedDefect)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(updatedDefect)
+	respondJSON(w, http.StatusOK, updatedDefect)
 }
 
 // handleDeleteDefect deletes a defect
 func handleDeleteDefect(w http.ResponseWriter, r *http.Request) {
 	defectID := r.PathValue("defect_id")
 	if defectID == "" {
-		http.Error(w, "Defect ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Defect ID is required", nil)
 		return
 	}
 
 	_, err := db.DB.Exec("DELETE FROM defects WHERE id = $1", defectID)
 	if err != nil {
-		http.Error(w, "Failed to delete defect: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to delete defect: ", err)
 		return
 	}
 
@@ -258,7 +253,7 @@ func handleDeleteDefect(w http.ResponseWriter, r *http.Request) {
 func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 	defectID := r.PathValue("defect_id")
 	if defectID == "" {
-		http.Error(w, "Defect ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Defect ID is required", nil)
 		return
 	}
 
@@ -270,7 +265,7 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -281,18 +276,17 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1
 		RETURNING id, machine_id, source_department, assigned_department, description, severity, status, resolved_by, resolved_at
 	`, defectID, req.SourceDepartment, req.AssignedDepartment, req.Severity, req.Description).Scan(
-		&updated.ID, &updated.MachineID, &updated.SourceDepartment, &updated.AssignedDepartment, 
+		&updated.ID, &updated.MachineID, &updated.SourceDepartment, &updated.AssignedDepartment,
 		&updated.Description, &updated.Severity, &updated.Status, &updated.ResolvedBy, &updated.ResolvedAt,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to update defect: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to update defect: ", err)
 		return
 	}
 
 	BroadcastEvent("defect_updated", updated)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(updated)
+	respondJSON(w, http.StatusOK, updated)
 }

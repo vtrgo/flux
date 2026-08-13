@@ -22,7 +22,7 @@ func setupTestDB(t *testing.T) {
 	if err := db.InitDB(connStr); err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
-	
+
 	// Ensure SSE hub is running to prevent panic on BroadcastEvent
 	InitHub()
 }
@@ -43,11 +43,11 @@ func TestSalesOrders(t *testing.T) {
 			"sales_rep":               "Alice",
 			"target_ship_date":        time.Now().AddDate(0, 1, 0).Format(time.RFC3339),
 		}
-		
+
 		body, _ := json.Marshal(payload)
 		req := httptest.NewRequest(http.MethodPost, "/api/sales_orders", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, req)
 
@@ -63,7 +63,7 @@ func TestSalesOrders(t *testing.T) {
 		if resp.CustomerName != "Test Corp" {
 			t.Errorf("expected customer name to be 'Test Corp', got '%s'", resp.CustomerName)
 		}
-		
+
 		// Clean up the created test record
 		_, err := db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", resp.ID)
 		if err != nil {
@@ -76,11 +76,11 @@ func TestSalesOrders(t *testing.T) {
 			// Missing customer_name and po_number
 			"sales_rep": "Alice",
 		}
-		
+
 		body, _ := json.Marshal(payload)
 		req := httptest.NewRequest(http.MethodPost, "/api/sales_orders", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, req)
 
@@ -109,7 +109,7 @@ func TestSalesOrders(t *testing.T) {
 		body, _ := json.Marshal(updatePayload)
 		req := httptest.NewRequest(http.MethodPut, "/api/sales_orders/"+createdOrder.ID.String(), bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, req)
 

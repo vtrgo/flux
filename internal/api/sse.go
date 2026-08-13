@@ -57,7 +57,9 @@ func (h *SSEHub) run() {
 }
 
 func BroadcastEvent(eventType string, data interface{}) {
-	if Hub == nil { return }
+	if Hub == nil {
+		return
+	}
 	payload, err := json.Marshal(data)
 	if err != nil {
 		fmt.Printf("Error marshalling SSE event data: %v\n", err)

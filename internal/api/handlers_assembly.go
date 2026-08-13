@@ -12,7 +12,7 @@ import (
 func handleGetAssembly(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -22,9 +22,9 @@ func handleGetAssembly(w http.ResponseWriter, r *http.Request) {
 		WHERE machine_id = $1
 		ORDER BY status ASC, task_name ASC
 	`, machineID)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -33,18 +33,17 @@ func handleGetAssembly(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var t models.AssemblyTask
 		if err := rows.Scan(
-			&t.ID, &t.MachineID, &t.TaskName, &t.Status, 
+			&t.ID, &t.MachineID, &t.TaskName, &t.Status,
 			&t.StartedAt, &t.CompletedAt, &t.SignedOffBy, &t.Notes,
 		); err != nil {
-			http.Error(w, "Error scanning row", http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning row", nil)
 			return
 		}
 		tasks = append(tasks, t)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(tasks)
+	respondJSON(w, http.StatusOK, tasks)
 }
 
 // handleGetAllAssembly fetches all assembly tasks across all active machines
@@ -56,9 +55,9 @@ func handleGetAllAssembly(w http.ResponseWriter, r *http.Request) {
 		WHERE m.status != 'shipped'
 		ORDER BY a.status DESC, m.created_at DESC
 	`)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -72,25 +71,24 @@ func handleGetAllAssembly(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var t AssemblyWithMachine
 		if err := rows.Scan(
-			&t.ID, &t.MachineID, &t.OrderNumber, &t.TaskName, &t.Status, 
+			&t.ID, &t.MachineID, &t.OrderNumber, &t.TaskName, &t.Status,
 			&t.StartedAt, &t.CompletedAt, &t.SignedOffBy, &t.Notes,
 		); err != nil {
-			http.Error(w, "Error scanning task: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning task: ", err)
 			return
 		}
 		tasks = append(tasks, t)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(tasks)
+	respondJSON(w, http.StatusOK, tasks)
 }
 
 // handleAddAssemblyTask adds an assembly task for a machine
 func handleAddAssemblyTask(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -99,7 +97,7 @@ func handleAddAssemblyTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -113,23 +111,22 @@ func handleAddAssemblyTask(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to insert task: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to insert task: ", err)
 		return
 	}
 
 	BroadcastEvent("assembly_task_added", newTask)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newTask)
+	respondJSON(w, http.StatusOK, newTask)
 }
 
 // handleUpdateAssemblyTask marks an assembly task as complete
 func handleUpdateAssemblyTask(w http.ResponseWriter, r *http.Request) {
 	taskID := r.PathValue("task_id")
 	if taskID == "" {
-		http.Error(w, "Task ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Task ID is required", nil)
 		return
 	}
 
@@ -139,7 +136,7 @@ func handleUpdateAssemblyTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -155,19 +152,18 @@ func handleUpdateAssemblyTask(w http.ResponseWriter, r *http.Request) {
 		WHERE id = $1
 		RETURNING id, machine_id, task_name, status, started_at, completed_at, signed_off_by, notes
 	`, taskID, req.Status, req.Notes).Scan(
-		&updatedTask.ID, &updatedTask.MachineID, &updatedTask.TaskName, &updatedTask.Status, 
+		&updatedTask.ID, &updatedTask.MachineID, &updatedTask.TaskName, &updatedTask.Status,
 		&updatedTask.StartedAt, &updatedTask.CompletedAt, &updatedTask.SignedOffBy, &updatedTask.Notes,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to update task: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to update task: ", err)
 		return
 	}
 
 	// Communications Hub: Let Quality know an assembly task is done
 	BroadcastEvent("assembly_task_updated", updatedTask)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(updatedTask)
+	respondJSON(w, http.StatusOK, updatedTask)
 }

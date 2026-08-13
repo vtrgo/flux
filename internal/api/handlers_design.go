@@ -12,7 +12,7 @@ import (
 func handleGetDesign(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -22,9 +22,9 @@ func handleGetDesign(w http.ResponseWriter, r *http.Request) {
 		WHERE machine_id = $1
 		ORDER BY uploaded_at DESC
 	`, machineID)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -33,25 +33,24 @@ func handleGetDesign(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var d models.DesignDocument
 		if err := rows.Scan(
-			&d.ID, &d.MachineID, &d.DocumentType, &d.Version, &d.FileURL, 
+			&d.ID, &d.MachineID, &d.DocumentType, &d.Version, &d.FileURL,
 			&d.Status, &d.UploadedBy, &d.UploadedAt,
 		); err != nil {
-			http.Error(w, "Error scanning row: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
 			return
 		}
 		documents = append(documents, d)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(documents)
+	respondJSON(w, http.StatusOK, documents)
 }
 
 // handleAddDesignFeedback adds an engineering change request back to the design team
 func handleAddDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
-		http.Error(w, "Machine ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
 		return
 	}
 
@@ -63,7 +62,7 @@ func handleAddDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -73,21 +72,20 @@ func handleAddDesignFeedback(w http.ResponseWriter, r *http.Request) {
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, machine_id, document_id, source_department, feedback_type, description, status
 	`, machineID, req.DocumentID, req.SourceDepartment, req.FeedbackType, req.Description).Scan(
-		&newFeedback.ID, &newFeedback.MachineID, &newFeedback.DocumentID, &newFeedback.SourceDepartment, 
+		&newFeedback.ID, &newFeedback.MachineID, &newFeedback.DocumentID, &newFeedback.SourceDepartment,
 		&newFeedback.FeedbackType, &newFeedback.Description, &newFeedback.Status,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to insert feedback: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to insert feedback: ", err)
 		return
 	}
 
 	BroadcastEvent("design_feedback_added", newFeedback)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newFeedback)
+	respondJSON(w, http.StatusOK, newFeedback)
 }
 
 // handleGetAllDesignFeedback fetches all design feedback across all machines
@@ -98,9 +96,9 @@ func handleGetAllDesignFeedback(w http.ResponseWriter, r *http.Request) {
 		JOIN machines m ON f.machine_id = m.id
 		ORDER BY f.status ASC, f.created_at DESC
 	`)
-	
+
 	if err != nil {
-		http.Error(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
 	}
 	defer rows.Close()
@@ -114,25 +112,24 @@ func handleGetAllDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var f FeedbackWithMachine
 		if err := rows.Scan(
-			&f.ID, &f.MachineID, &f.OrderNumber, &f.DocumentID, &f.SourceDepartment, 
+			&f.ID, &f.MachineID, &f.OrderNumber, &f.DocumentID, &f.SourceDepartment,
 			&f.FeedbackType, &f.Description, &f.Status, &f.ReviewedBy, &f.ReviewedAt, &f.CreatedAt,
 		); err != nil {
-			http.Error(w, "Error scanning feedback: "+err.Error(), http.StatusInternalServerError)
+			respondError(w, http.StatusInternalServerError, "Error scanning feedback: ", err)
 			return
 		}
 		feedbacks = append(feedbacks, f)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(feedbacks)
+	respondJSON(w, http.StatusOK, feedbacks)
 }
 
 // handleUpdateDesignFeedback allows design to mark feedback as reviewed
 func handleUpdateDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	feedbackID := r.PathValue("feedback_id")
 	if feedbackID == "" {
-		http.Error(w, "Feedback ID is required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Feedback ID is required", nil)
 		return
 	}
 
@@ -141,7 +138,7 @@ func handleUpdateDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
 		return
 	}
 
@@ -153,18 +150,17 @@ func handleUpdateDesignFeedback(w http.ResponseWriter, r *http.Request) {
 		RETURNING id, machine_id, document_id, source_department, feedback_type, description, status, reviewed_by, reviewed_at, created_at
 	`, feedbackID, req.Status).Scan(
 		&updated.ID, &updated.MachineID, &updated.DocumentID, &updated.SourceDepartment,
-		&updated.FeedbackType, &updated.Description, &updated.Status, 
+		&updated.FeedbackType, &updated.Description, &updated.Status,
 		&updated.ReviewedBy, &updated.ReviewedAt, &updated.CreatedAt,
 	)
 
 	if err != nil {
-		http.Error(w, "Failed to update feedback: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to update feedback: ", err)
 		return
 	}
 
 	BroadcastEvent("design_feedback_updated", updated)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	json.NewEncoder(w).Encode(updated)
+	respondJSON(w, http.StatusOK, updated)
 }
