@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import styles from "./sales.module.css";
+import styles from "./SalesKickoff.module.css";
 import Link from "next/link";
 
 interface SalesOrder {
@@ -123,7 +123,7 @@ export default function SalesDashboard() {
   };
 
   return (
-    <main className={styles.container}>
+    <div className={styles.container} style={{ padding: 0, marginBottom: '4rem' }}>
       <header className={styles.header}>
         <h1 className={styles.title}>Project Kickoff</h1>
       </header>
@@ -242,6 +242,6 @@ export default function SalesDashboard() {
           })}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

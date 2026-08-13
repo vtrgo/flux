@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './page.module.css';
+import SalesKickoff from '../components/SalesKickoff';
 
 interface Machine {
   id: string;
@@ -106,6 +107,8 @@ export default function Home() {
           {sseConnected ? "SYSTEM ONLINE" : "CONNECTING..."}
         </div>
       </div>
+
+      <SalesKickoff />
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
         {loading ? (
