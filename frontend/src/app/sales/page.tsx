@@ -219,7 +219,7 @@ export default function SalesDashboard() {
 
                 {spawningOrder === order.id && (
                   <div className={styles.machineSpawner}>
-                    <input className={styles.input} style={{ flex: 1 }} placeholder="Model (e.g. VibroBowl 500)" value={newMachineModel} onChange={e => setNewMachineModel(e.target.value)} />
+                    <input className={styles.input} style={{ flex: 1 }} placeholder="Part (e.g. Housing Base)" value={newMachineModel} onChange={e => setNewMachineModel(e.target.value)} />
                     <input className={styles.input} style={{ flex: 1 }} placeholder="S/N or Internal Tracking" value={newMachineSN} onChange={e => setNewMachineSN(e.target.value)} />
                     <button className="vtr-btn" onClick={() => spawnMachine(order.id)}>Spawn</button>
                   </div>
