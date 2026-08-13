@@ -7,6 +7,7 @@ import Link from 'next/link';
 import styles from './page.module.css';
 
 import { DefectModal } from '../components/DefectModal';
+import { MachineCard } from '../components/MachineCard';
 import { SalesOrder, Machine, DefectSummary } from "../types";
 import { ACTIVE_DEPARTMENTS } from '../lib/departments';
 
@@ -136,128 +137,15 @@ export default function Home() {
                   {orderMachines.length === 0 ? (
                     <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', fontStyle: 'italic' }}>No machines spawned for this project yet.</div>
                   ) : (
-                    orderMachines.map(machine => {
-
-                      return (
-                        <Link href={`/machine?id=${machine.id}`} key={machine.id} className={styles.card} style={{ 
-                          textDecoration: 'none',
-                          color: 'inherit',
-                          display: 'block',
-                          background: 'rgba(0,0,0,0.1)',
-                          position: 'relative'
-                        }}>
-                          <button 
-                            onClick={(e) => handleDeleteMachine(e, machine.id)}
-                            style={{
-                              position: 'absolute',
-                              top: '1rem',
-                              right: '1rem',
-                              background: 'transparent',
-                              border: '1px solid var(--accent-red)',
-                              color: 'var(--accent-red)',
-                              borderRadius: '4px',
-                              padding: '0.25rem 0.5rem',
-                              cursor: 'pointer',
-                              fontSize: '0.875rem',
-                              zIndex: 10
-                            }}
-                            title="Delete Machine"
-                          >
-                            🗑️
-                          </button>
-                          
-                          <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: 'var(--text-primary)' }}>{machine.order_number}</h3>
-                          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>{machine.model_type}</div>
-                          
-                          {(() => {
-                            const machineSummaries = defectSummaries.filter(s => s.machine_id === machine.id);
-                            const totalOpen = machineSummaries.reduce((sum, s) => sum + s.open_critical + s.open_moderate + s.open_minor, 0);
-                            const totalPending = machineSummaries.reduce((sum, s) => sum + s.pending_critical + s.pending_moderate + s.pending_minor, 0);
-                            const totalClosed = machineSummaries.reduce((sum, s) => sum + s.closed, 0);
-                            
-                            return (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontFamily: 'var(--font-mono)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-                                <span style={{ color: totalOpen > 0 ? 'var(--accent-red)' : 'inherit' }}>Open: {totalOpen}</span>
-                                <span style={{ color: totalPending > 0 ? 'var(--accent-amber)' : 'inherit' }}>Pending: {totalPending}</span>
-                                <span>&rarr;</span>
-                                <span style={{ color: totalClosed > 0 ? 'var(--vtr-theme-primary)' : 'inherit' }}>Closed: {totalClosed}</span>
-                              </div>
-                            );
-                          })()}
-                          
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
-                            {ACTIVE_DEPARTMENTS.map(dept => {
-                              // Find summary for this department (handle electrical_controls alias if needed)
-                              const summary = defectSummaries.find(s => 
-                                s.machine_id === machine.id && 
-                                (s.assigned_department === dept.key || (dept.key === 'electrical_controls' && s.assigned_department === 'controls'))
-                              );
-                              
-                              const openCritical = summary?.open_critical || 0;
-                              const openModerate = summary?.open_moderate || 0;
-                              const openMinor = summary?.open_minor || 0;
-                              
-                              const pendingCritical = summary?.pending_critical || 0;
-                              const pendingModerate = summary?.pending_moderate || 0;
-                              const pendingMinor = summary?.pending_minor || 0;
-                              
-                              const closed = summary?.closed || 0;
-                              
-                              const totalOpenAndPending = openCritical + openModerate + openMinor + pendingCritical + pendingModerate + pendingMinor;
-                              
-                              // Determine border based on highest severity open or pending
-                              let borderColor = 'var(--border-color)';
-                              if (openCritical > 0 || pendingCritical > 0) {
-                                borderColor = 'var(--accent-red)';
-                              } else if (openModerate > 0 || pendingModerate > 0) {
-                                borderColor = 'var(--accent-amber)';
-                              } else if (openMinor > 0 || pendingMinor > 0) {
-                                borderColor = 'var(--vtr-theme-primary)';
-                              }
-
-                              return (
-                                <div key={dept.key} 
-                                  style={{ 
-                                    background: 'rgba(255,255,255,0.02)', 
-                                    border: `1px solid ${borderColor}`,
-                                    padding: '0.75rem', 
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                  }}
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setSelectedMachineDept({ machineId: machine.id, dept: dept.key });
-                                  }}
-                                  onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                                  onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                                >
-                                  <div style={{ color: 'var(--vtr-theme-primary)', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
-                                    {dept.label} (Total Open: {totalOpenAndPending})
-                                  </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: (openCritical > 0 || pendingCritical > 0) ? 'var(--accent-red)' : 'var(--vtr-theme-neutral)' }}>
-                                      <span>• Critical:</span> <span>{openCritical + pendingCritical} ({pendingCritical} pending)</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: (openModerate > 0 || pendingModerate > 0) ? 'var(--accent-amber)' : 'var(--vtr-theme-neutral)' }}>
-                                      <span>• Moderate:</span> <span>{openModerate + pendingModerate} ({pendingModerate} pending)</span>
-                                    </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: (openMinor > 0 || pendingMinor > 0) ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)' }}>
-                                      <span>• Minor:</span> <span>{openMinor + pendingMinor} ({pendingMinor} pending)</span>
-                                    </div>
-                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0.25rem 0' }}></div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--vtr-theme-neutral)' }}>
-                                      <span>• Closed:</span> <span>{closed}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </Link>
-                      );
-                    })
+                    orderMachines.map(machine => (
+                      <MachineCard
+                        key={machine.id}
+                        machine={machine}
+                        defectSummaries={defectSummaries}
+                        onDelete={handleDeleteMachine}
+                        onSelectDept={(machineId, dept) => setSelectedMachineDept({ machineId, dept })}
+                      />
+                    ))
                   )}
                 </div>
               </div>
