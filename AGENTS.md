@@ -81,6 +81,13 @@ To guarantee accurate `Content-Type` headers and to prevent internal data leakag
 
 # Frontend Architecture Guidelines
 
+## Component Modularity & Custom Hooks
+1. **Separation of Concerns:** Do not build "God components" (like a single `page.tsx` handling fetching, SSE patching, and complex UI rendering). Extract data-fetching and SSE orchestration logic into custom React hooks (e.g., `src/hooks/useDashboardData.ts`).
+2. **Reusable UI:** Identify duplicated UI structures (like identical cards or columns) and abstract them into reusable components inside `src/components/`, utilizing CSS modules to encapsulate their styling.
+
+## API Queries vs. Client Filtering
+1. **Server-Side Filtering:** Avoid fetching large collections of data (e.g. `GET /api/defects`) only to filter them on the client via `array.filter()`. Always append query parameters to the URL using the `fetchApi` utility (`{ params: { key: value } }`) and perform the `WHERE` filter at the database layer in the Go backend.
+
 ## Server-Sent Events (SSE)
 All frontend real-time updates must be managed through the centralized `SSEProvider` service to avoid multiple concurrent connections and to gracefully handle network reconnections and orphaned states.
 
@@ -119,6 +126,7 @@ When making deployment-related modifications or writing build scripts, agents mu
 1. **Static Frontend Export**: 
    - The Next.js frontend must be built as a purely static HTML/CSS/JS export.
    - Run `npm run build` with Next.js configured for `output: 'export'`. This populates the `frontend/out` directory.
+   - **CRITICAL:** `next.config.ts` MUST contain `trailingSlash: true` so that route files are exported as directories with an `index.html` (e.g., `assembly/index.html`). This ensures compatibility when served natively by Go's `http.FileServer`.
 2. **Embedded Go Binary**:
    - The Go backend utilizes `//go:embed all:frontend/out` to package the static assets.
    - The Go HTTP router serves the `/api/*` endpoints for business logic, and falls back to serving the embedded file system for all other routes.

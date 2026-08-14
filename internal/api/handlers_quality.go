@@ -140,12 +140,23 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 
 // handleGetAllDefects fetches all defects across all machines for the Quality Resolution Hub
 func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.DB.Query(`
+	department := r.URL.Query().Get("department")
+
+	query := `
 		SELECT d.id, d.machine_id, m.order_number, d.source_department, d.assigned_department, d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at
 		FROM defects d
 		JOIN machines m ON d.machine_id = m.id
-		ORDER BY d.status ASC, m.created_at DESC
-	`)
+	`
+	var args []interface{}
+
+	if department != "" {
+		query += " WHERE d.assigned_department = $1"
+		args = append(args, department)
+	}
+
+	query += " ORDER BY d.status ASC, m.created_at DESC"
+
+	rows, err := db.DB.Query(query, args...)
 
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Database error: ", err)

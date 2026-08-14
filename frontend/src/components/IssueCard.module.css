@@ -1,0 +1,99 @@
+.card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--vtr-card-border, #333);
+  border-radius: 6px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  border-color: rgba(0, 229, 255, 0.4);
+  background: rgba(0, 229, 255, 0.05);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.orderNumber {
+  color: var(--vtr-theme-primary, #00e5ff);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.severity {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.severity.critical {
+  color: var(--accent-red, #ff3366);
+  border-color: var(--accent-red, #ff3366);
+  background: rgba(255, 51, 102, 0.1);
+}
+
+.severity.moderate {
+  color: var(--accent-amber, #ffaa00);
+  border-color: var(--accent-amber, #ffaa00);
+}
+
+.severity.minor {
+  color: var(--vtr-theme-primary, #00e5ff);
+  border-color: var(--vtr-theme-primary, #00e5ff);
+}
+
+.source {
+  color: var(--vtr-theme-primary, #00e5ff);
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  margin-top: 0;
+}
+
+.description {
+  color: var(--text-primary, #fff);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.note {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.noteLabel {
+  color: var(--vtr-theme-secondary, #ff00ff);
+  font-weight: bold;
+}
+
+.actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.actionBtn {
+  flex: 1;
+  padding: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.deleteBtn {
+  border-color: var(--accent-red, #ff3366);
+  color: var(--accent-red, #ff3366);
+  padding: 0.25rem;
+  font-size: 0.75rem;
+}

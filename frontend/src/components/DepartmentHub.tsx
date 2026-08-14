@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { fetchApi } from "../lib/api";
-import { useSSE } from "./SSEProvider";
+import { useDepartmentIssues } from "../hooks/useDepartmentIssues";
 import Link from "next/link";
 import styles from "../app/quality/quality.module.css";
 import { IssueModal } from "./IssueModal";
+import { IssueCard } from "./IssueCard";
 
 import { Defect } from "../types";
 
@@ -15,58 +16,10 @@ interface DepartmentHubProps {
 }
 
 export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
-  const [issues, setIssues] = useState<Defect[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { issues, loading } = useDepartmentIssues(departmentKey);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
-
-  useSSE('defect_updated', (updated: Defect) => {
-    if (updated.assigned_department === departmentKey) {
-      setIssues(prev => {
-        const exists = prev.find(f => f.id === updated.id);
-        if (exists) return prev.map(f => f.id === updated.id ? { ...updated, order_number: f.order_number } : f);
-        return [...prev, updated];
-      });
-    } else {
-      setIssues(prev => prev.filter(f => f.id !== updated.id));
-    }
-  });
-
-  useSSE('defect_added', () => {
-    // Ideally we would fetch just this defect, but fetchData ensures we're perfectly in sync
-    // The previous implementation used fetchData() here. We can just call it  useEffect(() => {
-    fetchApi<Defect[]>(`defects`)
-      .then(allDefects => {
-        setIssues((allDefects || []).filter((d: Defect) => d.assigned_department === departmentKey));
-      });
-  });
-
-  useSSE('defect_deleted', (deleted: { id: string }) => {
-    setIssues(prev => prev.filter(d => d.id !== deleted.id));
-  });
-
-  useSSE('machine_deleted', () => {
-    fetchApi<Defect[]>(`defects`)
-      .then(allDefects => {
-        setIssues(allDefects.filter((d: Defect) => d.assigned_department === departmentKey));
-      });
-  });
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const allDefects = await fetchApi<Defect[]>(`defects`);
-        setIssues((allDefects || []).filter(d => d.assigned_department === departmentKey));
-      } catch (err) {
-        console.error(`Failed to load data for ${departmentKey}`, err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [departmentKey]);
 
   const openNewModal = () => {
     setEditingDefect(null);
@@ -145,23 +98,17 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
                     {openF.length === 0 ? (
                       <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No open issues.</p>
                     ) : openF.map(issue => (
-                      <div key={issue.id} className={styles.card} onClick={() => openEditModal(issue)}>
-                        <div className={styles.cardHeader}>
-                          <span className={styles.orderNumber}>{issue.order_number}</span>
-                          <span className={`${styles.severity} ${styles[issue.severity]}`}>{issue.status}</span>
-                        </div>
-                        <h3 style={{ color: 'var(--vtr-theme-primary)', marginBottom: '0.5rem', fontSize: '1rem' }}>Source: {issue.source_department}</h3>
-                        <p style={{ color: 'var(--text-primary)', fontSize: '0.875rem' }}>{issue.description}</p>
-                        {issue.notes && (
-                          <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                            <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {issue.notes}
-                          </div>
-                        )}
-                        <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'fixed')}>MARK FIXED</button>
-                          <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
-                        </div>
-                      </div>
+                      <IssueCard
+                        key={issue.id}
+                        issue={issue}
+                        onClick={() => openEditModal(issue)}
+                        actions={
+                          <>
+                            <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'fixed')}>MARK FIXED</button>
+                            <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
+                          </>
+                        }
+                      />
                     ))}
                   </div>
                 </section>
@@ -173,24 +120,19 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
                     {fixedF.length === 0 ? (
                       <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No issues pending verification.</p>
                     ) : fixedF.map(issue => (
-                      <div key={issue.id} className={styles.card} style={{ borderColor: 'var(--accent-amber)' }} onClick={() => openEditModal(issue)}>
-                        <div className={styles.cardHeader}>
-                          <span className={styles.orderNumber}>{issue.order_number}</span>
-                          <span className={`${styles.severity} ${styles[issue.severity]}`}>{issue.status}</span>
-                        </div>
-                        <h3 style={{ color: 'var(--vtr-theme-primary)', marginBottom: '0.5rem', fontSize: '1rem' }}>Source: {issue.source_department}</h3>
-                        <p style={{ color: 'var(--text-primary)', fontSize: '0.875rem' }}>{issue.description}</p>
-                        {issue.notes && (
-                          <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                            <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {issue.notes}
-                          </div>
-                        )}
-                        <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'verified')}>SIGN OFF</button>
-                          <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'open')}>REJECT</button>
-                          <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
-                        </div>
-                      </div>
+                      <IssueCard
+                        key={issue.id}
+                        issue={issue}
+                        onClick={() => openEditModal(issue)}
+                        cardStyle={{ borderColor: 'var(--accent-amber)' }}
+                        actions={
+                          <>
+                            <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'verified')}>SIGN OFF</button>
+                            <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'open')}>REJECT</button>
+                            <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
+                          </>
+                        }
+                      />
                     ))}
                   </div>
                 </section>
@@ -202,23 +144,18 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
                     {verifiedF.length === 0 ? (
                       <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No completed issues.</p>
                     ) : verifiedF.map(issue => (
-                      <div key={issue.id} className={styles.card} style={{ opacity: 0.6, cursor: 'pointer' }} onClick={() => openEditModal(issue)}>
-                        <div className={styles.cardHeader}>
-                          <span className={styles.orderNumber}>{issue.order_number}</span>
-                          <span className={`${styles.severity} ${styles[issue.severity]}`}>{issue.status}</span>
-                        </div>
-                        <h3 style={{ color: 'var(--vtr-theme-primary)', marginBottom: '0.5rem', fontSize: '1rem' }}>Source: {issue.source_department}</h3>
-                        <p style={{ color: 'var(--text-primary)', fontSize: '0.875rem' }}>{issue.description}</p>
-                        {issue.notes && (
-                          <div style={{ marginTop: '0.5rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                            <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {issue.notes}
-                          </div>
-                        )}
-                        <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'open')}>RE-OPEN</button>
-                          <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
-                        </div>
-                      </div>
+                      <IssueCard
+                        key={issue.id}
+                        issue={issue}
+                        onClick={() => openEditModal(issue)}
+                        cardStyle={{ opacity: 0.6, cursor: 'pointer' }}
+                        actions={
+                          <>
+                            <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'open')}>RE-OPEN</button>
+                            <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
+                          </>
+                        }
+                      />
                     ))}
                   </div>
                 </section>

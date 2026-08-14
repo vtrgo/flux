@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useSSE, useSSEConnectionStatus } from '../components/SSEProvider';
+import { useState } from 'react';
+import { useSSEConnectionStatus } from '../components/SSEProvider';
 import { fetchApi } from '../lib/api';
+import { useDashboardData } from '../hooks/useDashboardData';
 import Link from 'next/link';
 import styles from './page.module.css';
 
@@ -12,70 +13,9 @@ import { SalesOrder, Machine, DefectSummary } from "../types";
 import { ACTIVE_DEPARTMENTS } from '../lib/departments';
 
 export default function Home() {
-  const [orders, setOrders] = useState<SalesOrder[]>([]);
-  const [machines, setMachines] = useState<Machine[]>([]);
-  const [defectSummaries, setDefectSummaries] = useState<DefectSummary[]>([]);
+  const { orders, machines, defectSummaries, loading } = useDashboardData();
   const [selectedMachineDept, setSelectedMachineDept] = useState<{ machineId: string, dept: string } | null>(null);
-  const [loading, setLoading] = useState(true);
   const sseConnected = useSSEConnectionStatus();
-
-  useEffect(() => {
-    Promise.all([
-      fetchApi('sales_orders'),
-      fetchApi('machines'),
-      fetchApi('defects/summary')
-    ])
-      .then(([ordData, macData, defData]) => {
-        setOrders(ordData || []);
-        setMachines(macData || []);
-        setDefectSummaries(defData || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch data:", err);
-        setLoading(false);
-      });
-  }, []);
-
-  const refetchAll = async () => {
-    Promise.all([
-      fetchApi('sales_orders'),
-      fetchApi('machines'),
-      fetchApi('defects/summary')
-    ]).then(([ordData, macData, defData]) => {
-      setOrders(ordData || []);
-      setMachines(macData || []);
-      setDefectSummaries(defData || []);
-    });
-  };
-
-  const refetchOrders = async () => {
-    const res = await fetchApi<SalesOrder[]>('sales_orders');
-    setOrders(res || []);
-  };
-
-  const refetchSummaries = async () => {
-    const res = await fetchApi<DefectSummary[]>('defects/summary');
-    setDefectSummaries(res || []);
-  };
-
-  useSSE('sales_order_created', refetchOrders);
-  useSSE('sales_order_updated', refetchOrders);
-  useSSE('sales_order_deleted', refetchAll);
-
-  useSSE('machine_created', (newMachine: Machine) => {
-    setMachines(prev => [newMachine, ...prev]);
-  });
-
-  useSSE('machine_deleted', (deleted: { id: string }) => {
-    setMachines(prev => prev.filter(m => m.id !== deleted.id));
-    refetchSummaries();
-  });
-
-  // Since summaries are aggregated, just refetch them on any defect mutation
-  useSSE('defect_added', refetchSummaries);
-  useSSE('defect_updated', refetchSummaries);
-  useSSE('defect_deleted', refetchSummaries);
 
 
   const handleDeleteMachine = async (e: React.MouseEvent, id: string) => {

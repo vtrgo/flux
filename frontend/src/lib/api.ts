@@ -1,7 +1,12 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
-export async function fetchApi<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+export async function fetchApi<T = any>(endpoint: string, options: RequestInit & { params?: Record<string, string> } = {}): Promise<T> {
+  let url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  
+  if (options.params) {
+    const searchParams = new URLSearchParams(options.params);
+    url += `?${searchParams.toString()}`;
+  }
   
   const headers = new Headers(options.headers || {});
   if (!headers.has('Content-Type') && options.body && typeof options.body === 'string') {
