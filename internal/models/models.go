@@ -142,6 +142,18 @@ type MachineShopTask struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
+type LaserTask struct {
+	ID          uuid.UUID  `json:"id"`
+	MachineID   uuid.UUID  `json:"machine_id"`
+	DefectID    *uuid.UUID `json:"defect_id,omitempty"`
+	PartName    string     `json:"part_name"`
+	Material    string     `json:"material"`
+	Status      string     `json:"status"`
+	CutBy       *string    `json:"cut_by,omitempty"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
 // DesignDocument tracks CAD, BOMs, and Schematics from engineering
 type DesignDocument struct {
 	ID           uuid.UUID `json:"id"`

@@ -12,3 +12,12 @@ As noted during the frontend refactor, the current codebase has some unoptimized
 - [ ] **Memoize the Component:** Update `src/components/IssueCard.tsx` to wrap the exported function in `React.memo()`.
 - [ ] **Memoize the Handlers:** In `src/components/DepartmentHub.tsx`, wrap `openEditModal`, `handleStatusChange`, and `handleDelete` in `useCallback`.
 - [ ] **Refactor Inline Actions:** Refactor the `<IssueCard />` props so that the action buttons don't rely on inline arrow functions created on every render.
+
+# Future Backend Architecture Improvements
+
+## Database Configuration & ORMs
+- [ ] **Dependency Injection:** Refactor handlers to eliminate the global `db.DB` usage. Create a central `Server` or `App` struct that holds the `*sql.DB` connection and binds handlers as methods on the struct (e.g., `func (s *Server) handleGetAllDefects(...)`). This enables isolated unit testing with mock databases.
+- [ ] **Adopt `sqlc`:** Replace raw `database/sql` queries and manual `rows.Scan` boilerplate with `sqlc` to automatically generate type-safe Go structs from `.sql` queries, reducing human error during schema migrations.
+
+## Middleware Infrastructure
+- [ ] **Middleware Chains:** Implement a scalable middleware orchestration chain (e.g., `chain(Logging, Auth, Cors, handleAddLaserTask)`) to support future requirements like JWT authentication, request logging, and granular user authorization scopes.

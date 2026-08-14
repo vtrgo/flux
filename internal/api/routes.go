@@ -82,6 +82,10 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/machine-shop/tasks", handleAddMachineShopTask)
 	mux.HandleFunc("PUT /api/machine-shop/tasks/{task_id}", handleUpdateMachineShopTask)
 
+	mux.HandleFunc("GET /api/laser/tasks", handleGetAllLaserTasks)
+	mux.HandleFunc("POST /api/laser/tasks", handleAddLaserTask)
+	mux.HandleFunc("PUT /api/laser/tasks/{task_id}", handleUpdateLaserTask)
+
 	mux.HandleFunc("/api/sse", SSEHandler)
 }
 

@@ -15,6 +15,7 @@ export function Navigation() {
       <Link href="/design" className={getClassName("/design")}>Design</Link>
       <Link href="/kitting" className={getClassName("/kitting")}>Kitting</Link>
       <Link href="/machine-shop" className={getClassName("/machine-shop")}>Machine Shop</Link>
+      <Link href="/laser" className={getClassName("/laser")}>Laser</Link>
       <Link href="/assembly" className={getClassName("/assembly")}>Assembly</Link>
       <Link href="/electrical-controls" className={getClassName("/electrical-controls")}>Electrical / Controls</Link>
       <Link href="/enclosures" className={getClassName("/enclosures")}>Enclosures</Link>

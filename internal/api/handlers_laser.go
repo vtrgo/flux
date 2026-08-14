@@ -8,11 +8,11 @@ import (
 	"github.com/vtrgo/flux/internal/models"
 )
 
-// handleGetAllMachineShopTasks fetches all machine shop tasks
-func handleGetAllMachineShopTasks(w http.ResponseWriter, r *http.Request) {
+// handleGetAllLaserTasks fetches all machine shop tasks
+func handleGetAllLaserTasks(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
-		SELECT id, machine_id, defect_id, part_name, material, status, machined_by, completed_at, created_at
-		FROM machine_shop_tasks
+		SELECT id, machine_id, defect_id, part_name, material, status, cut_by, completed_at, created_at
+		FROM laser_tasks
 		ORDER BY status DESC, created_at DESC
 	`)
 
@@ -22,12 +22,12 @@ func handleGetAllMachineShopTasks(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	tasks := []models.MachineShopTask{}
+	tasks := []models.LaserTask{}
 	for rows.Next() {
-		var t models.MachineShopTask
+		var t models.LaserTask
 		if err := rows.Scan(
 			&t.ID, &t.MachineID, &t.DefectID, &t.PartName, &t.Material,
-			&t.Status, &t.MachinedBy, &t.CompletedAt, &t.CreatedAt,
+			&t.Status, &t.CutBy, &t.CompletedAt, &t.CreatedAt,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning task: ", err)
 			return
@@ -39,8 +39,8 @@ func handleGetAllMachineShopTasks(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, tasks)
 }
 
-// handleAddMachineShopTask creates a new machine shop task
-func handleAddMachineShopTask(w http.ResponseWriter, r *http.Request) {
+// handleAddLaserTask creates a new machine shop task
+func handleAddLaserTask(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		MachineID string  `json:"machine_id"`
 		DefectID  *string `json:"defect_id"`
@@ -53,9 +53,9 @@ func handleAddMachineShopTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var newTask models.MachineShopTask
+	var newTask models.LaserTask
 	err := db.DB.QueryRow(`
-		INSERT INTO machine_shop_tasks (machine_id, defect_id, part_name, material, status)
+		INSERT INTO laser_tasks (machine_id, defect_id, part_name, material, status)
 		VALUES ($1, $2, $3, $4, 'pending')
 		RETURNING id, machine_id, defect_id, part_name, material, status, created_at
 	`, req.MachineID, req.DefectID, req.PartName, req.Material).Scan(
@@ -68,14 +68,14 @@ func handleAddMachineShopTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	BroadcastEvent("machine_shop_task_added", newTask)
+	BroadcastEvent("laser_task_added", newTask)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newTask)
 }
 
-// handleUpdateMachineShopTask updates task status
-func handleUpdateMachineShopTask(w http.ResponseWriter, r *http.Request) {
+// handleUpdateLaserTask updates task status
+func handleUpdateLaserTask(w http.ResponseWriter, r *http.Request) {
 	taskID := r.PathValue("task_id")
 	if taskID == "" {
 		respondError(w, http.StatusBadRequest, "Task ID is required", nil)
@@ -91,17 +91,17 @@ func handleUpdateMachineShopTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updatedTask models.MachineShopTask
+	var updatedTask models.LaserTask
 	err := db.DB.QueryRow(`
-		UPDATE machine_shop_tasks 
+		UPDATE laser_tasks 
 		SET status = $2, 
 		    completed_at = CASE WHEN $2 = 'complete' THEN NOW() ELSE completed_at END,
-		    machined_by = CASE WHEN $2 = 'complete' THEN 'user_machinist_01' ELSE machined_by END
+		    cut_by = CASE WHEN $2 = 'complete' THEN 'user_machinist_01' ELSE cut_by END
 		WHERE id = $1
-		RETURNING id, machine_id, defect_id, part_name, material, status, machined_by, completed_at, created_at
+		RETURNING id, machine_id, defect_id, part_name, material, status, cut_by, completed_at, created_at
 	`, taskID, req.Status).Scan(
 		&updatedTask.ID, &updatedTask.MachineID, &updatedTask.DefectID, &updatedTask.PartName,
-		&updatedTask.Material, &updatedTask.Status, &updatedTask.MachinedBy,
+		&updatedTask.Material, &updatedTask.Status, &updatedTask.CutBy,
 		&updatedTask.CompletedAt, &updatedTask.CreatedAt,
 	)
 
@@ -110,7 +110,7 @@ func handleUpdateMachineShopTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	BroadcastEvent("machine_shop_task_updated", updatedTask)
+	BroadcastEvent("laser_task_updated", updatedTask)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updatedTask)
