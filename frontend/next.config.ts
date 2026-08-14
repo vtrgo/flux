@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import path from "path";
+
 const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
@@ -8,8 +10,8 @@ const nextConfig: NextConfig = {
   },
   reactCompiler: true,
   turbopack: {
-    // Limit Turbopack's workspace search to the git root to prevent it from looking into /home/justin
-    root: "/home/justin/code/vtr/flux",
+    // Limit Turbopack's workspace search to the git root dynamically to support CI
+    root: path.join(process.cwd(), '..'),
   },
 };
 
