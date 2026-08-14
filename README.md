@@ -19,23 +19,24 @@ Flux is built on a high-performance, single-executable paradigm. The modern fron
 *   **Live Telemetry (SSE):** Seamless state patching across all active clients. When a task status changes on the floor, the dashboard updates instantly without page reloads.
 *   **Component Modularity:** A strictly typed React architecture utilizing decoupled state hooks and reusable UI components.
 
-## Development Setup
+## Quick Start & Development
+
+We provide automated scripts to make spinning up the environment simple.
 
 ### 1. Database Initialization
-Ensure PostgreSQL is running, then initialize the database and apply the schemas:
+Ensure PostgreSQL is running, then use the bootstrap script to automatically create the database, apply all schema migrations, and optionally seed it with sample data:
 ```bash
-# Create the database
-createdb flux
-
-# Apply schemas in sequence
-cat scripts/migrations/000001_init_mes_schema.up.sql | psql flux
-cat scripts/migrations/000002_add_enclosures.up.sql | psql flux
-cat scripts/migrations/000003_add_sales_orders.up.sql | psql flux
-cat scripts/migrations/000004_add_laser.up.sql | psql flux
+./scripts/bootstrap_flux_db.sh
 ```
 
-### 2. Running Locally (Development Mode)
-You will need to run the Go backend and the Next.js frontend simultaneously to take advantage of hot-reloading.
+### 2. Testing
+Before running or building, ensure the environment is healthy by executing the unified test suite (which validates Go handlers and type-checks the Next.js frontend):
+```bash
+./scripts/test.sh
+```
+
+### 3. Running Locally (Development Mode)
+To take advantage of hot-reloading while developing:
 
 **Terminal 1 (Backend):**
 ```bash
@@ -49,18 +50,12 @@ npm install
 npm run dev
 ```
 
-### 3. Production Build
-To compile the entire application into a single production binary:
+### 4. Production Build
+To compile the entire application into a single, self-contained production binary, simply run:
 ```bash
-# 1. Build the static frontend export
-cd frontend
-npm run build
-
-# 2. Build the Go binary (which embeds the static frontend)
-cd ..
-go build -o bin/flux ./cmd/flux
+./scripts/build.sh
 ```
-You can then run `./bin/flux` on your production server.
+This script will automatically generate the Next.js static export, embed it into the Go binary, and output the final artifact to `./bin/flux`.
 
 ## Codebase Organization
 
