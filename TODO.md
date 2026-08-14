@@ -21,3 +21,7 @@ As noted during the frontend refactor, the current codebase has some unoptimized
 
 ## Middleware Infrastructure
 - [ ] **Middleware Chains:** Implement a scalable middleware orchestration chain (e.g., `chain(Logging, Auth, Cors, handleAddLaserTask)`) to support future requirements like JWT authentication, request logging, and granular user authorization scopes.
+
+# Future Deployment & Infrastructure
+- [ ] **Automated Release Packaging:** Create a `deploy.sh` script to package the single-executable binary alongside a systemd service file for one-click installation on the production server.
+- [ ] **Auto-Update Mechanism:** Investigate adding an auto-update routine (e.g., polling a private release server and safely restarting the binary) so the shop floor screens never require manual intervention.
