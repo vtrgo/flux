@@ -123,19 +123,19 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
                       {(openCritical > 0 || pendingCritical > 0) && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-red)' }}>
                           <span>Critical:</span> 
-                          <span>{openCritical > 0 ? `${openCritical} Open` : ''}{openCritical > 0 && pendingCritical > 0 ? ' | ' : ''}{pendingCritical > 0 ? `${pendingCritical} Pnd` : ''}</span>
+                          <span>{openCritical > 0 ? `${openCritical} Open` : ''}{openCritical > 0 && pendingCritical > 0 ? ' | ' : ''}{pendingCritical > 0 ? `${pendingCritical} Pending` : ''}</span>
                         </div>
                       )}
                       {(openModerate > 0 || pendingModerate > 0) && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-amber)' }}>
                           <span>Moderate:</span> 
-                          <span>{openModerate > 0 ? `${openModerate} Open` : ''}{openModerate > 0 && pendingModerate > 0 ? ' | ' : ''}{pendingModerate > 0 ? `${pendingModerate} Pnd` : ''}</span>
+                          <span>{openModerate > 0 ? `${openModerate} Open` : ''}{openModerate > 0 && pendingModerate > 0 ? ' | ' : ''}{pendingModerate > 0 ? `${pendingModerate} Pending` : ''}</span>
                         </div>
                       )}
                       {(openMinor > 0 || pendingMinor > 0) && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--vtr-theme-primary)' }}>
                           <span>Minor:</span> 
-                          <span>{openMinor > 0 ? `${openMinor} Open` : ''}{openMinor > 0 && pendingMinor > 0 ? ' | ' : ''}{pendingMinor > 0 ? `${pendingMinor} Pnd` : ''}</span>
+                          <span>{openMinor > 0 ? `${openMinor} Open` : ''}{openMinor > 0 && pendingMinor > 0 ? ' | ' : ''}{pendingMinor > 0 ? `${pendingMinor} Pending` : ''}</span>
                         </div>
                       )}
                     </>
