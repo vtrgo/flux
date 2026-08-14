@@ -85,8 +85,9 @@ To guarantee accurate `Content-Type` headers and to prevent internal data leakag
 1. **Separation of Concerns:** Do not build "God components" (like a single `page.tsx` handling fetching, SSE patching, and complex UI rendering). Extract data-fetching and SSE orchestration logic into custom React hooks (e.g., `src/hooks/useDashboardData.ts`).
 2. **Reusable UI:** Identify duplicated UI structures (like identical cards or columns) and abstract them into reusable components inside `src/components/`, utilizing CSS modules to encapsulate their styling.
 
-## API Queries vs. Client Filtering
+## Data Aggregation & Client Filtering
 1. **Server-Side Filtering:** Avoid fetching large collections of data (e.g. `GET /api/defects`) only to filter them on the client via `array.filter()`. Always append query parameters to the URL using the `fetchApi` utility (`{ params: { key: value } }`) and perform the `WHERE` filter at the database layer in the Go backend.
+2. **Backend Aggregation:** Do not use `array.reduce()` or similar mapping loops in React components to calculate sums, totals, or aggregated metrics (e.g., project-level summaries). All data aggregation must be performed at the database layer using SQL `GROUP BY` and `JOIN` clauses, exposed via dedicated Go API endpoints.
 
 ## Server-Sent Events (SSE)
 All frontend real-time updates must be managed through the centralized `SSEProvider` service to avoid multiple concurrent connections and to gracefully handle network reconnections and orphaned states.

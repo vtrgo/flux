@@ -1,24 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchApi } from '../lib/api';
 import { useSSE } from '../components/SSEProvider';
-import { SalesOrder, Machine, DefectSummary } from '../types';
+import { SalesOrder, Machine, DefectSummary, ProjectDefectSummary } from '../types';
 
 export function useDashboardData() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [defectSummaries, setDefectSummaries] = useState<DefectSummary[]>([]);
+  const [projectSummaries, setProjectSummaries] = useState<ProjectDefectSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetchApi('sales_orders'),
       fetchApi('machines'),
-      fetchApi('defects/summary')
+      fetchApi('defects/summary'),
+      fetchApi('defects/project_summary')
     ])
-      .then(([ordData, macData, defData]) => {
+      .then(([ordData, macData, defData, projData]) => {
         setOrders(ordData || []);
         setMachines(macData || []);
         setDefectSummaries(defData || []);
+        setProjectSummaries(projData || []);
         setLoading(false);
       })
       .catch(err => {
@@ -42,10 +45,20 @@ export function useDashboardData() {
     });
   });
 
+  const refetchSummaries = useCallback(() => {
+    Promise.all([
+      fetchApi<DefectSummary[]>('defects/summary'),
+      fetchApi<ProjectDefectSummary[]>('defects/project_summary')
+    ]).then(([macData, projData]) => {
+      setDefectSummaries(macData || []);
+      setProjectSummaries(projData || []);
+    });
+  }, []);
+
   useSSE('sales_order_deleted', (deleted: { id: string }) => {
     setOrders(prev => prev.filter(o => o.id !== deleted.id));
     setMachines(prev => prev.filter(m => m.sales_order_id !== deleted.id));
-    fetchApi<DefectSummary[]>('defects/summary').then(res => setDefectSummaries(res || []));
+    refetchSummaries();
   });
 
   useSSE('machine_created', (newMachine: Machine) => {
@@ -57,16 +70,13 @@ export function useDashboardData() {
 
   useSSE('machine_deleted', (deleted: { id: string }) => {
     setMachines(prev => prev.filter(m => m.id !== deleted.id));
-    fetchApi<DefectSummary[]>('defects/summary').then(res => setDefectSummaries(res || []));
+    refetchSummaries();
   });
 
-  const refetchSummaries = useCallback(() => {
-    fetchApi<DefectSummary[]>('defects/summary').then(res => setDefectSummaries(res || []));
-  }, []);
 
   useSSE('defect_added', refetchSummaries);
   useSSE('defect_updated', refetchSummaries);
   useSSE('defect_deleted', refetchSummaries);
 
-  return { orders, machines, defectSummaries, loading };
+  return { orders, machines, defectSummaries, projectSummaries, loading };
 }

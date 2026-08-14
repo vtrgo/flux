@@ -20,13 +20,24 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
 
   return (
     <Link href={`/machine?id=${machine.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-      <div style={{ 
-        border: '1px solid var(--border-color)',
-        borderRadius: '8px',
-        padding: '1.5rem',
-        background: 'rgba(0,0,0,0.1)',
-        position: 'relative'
-      }}>
+      <div 
+        style={{ 
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          padding: '1.5rem',
+          background: 'rgba(0,0,0,0.1)',
+          position: 'relative',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+          e.currentTarget.style.borderColor = 'var(--vtr-theme-primary)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(0,0,0,0.1)';
+          e.currentTarget.style.borderColor = 'var(--border-color)';
+        }}
+      >
         <button 
           onClick={(e) => onDelete(e, machine.id)}
           style={{
@@ -50,7 +61,7 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
         <h3 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', color: 'var(--text-primary)' }}>{machine.order_number}</h3>
         <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>{machine.model_type}</div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontFamily: 'var(--font-mono)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', fontFamily: 'var(--font-mono)', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
           <span style={{ color: totalOpen > 0 ? 'var(--accent-red)' : 'inherit' }}>Open: {totalOpen}</span>
           <span style={{ color: totalPending > 0 ? 'var(--accent-amber)' : 'inherit' }}>Pending: {totalPending}</span>
           <span>&rarr;</span>
@@ -102,22 +113,41 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
                 onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
               >
                 <div style={{ color: 'var(--vtr-theme-primary)', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
-                  {dept.label} (Total Open: {totalOpenAndPending})
+                  {dept.label} {totalOpenAndPending > 0 && `(${totalOpenAndPending} Issues)`}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: (openCritical > 0 || pendingCritical > 0) ? 'var(--accent-red)' : 'var(--vtr-theme-neutral)' }}>
-                    <span>• Critical:</span> <span>{openCritical + pendingCritical} ({pendingCritical} pending)</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: (openModerate > 0 || pendingModerate > 0) ? 'var(--accent-amber)' : 'var(--vtr-theme-neutral)' }}>
-                    <span>• Moderate:</span> <span>{openModerate + pendingModerate} ({pendingModerate} pending)</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: (openMinor > 0 || pendingMinor > 0) ? 'var(--vtr-theme-primary)' : 'var(--vtr-theme-neutral)' }}>
-                    <span>• Minor:</span> <span>{openMinor + pendingMinor} ({pendingMinor} pending)</span>
-                  </div>
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0.25rem 0' }}></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--vtr-theme-neutral)' }}>
-                    <span>• Closed:</span> <span>{closed}</span>
-                  </div>
+                  {totalOpenAndPending === 0 ? (
+                    <div style={{ color: 'var(--vtr-theme-neutral)', fontStyle: 'italic', padding: '0.25rem 0' }}>✓ No active issues</div>
+                  ) : (
+                    <>
+                      {(openCritical > 0 || pendingCritical > 0) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-red)' }}>
+                          <span>Critical:</span> 
+                          <span>{openCritical > 0 ? `${openCritical} Open` : ''}{openCritical > 0 && pendingCritical > 0 ? ' | ' : ''}{pendingCritical > 0 ? `${pendingCritical} Pnd` : ''}</span>
+                        </div>
+                      )}
+                      {(openModerate > 0 || pendingModerate > 0) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--accent-amber)' }}>
+                          <span>Moderate:</span> 
+                          <span>{openModerate > 0 ? `${openModerate} Open` : ''}{openModerate > 0 && pendingModerate > 0 ? ' | ' : ''}{pendingModerate > 0 ? `${pendingModerate} Pnd` : ''}</span>
+                        </div>
+                      )}
+                      {(openMinor > 0 || pendingMinor > 0) && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--vtr-theme-primary)' }}>
+                          <span>Minor:</span> 
+                          <span>{openMinor > 0 ? `${openMinor} Open` : ''}{openMinor > 0 && pendingMinor > 0 ? ' | ' : ''}{pendingMinor > 0 ? `${pendingMinor} Pnd` : ''}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {closed > 0 && (
+                    <>
+                      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '0.25rem 0' }}></div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--vtr-theme-neutral)' }}>
+                        <span>Closed:</span> <span>{closed}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             );

@@ -431,6 +431,63 @@ func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, summaries)
 }
 
+// handleGetProjectDefectSummaries aggregates defect counts by sales order
+func handleGetProjectDefectSummaries(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.DB.Query(`
+		SELECT m.sales_order_id, d.status, COUNT(*) 
+		FROM defects d
+		JOIN machines m ON d.machine_id = m.id
+		WHERE m.sales_order_id IS NOT NULL
+		GROUP BY m.sales_order_id, d.status
+	`)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to query project defect summaries: ", err)
+		return
+	}
+	defer rows.Close()
+
+	summaryMap := make(map[uuid.UUID]*models.ProjectDefectSummary)
+
+	for rows.Next() {
+		var salesOrderID uuid.UUID
+		var status string
+		var count int
+
+		if err := rows.Scan(&salesOrderID, &status, &count); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to scan project summary row: ", err)
+			return
+		}
+
+		if _, exists := summaryMap[salesOrderID]; !exists {
+			summaryMap[salesOrderID] = &models.ProjectDefectSummary{
+				SalesOrderID: salesOrderID,
+			}
+		}
+
+		s := summaryMap[salesOrderID]
+
+		if status == "open" {
+			s.TotalOpen += count
+		} else if status == "fixed" {
+			s.TotalPending += count
+		} else if status == "verified" {
+			s.TotalClosed += count
+		}
+	}
+
+	var summaries []models.ProjectDefectSummary
+	for _, v := range summaryMap {
+		summaries = append(summaries, *v)
+	}
+
+	if summaries == nil {
+		summaries = []models.ProjectDefectSummary{}
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	respondJSON(w, http.StatusOK, summaries)
+}
+
 // handleEditDefect fully updates a defect
 func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 	defectID := r.PathValue("defect_id")

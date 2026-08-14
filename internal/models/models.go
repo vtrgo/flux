@@ -130,6 +130,14 @@ type DefectSummary struct {
 	Closed             int       `json:"closed"`
 }
 
+// ProjectDefectSummary represents aggregated backend counts for defects per project
+type ProjectDefectSummary struct {
+	SalesOrderID uuid.UUID `json:"sales_order_id"`
+	TotalOpen    int       `json:"total_open"`
+	TotalPending int       `json:"total_pending"`
+	TotalClosed  int       `json:"total_closed"`
+}
+
 type MachineShopTask struct {
 	ID          uuid.UUID  `json:"id"`
 	MachineID   uuid.UUID  `json:"machine_id"`

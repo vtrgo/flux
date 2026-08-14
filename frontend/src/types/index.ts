@@ -51,3 +51,10 @@ export interface DefectSummary {
   pending_minor: number;
   closed: number;
 }
+
+export interface ProjectDefectSummary {
+  sales_order_id: string;
+  total_open: number;
+  total_pending: number;
+  total_closed: number;
+}

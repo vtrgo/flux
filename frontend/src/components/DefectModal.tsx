@@ -9,10 +9,11 @@ import styles from "../app/page.module.css";
 interface DefectModalProps {
   machineId: string;
   department: string;
+  machineName?: string;
   onClose: () => void;
 }
 
-export function DefectModal({ machineId, department, onClose }: DefectModalProps) {
+export function DefectModal({ machineId, department, machineName, onClose }: DefectModalProps) {
   const [defects, setDefects] = useState<Defect[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +47,20 @@ export function DefectModal({ machineId, department, onClose }: DefectModalProps
       );
     } catch (err) {
       console.error("Failed to mark defect as fixed", err);
+    }
+  };
+
+  const handleSignOff = async (defectId: string) => {
+    try {
+      await fetchApi(`defects/${defectId}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "verified" }),
+      });
+      setDefects((prev) =>
+        prev.map((d) => (d.id === defectId ? { ...d, status: "verified" } : d))
+      );
+    } catch (err) {
+      console.error("Failed to sign off defect", err);
     }
   };
 
@@ -97,7 +112,7 @@ export function DefectModal({ machineId, department, onClose }: DefectModalProps
         </button>
 
         <h2 style={{ marginTop: 0, color: "var(--vtr-theme-primary)", marginBottom: "1rem" }}>
-          {formatDepartmentName(department)} Deficiencies
+          {formatDepartmentName(department)} Deficiencies {machineName ? `- ${machineName}` : ''}
         </h2>
 
         {loading ? (
@@ -119,7 +134,7 @@ export function DefectModal({ machineId, department, onClose }: DefectModalProps
                     borderLeft: `4px solid ${
                       d.severity === "critical"
                         ? "var(--accent-red)"
-                        : d.severity === "minor"
+                        : d.severity === "moderate"
                         ? "var(--accent-amber)"
                         : "var(--vtr-theme-primary)"
                     }`,
@@ -151,6 +166,15 @@ export function DefectModal({ machineId, department, onClose }: DefectModalProps
                         style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", alignSelf: "flex-end" }}
                       >
                         Mark Fixed
+                      </button>
+                    )}
+                    {d.status === "fixed" && (
+                      <button
+                        onClick={() => handleSignOff(d.id)}
+                        className="vtr-btn"
+                        style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", alignSelf: "flex-end", background: "var(--vtr-theme-primary)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
+                      >
+                        Sign Off
                       </button>
                     )}
                   </div>
