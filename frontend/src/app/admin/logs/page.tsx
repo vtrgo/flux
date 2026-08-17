@@ -18,7 +18,6 @@ export default function LogsViewerPage() {
   const [activeLevels, setActiveLevels] = useState<Record<string, boolean>>({
     DEBUG: true,
     INFO: true,
-    WARN: true,
     ERROR: true,
     SYSTEM: false
   });
@@ -44,9 +43,14 @@ export default function LogsViewerPage() {
                     }
                   }
                 }
+                
+                // Map WARN to INFO if we are removing the WARN level completely
+                let level = parsed.level;
+                if (level === 'WARN') level = 'INFO';
+
                 parsedLogs.push({
                   time: parsed.time,
-                  level: parsed.level,
+                  level: level,
                   message: msg,
                   attrs
                 });
@@ -71,8 +75,13 @@ export default function LogsViewerPage() {
   // Listen for live SSE logs
   useSSE('server_log_entry', (data: LogEntry) => {
     setLogs(prev => {
+      let level = data.level;
+      if (level === 'WARN') level = 'INFO';
+      
+      const newLog = { ...data, level };
+      
       // Prepend newest at the top
-      const newLogs = [data, ...prev];
+      const newLogs = [newLog, ...prev];
       if (newLogs.length > 10000) {
         return newLogs.slice(0, 10000);
       }
@@ -111,7 +120,6 @@ export default function LogsViewerPage() {
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'ERROR': return '#ff4444';
-      case 'WARN': return '#ffbb33';
       case 'INFO': return '#33b5e5';
       case 'SYSTEM': return '#9b59b6'; // Purple for system routing
       case 'DEBUG': return '#00C851'; // Green for successful user actions
@@ -119,7 +127,7 @@ export default function LogsViewerPage() {
     }
   };
 
-  const availableLevels = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'SYSTEM'];
+  const availableLevels = ['DEBUG', 'INFO', 'ERROR', 'SYSTEM'];
 
   return (
     <main style={{ padding: '2rem', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
