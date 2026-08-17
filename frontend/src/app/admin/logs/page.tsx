@@ -33,12 +33,26 @@ export default function LogsViewerPage() {
           
           for (let i = 0; i < lines.length; i++) {
             try {
-              const parsed = JSON.parse(lines[i]) as LogEntry;
-              if (parsed && parsed.level && parsed.message) {
-                parsedLogs.push(parsed);
+              const parsed = JSON.parse(lines[i]);
+              const msg = parsed.message || parsed.msg;
+              if (parsed && parsed.level && msg) {
+                const attrs = parsed.attrs || {};
+                if (!parsed.attrs) {
+                  for (const key in parsed) {
+                    if (key !== 'time' && key !== 'level' && key !== 'msg' && key !== 'message') {
+                      attrs[key] = parsed[key];
+                    }
+                  }
+                }
+                parsedLogs.push({
+                  time: parsed.time,
+                  level: parsed.level,
+                  message: msg,
+                  attrs
+                });
               }
             } catch (e) {
-              // Ignore incomplete lines (like the first chopped line from the 100kb tail)
+              // Ignore incomplete lines
             }
           }
           
