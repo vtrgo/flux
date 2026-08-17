@@ -87,9 +87,14 @@ func (m *MultiHandler) Handle(ctx context.Context, record slog.Record) error {
 			return true
 		})
 		
+		levelStr := record.Level.String()
+		if record.Level == LevelSystem {
+			levelStr = "SYSTEM"
+		}
+
 		entry := map[string]interface{}{
 			"time":    record.Time,
-			"level":   record.Level.String(),
+			"level":   levelStr,
 			"message": record.Message,
 			"attrs":   attrs,
 		}

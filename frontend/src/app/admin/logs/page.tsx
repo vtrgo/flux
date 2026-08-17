@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import Link from 'next/link';
 import { fetchApi } from '../../../lib/api';
 import { useSSE } from '../../../components/SSEProvider';
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import { Virtuoso } from 'react-virtuoso';
 
 type LogEntry = {
   time: string;
@@ -15,43 +14,50 @@ type LogEntry = {
 
 export default function LogsViewerPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [autoScroll, setAutoScroll] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [preset, setPreset] = useState<string>('user');
   const [activeLevels, setActiveLevels] = useState<Record<string, boolean>>({
-    SYSTEM: false,
     DEBUG: true,
     INFO: true,
     WARN: true,
     ERROR: true
   });
   
+  // Read preset and configure levels
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
-      const preset = urlParams.get('preset');
-      if (preset === 'system') {
-        setActiveLevels({ SYSTEM: true, DEBUG: false, INFO: true, WARN: true, ERROR: true });
-      } else if (preset === 'user') {
-        setActiveLevels({ SYSTEM: false, DEBUG: true, INFO: true, WARN: true, ERROR: true });
+      const p = urlParams.get('preset') || 'user';
+      setPreset(p);
+      if (p === 'system') {
+        setActiveLevels({ SYSTEM: true, INFO: true, WARN: true, ERROR: true });
+      } else {
+        setActiveLevels({ DEBUG: true, INFO: true, WARN: true, ERROR: true });
       }
     }
   }, []);
   
-  const virtuosoRef = useRef<VirtuosoHandle>(null);
-
   // Load initial logs
   useEffect(() => {
     fetchApi<{ logs: string }>('/logs')
       .then(res => {
         if (res.logs) {
           const lines = res.logs.split('\n').filter(Boolean);
-          const parsedLogs: LogEntry[] = lines.map(line => {
+          const parsedLogs: LogEntry[] = [];
+          
+          for (let i = 0; i < lines.length; i++) {
             try {
-              return JSON.parse(line) as LogEntry;
+              const parsed = JSON.parse(lines[i]) as LogEntry;
+              if (parsed && parsed.level && parsed.message) {
+                parsedLogs.push(parsed);
+              }
             } catch (e) {
-              return { time: new Date().toISOString(), level: "INFO", message: line, attrs: {} };
+              // Ignore incomplete lines (like the first chopped line from the 100kb tail)
             }
-          });
+          }
+          
+          // Reverse to put newest at the top
+          parsedLogs.reverse();
           setLogs(parsedLogs);
         }
       })
@@ -61,10 +67,10 @@ export default function LogsViewerPage() {
   // Listen for live SSE logs
   useSSE('server_log_entry', (data: LogEntry) => {
     setLogs(prev => {
-      const newLogs = [...prev, data];
-      // Virtualization means we can keep more logs without crashing, but let's cap it to 10k for memory safety
+      // Prepend newest at the top
+      const newLogs = [data, ...prev];
       if (newLogs.length > 10000) {
-        return newLogs.slice(newLogs.length - 10000);
+        return newLogs.slice(0, 10000);
       }
       return newLogs;
     });
@@ -98,13 +104,6 @@ export default function LogsViewerPage() {
     });
   }, [logs, activeLevels, searchQuery]);
 
-  // Auto-scroll mechanism for Virtuoso
-  useEffect(() => {
-    if (autoScroll && virtuosoRef.current && filteredLogs.length > 0) {
-      virtuosoRef.current.scrollToIndex({ index: filteredLogs.length - 1, align: 'end' });
-    }
-  }, [filteredLogs.length, autoScroll]);
-
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'ERROR': return '#ff4444';
@@ -116,32 +115,32 @@ export default function LogsViewerPage() {
     }
   };
 
+  const availableLevels = preset === 'system' 
+    ? ['SYSTEM', 'ERROR', 'WARN', 'INFO'] 
+    : ['DEBUG', 'ERROR', 'WARN', 'INFO'];
+
   return (
     <main style={{ padding: '2rem', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <h1 style={{ fontFamily: 'monospace', color: '#fff', margin: 0, fontSize: '1.5rem' }}>
-            &gt; SERVER LOGS
+            &gt; {preset === 'system' ? 'SYSTEM LOGS' : 'USER LOGS'}
           </h1>
           <span style={{ 
             padding: '4px 8px', 
             borderRadius: '4px', 
             fontSize: '12px', 
             fontWeight: 'bold', 
-            backgroundColor: autoScroll ? '#28a745' : '#dc3545',
+            backgroundColor: '#28a745',
             color: '#fff',
-            fontFamily: 'monospace',
-            cursor: 'pointer'
-          }} onClick={() => setAutoScroll(!autoScroll)}>
-            {autoScroll ? 'AUTO-SCROLL ON' : 'AUTO-SCROLL OFF'}
+            fontFamily: 'monospace'
+          }}>
+            LIVE VIEW
           </span>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button onClick={handleClear} className="vtr-btn" style={{ padding: '4px 12px', fontSize: '0.9rem', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}>Clear</button>
           <button onClick={handleExport} className="vtr-btn" style={{ padding: '4px 12px', fontSize: '0.9rem', backgroundColor: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', cursor: 'pointer' }}>Export</button>
-          <Link href="/admin" style={{ color: '#007bff', textDecoration: 'none', fontFamily: 'monospace' }}>
-            [ Return to Admin ]
-          </Link>
         </div>
       </header>
 
@@ -154,12 +153,12 @@ export default function LogsViewerPage() {
           onChange={e => setSearchQuery(e.target.value)}
           style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#111', color: '#fff', fontFamily: 'monospace' }}
         />
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {Object.keys(activeLevels).map(level => (
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          {availableLevels.map(level => (
             <label key={level} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ccc', fontFamily: 'monospace', cursor: 'pointer' }}>
               <input 
                 type="checkbox" 
-                checked={activeLevels[level]} 
+                checked={activeLevels[level] || false} 
                 onChange={() => toggleLevel(level)} 
               />
               <span style={{ color: getLevelColor(level) }}>{level}</span>
@@ -171,11 +170,7 @@ export default function LogsViewerPage() {
       {/* Virtualized Log Container */}
       <div style={{ flex: 1, backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden' }}>
         <Virtuoso
-          ref={virtuosoRef}
           data={filteredLogs}
-          atBottomStateChange={(atBottom) => {
-            setAutoScroll(atBottom);
-          }}
           itemContent={(index, log) => (
             <div style={{ 
               padding: '4px 8px', 
