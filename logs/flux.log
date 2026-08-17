@@ -1543,3 +1543,109 @@
 {"time":"2026-08-17T10:18:36.72376372-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:49990","method":"GET","path":"/enclosures/__next.enclosures.__PAGE__.txt","status":200,"duration":"64µs"}
 {"time":"2026-08-17T10:18:36.724848219-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:50004","method":"GET","path":"/admin/__next.admin.__PAGE__.txt","status":200,"duration":"45.7µs"}
 {"time":"2026-08-17T10:18:36.750209183-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:50004","method":"GET","path":"/_next/static/chunks/3khixjnvvhy0j.js","status":200,"duration":"28.3µs"}
+{"time":"2026-08-17T10:21:13.025875898-04:00","level":"INFO","msg":"Shutting down server..."}
+{"time":"2026-08-17T10:21:23.026868961-04:00","level":"ERROR","msg":"Server forced to shutdown","error":"context deadline exceeded"}
+{"time":"2026-08-17T10:21:54.165402374-04:00","level":"INFO","msg":"Starting vtrFlux API Server..."}
+{"time":"2026-08-17T10:21:54.170242619-04:00","level":"INFO","msg":"Database connection successfully established."}
+{"time":"2026-08-17T10:21:54.1708418-04:00","level":"INFO","msg":"vtrFlux API Server listening","port":"8080"}
+{"time":"2026-08-17T10:21:56.172133519-04:00","level":"SYSTEM","msg":"Server successfully started and stabilized","port":"8080","status":"online"}
+{"time":"2026-08-17T10:21:58.192351421-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60344","method":"GET","path":"/admin/logs/","status":200,"duration":"2.17493ms"}
+{"time":"2026-08-17T10:21:58.223118932-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60328","method":"GET","path":"/api/sse","status":200,"duration":"2.131293635s"}
+{"time":"2026-08-17T10:21:58.245128325-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/_next/static/media/70bc3e132a0a741e-s.p.3t6q91iet4nsy.woff2","status":200,"duration":"346.489µs"}
+{"time":"2026-08-17T10:21:58.254388828-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/_next/static/chunks/3f3qq2zss_cvg.css","status":200,"duration":"278.791µs"}
+{"time":"2026-08-17T10:21:58.255512792-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/_next/static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2","status":200,"duration":"452.386µs"}
+{"time":"2026-08-17T10:21:58.425381533-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/_next/static/chunks/2jvy4veosd9k8.js","status":200,"duration":"91.797µs"}
+{"time":"2026-08-17T10:21:58.425395933-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60396","method":"GET","path":"/assets/Triangle Icon_Solid.png","status":200,"duration":"110.297µs"}
+{"time":"2026-08-17T10:21:58.625769494-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60344","method":"GET","path":"/_next/static/chunks/39bdv8zbvwcba.js","status":200,"duration":"86.097µs"}
+{"time":"2026-08-17T10:21:58.688477879-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/_next/static/chunks/turbopack-17k0ibfbjh1n1.js","status":200,"duration":"82.998µs"}
+{"time":"2026-08-17T10:21:58.700840682-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/_next/static/chunks/3n-k319vhvu8e.js","status":200,"duration":"70.698µs"}
+{"time":"2026-08-17T10:21:58.712710201-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/_next/static/chunks/1k6ceh6302v40.js","status":200,"duration":"72.198µs"}
+{"time":"2026-08-17T10:21:58.768912495-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/_next/static/chunks/1zbq8u6p3m7g-.js","status":200,"duration":"83.937502ms"}
+{"time":"2026-08-17T10:21:58.984463369-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60344","method":"GET","path":"/_next/static/chunks/0e6t78x6zb_q1.js","status":200,"duration":"330.778871ms"}
+{"time":"2026-08-17T10:21:59.312149439-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60344","method":"GET","path":"/favicon.ico","status":200,"duration":"241.293µs"}
+{"time":"2026-08-17T10:21:59.351568772-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/api/logs","status":200,"duration":"2.310426ms"}
+{"time":"2026-08-17T10:21:59.362479022-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"HEAD","path":"/","status":200,"duration":"22.499µs"}
+{"time":"2026-08-17T10:21:59.366789683-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"HEAD","path":"/design/","status":200,"duration":"15.599µs"}
+{"time":"2026-08-17T10:21:59.367052675-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/kitting/","status":200,"duration":"32.899µs"}
+{"time":"2026-08-17T10:21:59.367051975-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"HEAD","path":"/machine-shop/","status":200,"duration":"39.199µs"}
+{"time":"2026-08-17T10:21:59.379427877-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/__next._tree.txt","status":200,"duration":"28.499µs"}
+{"time":"2026-08-17T10:21:59.391668284-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/kitting/__next._tree.txt","status":200,"duration":"15.999µs"}
+{"time":"2026-08-17T10:21:59.391687583-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/design/__next._tree.txt","status":200,"duration":"14.799µs"}
+{"time":"2026-08-17T10:21:59.392080371-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/machine-shop/__next._tree.txt","status":200,"duration":"25.399µs"}
+{"time":"2026-08-17T10:21:59.400066914-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/_next/static/chunks/20hpmtn2yqa_-.css","status":200,"duration":"145.995µs"}
+{"time":"2026-08-17T10:21:59.40112688-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/laser/","status":200,"duration":"32.399µs"}
+{"time":"2026-08-17T10:21:59.409943497-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/_next/static/chunks/1-g6bnn28o7ok.css","status":200,"duration":"92.397µs"}
+{"time":"2026-08-17T10:21:59.410048193-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/assembly/","status":200,"duration":"22.2µs"}
+{"time":"2026-08-17T10:21:59.410898666-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"HEAD","path":"/electrical-controls/","status":200,"duration":"24.099µs"}
+{"time":"2026-08-17T10:21:59.421691819-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"HEAD","path":"/enclosures/","status":200,"duration":"27.699µs"}
+{"time":"2026-08-17T10:21:59.422999677-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/laser/__next._tree.txt","status":200,"duration":"36.198µs"}
+{"time":"2026-08-17T10:21:59.429921155-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/assembly/__next._tree.txt","status":200,"duration":"12.4µs"}
+{"time":"2026-08-17T10:21:59.441109095-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/electrical-controls/__next._tree.txt","status":200,"duration":"25.899µs"}
+{"time":"2026-08-17T10:21:59.441464584-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/enclosures/__next._tree.txt","status":200,"duration":"13.7µs"}
+{"time":"2026-08-17T10:21:59.452150141-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"HEAD","path":"/admin/","status":200,"duration":"19.3µs"}
+{"time":"2026-08-17T10:21:59.453289204-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/__next.__PAGE__.txt","status":200,"duration":"56.798µs"}
+{"time":"2026-08-17T10:21:59.457859957-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/design/__next.design.__PAGE__.txt","status":200,"duration":"92.797µs"}
+{"time":"2026-08-17T10:21:59.463391279-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/kitting/__next.kitting.__PAGE__.txt","status":200,"duration":"121.397µs"}
+{"time":"2026-08-17T10:21:59.468458317-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/admin/__next._tree.txt","status":200,"duration":"41.599µs"}
+{"time":"2026-08-17T10:21:59.484825191-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/_next/static/chunks/00u50u2lnynde.js","status":200,"duration":"243.192µs"}
+{"time":"2026-08-17T10:21:59.486236945-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/machine-shop/__next.machine-shop.__PAGE__.txt","status":200,"duration":"89.697µs"}
+{"time":"2026-08-17T10:21:59.491469277-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/_next/static/chunks/0-f83a2t4wynj.js","status":200,"duration":"162.295µs"}
+{"time":"2026-08-17T10:21:59.494716973-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/laser/__next.laser.__PAGE__.txt","status":200,"duration":"88.797µs"}
+{"time":"2026-08-17T10:21:59.498947137-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/assembly/__next.assembly.__PAGE__.txt","status":200,"duration":"83.697µs"}
+{"time":"2026-08-17T10:21:59.505230335-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/electrical-controls/__next.electrical-controls.__PAGE__.txt","status":200,"duration":"80.697µs"}
+{"time":"2026-08-17T10:21:59.511393637-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/enclosures/__next.enclosures.__PAGE__.txt","status":200,"duration":"77.197µs"}
+{"time":"2026-08-17T10:21:59.51814792-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/admin/__next.admin.__PAGE__.txt","status":200,"duration":"104.697µs"}
+{"time":"2026-08-17T10:21:59.537187008-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/_next/static/chunks/3khixjnvvhy0j.js","status":200,"duration":"38.398µs"}
+{"time":"2026-08-17T10:22:33.378165838-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/admin/logs/","status":200,"duration":"69.598µs"}
+{"time":"2026-08-17T10:22:33.408194882-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60396","method":"GET","path":"/api/sse","status":200,"duration":"34.041215804s"}
+{"time":"2026-08-17T10:22:33.436656676-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/_next/static/media/70bc3e132a0a741e-s.p.3t6q91iet4nsy.woff2","status":200,"duration":"75.998µs"}
+{"time":"2026-08-17T10:22:33.440106866-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/_next/static/chunks/2jvy4veosd9k8.js","status":200,"duration":"49.698µs"}
+{"time":"2026-08-17T10:22:33.440809243-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/assets/Triangle Icon_Solid.png","status":200,"duration":"48.299µs"}
+{"time":"2026-08-17T10:22:33.440831743-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60344","method":"GET","path":"/_next/static/chunks/3f3qq2zss_cvg.css","status":200,"duration":"92.797µs"}
+{"time":"2026-08-17T10:22:33.440877241-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/_next/static/chunks/39bdv8zbvwcba.js","status":200,"duration":"138.895µs"}
+{"time":"2026-08-17T10:22:33.440958339-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/_next/static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2","status":200,"duration":"143.996µs"}
+{"time":"2026-08-17T10:22:33.669231472-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/_next/static/chunks/turbopack-17k0ibfbjh1n1.js","status":200,"duration":"106.196µs"}
+{"time":"2026-08-17T10:22:33.671065814-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60402","method":"GET","path":"/_next/static/chunks/3n-k319vhvu8e.js","status":200,"duration":"111.996µs"}
+{"time":"2026-08-17T10:22:33.686612519-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/_next/static/chunks/1k6ceh6302v40.js","status":200,"duration":"107.796µs"}
+{"time":"2026-08-17T10:22:33.749242525-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/_next/static/chunks/0e6t78x6zb_q1.js","status":200,"duration":"302.156982ms"}
+{"time":"2026-08-17T10:22:33.977142671-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60344","method":"GET","path":"/_next/static/chunks/1zbq8u6p3m7g-.js","status":200,"duration":"529.188455ms"}
+{"time":"2026-08-17T10:22:34.346680507-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60344","method":"GET","path":"/favicon.ico","status":200,"duration":"136.696µs"}
+{"time":"2026-08-17T10:22:34.366000592-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60360","method":"GET","path":"/api/logs","status":200,"duration":"1.27716ms"}
+{"time":"2026-08-17T10:22:34.399565024-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"HEAD","path":"/","status":200,"duration":"20.099µs"}
+{"time":"2026-08-17T10:22:34.401202572-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/design/","status":200,"duration":"21.999µs"}
+{"time":"2026-08-17T10:22:34.402920417-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"HEAD","path":"/kitting/","status":200,"duration":"29.699µs"}
+{"time":"2026-08-17T10:22:34.404341772-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"HEAD","path":"/machine-shop/","status":200,"duration":"24.099µs"}
+{"time":"2026-08-17T10:22:34.40879723-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/design/__next._tree.txt","status":200,"duration":"20.599µs"}
+{"time":"2026-08-17T10:22:34.408820329-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/__next._tree.txt","status":200,"duration":"29.5µs"}
+{"time":"2026-08-17T10:22:34.413095693-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/kitting/__next._tree.txt","status":200,"duration":"18.699µs"}
+{"time":"2026-08-17T10:22:34.415940803-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/machine-shop/__next._tree.txt","status":200,"duration":"15.3µs"}
+{"time":"2026-08-17T10:22:34.424073344-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/laser/","status":200,"duration":"14.8µs"}
+{"time":"2026-08-17T10:22:34.424668525-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/_next/static/chunks/20hpmtn2yqa_-.css","status":200,"duration":"480.585µs"}
+{"time":"2026-08-17T10:22:34.429459672-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/_next/static/chunks/1-g6bnn28o7ok.css","status":200,"duration":"76.098µs"}
+{"time":"2026-08-17T10:22:34.429509971-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/assembly/","status":200,"duration":"21.399µs"}
+{"time":"2026-08-17T10:22:34.435286887-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/electrical-controls/","status":200,"duration":"16.499µs"}
+{"time":"2026-08-17T10:22:34.439682247-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/enclosures/","status":200,"duration":"16.799µs"}
+{"time":"2026-08-17T10:22:34.440590518-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/laser/__next._tree.txt","status":200,"duration":"17.799µs"}
+{"time":"2026-08-17T10:22:34.449506634-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/assembly/__next._tree.txt","status":200,"duration":"18.699µs"}
+{"time":"2026-08-17T10:22:34.44994762-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/electrical-controls/__next._tree.txt","status":200,"duration":"17.999µs"}
+{"time":"2026-08-17T10:22:34.455648839-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/enclosures/__next._tree.txt","status":200,"duration":"19µs"}
+{"time":"2026-08-17T10:22:34.46190224-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"HEAD","path":"/admin/","status":200,"duration":"21.499µs"}
+{"time":"2026-08-17T10:22:34.467742154-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/__next.__PAGE__.txt","status":200,"duration":"71.498µs"}
+{"time":"2026-08-17T10:22:34.469253706-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/design/__next.design.__PAGE__.txt","status":200,"duration":"68.098µs"}
+{"time":"2026-08-17T10:22:34.47225461-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/kitting/__next.kitting.__PAGE__.txt","status":200,"duration":"43.598µs"}
+{"time":"2026-08-17T10:22:34.479957165-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/admin/__next._tree.txt","status":200,"duration":"24.299µs"}
+{"time":"2026-08-17T10:22:34.485425491-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/_next/static/chunks/00u50u2lnynde.js","status":200,"duration":"75.997µs"}
+{"time":"2026-08-17T10:22:34.488885581-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/machine-shop/__next.machine-shop.__PAGE__.txt","status":200,"duration":"57.198µs"}
+{"time":"2026-08-17T10:22:34.49080482-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60384","method":"GET","path":"/_next/static/chunks/0-f83a2t4wynj.js","status":200,"duration":"65.298µs"}
+{"time":"2026-08-17T10:22:34.496068452-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/laser/__next.laser.__PAGE__.txt","status":200,"duration":"97.797µs"}
+{"time":"2026-08-17T10:22:34.497460708-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/assembly/__next.assembly.__PAGE__.txt","status":200,"duration":"76.198µs"}
+{"time":"2026-08-17T10:22:34.512563227-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60370","method":"GET","path":"/electrical-controls/__next.electrical-controls.__PAGE__.txt","status":200,"duration":"64.398µs"}
+{"time":"2026-08-17T10:22:34.513854586-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/enclosures/__next.enclosures.__PAGE__.txt","status":200,"duration":"43.199µs"}
+{"time":"2026-08-17T10:22:34.518933324-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/admin/__next.admin.__PAGE__.txt","status":200,"duration":"66.097µs"}
+{"time":"2026-08-17T10:22:34.558278672-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:47010","method":"GET","path":"/_next/static/chunks/3khixjnvvhy0j.js","status":200,"duration":"37.199µs"}
+{"time":"2026-08-17T10:22:39.372369829-04:00","level":"INFO","msg":"Shutting down server..."}
+{"time":"2026-08-17T10:22:49.373166069-04:00","level":"ERROR","msg":"Server forced to shutdown","error":"context deadline exceeded"}
+{"time":"2026-08-17T10:23:00.690750497-04:00","level":"INFO","msg":"Starting vtrFlux API Server..."}
+{"time":"2026-08-17T10:23:00.695525745-04:00","level":"INFO","msg":"Database connection successfully established."}
+{"time":"2026-08-17T10:23:00.696255222-04:00","level":"INFO","msg":"vtrFlux API Server listening","port":"8080"}
+{"time":"2026-08-17T10:23:02.697137729-04:00","level":"SYSTEM","msg":"Server successfully started and stabilized","port":"8080","status":"online"}

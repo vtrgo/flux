@@ -81,7 +81,7 @@ func main() {
 	// Broadcast a system log event after a brief settling time for administrators
 	go func() {
 		time.Sleep(2 * time.Second)
-		logger.System("Server successfully started and stabilized", "port", port, "status", "online")
+		slog.Info("Server successfully started and stabilized", "port", port, "status", "online")
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server

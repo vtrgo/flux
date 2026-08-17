@@ -16,11 +16,11 @@ export default function LogsViewerPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeLevels, setActiveLevels] = useState<Record<string, boolean>>({
-    SYSTEM: true,
     DEBUG: true,
     INFO: true,
     WARN: true,
-    ERROR: true
+    ERROR: true,
+    SYSTEM: false
   });
   
   // Load initial logs
@@ -119,7 +119,7 @@ export default function LogsViewerPage() {
     }
   };
 
-  const availableLevels = ['SYSTEM', 'DEBUG', 'INFO', 'WARN', 'ERROR'];
+  const availableLevels = ['DEBUG', 'INFO', 'WARN', 'ERROR', 'SYSTEM'];
 
   return (
     <main style={{ padding: '2rem', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
