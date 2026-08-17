@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"io/fs"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,10 +13,19 @@ import (
 	"github.com/vtrgo/flux"
 	"github.com/vtrgo/flux/internal/api"
 	"github.com/vtrgo/flux/internal/db"
+	"github.com/vtrgo/flux/internal/logger"
 )
 
 func main() {
-	log.Println("Starting vtrFlux API Server...")
+	// Initialize our dual-handler slog configuration
+	logger.InitLogger()
+	
+	// Hook the log output to our SSE broadcaster
+	logger.LogBroadcaster = func(data interface{}) {
+		api.BroadcastEvent("server_log_entry", data)
+	}
+
+	slog.Info("Starting vtrFlux API Server...")
 
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
@@ -24,10 +33,11 @@ func main() {
 	}
 
 	if err := db.InitDB(connStr); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		slog.Error("Failed to initialize database", "error", err)
+		os.Exit(1)
 	}
 	defer func() {
-		log.Println("Closing database connections...")
+		slog.Info("Closing database connections...")
 		db.DB.Close()
 	}()
 
@@ -38,7 +48,8 @@ func main() {
 
 	uiFS, err := fs.Sub(flux.UIFS, "frontend/out")
 	if err != nil {
-		log.Fatalf("Failed to initialize embedded UI filesystem: %v", err)
+		slog.Error("Failed to initialize embedded UI filesystem", "error", err)
+		os.Exit(1)
 	}
 	mux.Handle("/", http.FileServer(http.FS(uiFS)))
 
@@ -60,9 +71,10 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("vtrFlux API Server listening on :%s\n", port)
+		slog.Info("vtrFlux API Server listening", "port", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Server failed: %v", err)
+			slog.Error("Server failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -70,14 +82,15 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	slog.Info("Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		slog.Error("Server forced to shutdown", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Server exiting")
+	slog.Info("Server exiting")
 }

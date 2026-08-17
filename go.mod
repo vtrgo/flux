@@ -6,3 +6,5 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.12.3
 )
+
+require gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect

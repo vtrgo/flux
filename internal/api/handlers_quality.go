@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -132,6 +133,7 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	BroadcastEvent("defect_added", newDefect)
+	slog.Debug("Defect logged", "defect_id", newDefect.ID, "machine_id", machineID)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newDefect)
@@ -235,6 +237,7 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	BroadcastEvent("defect_updated", updatedDefect)
+	slog.Debug("Defect updated", "defect_id", defectID, "status", updatedDefect.Status)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updatedDefect)

@@ -3,9 +3,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/vtrgo/flux/internal/db"
+	"github.com/vtrgo/flux/internal/logger"
 	"github.com/vtrgo/flux/internal/models"
 )
 
@@ -87,7 +89,22 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/laser/tasks", handleAddLaserTask)
 	mux.HandleFunc("PUT /api/laser/tasks/{task_id}", handleUpdateLaserTask)
 
+	mux.HandleFunc("GET /api/logs", handleGetLogs)
+
 	mux.HandleFunc("/api/sse", SSEHandler)
+}
+
+func handleGetLogs(w http.ResponseWriter, r *http.Request) {
+	// Import the logger package up top to use logger.ReadLastLogLines
+	// Let's assume we read the last 100KB (~1000 lines max)
+	const readBytes = 100 * 1024 
+	
+	logs, err := logger.ReadLastLogLines(int64(readBytes))
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to read logs", err)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"logs": logs})
 }
 
 func handleMachines(w http.ResponseWriter, r *http.Request) {
@@ -201,6 +218,8 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 
 	BroadcastEvent("machine_created", newMachine)
 
+	slog.Debug("Machine created", "machine_id", newMachine.ID, "order_number", newMachine.OrderNumber)
+
 	respondJSON(w, http.StatusCreated, newMachine)
 }
 
@@ -218,5 +237,6 @@ func handleDeleteMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	BroadcastEvent("machine_deleted", map[string]string{"id": id})
+	slog.Debug("Machine deleted", "machine_id", id)
 	w.WriteHeader(http.StatusOK)
 }

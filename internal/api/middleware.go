@@ -1,10 +1,11 @@
 package api
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"runtime/debug"
 	"time"
+	"github.com/vtrgo/flux/internal/logger"
 )
 
 // RequestLoggerMiddleware logs the method, path, status, and duration of each HTTP request
@@ -18,7 +19,13 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 
 		duration := time.Since(start)
-		log.Printf("[%s] %s %s - %d %s", r.RemoteAddr, r.Method, r.URL.Path, ww.status, duration)
+		logger.System("HTTP Request",
+			slog.String("ip", r.RemoteAddr),
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.Path),
+			slog.Int("status", ww.status),
+			slog.String("duration", duration.String()),
+		)
 	})
 }
 
@@ -27,7 +34,10 @@ func PanicRecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("PANIC RECOVERED: %v\n%s", err, debug.Stack())
+				slog.Error("PANIC RECOVERED",
+					slog.Any("error", err),
+					slog.String("stack", string(debug.Stack())),
+				)
 				respondError(w, http.StatusInternalServerError, "Internal server error", nil)
 			}
 		}()
