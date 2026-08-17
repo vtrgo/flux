@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from 'react';
-import { useSSEConnectionStatus } from '../components/SSEProvider';
+
 import { fetchApi } from '../lib/api';
 import { useDashboardData } from '../hooks/useDashboardData';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ import { ACTIVE_DEPARTMENTS } from '../lib/departments';
 export default function Home() {
   const { orders, machines, defectSummaries, projectSummaries, loading } = useDashboardData();
   const [selectedMachineDept, setSelectedMachineDept] = useState<{ machineId: string, dept: string } | null>(null);
-  const sseConnected = useSSEConnectionStatus();
+
 
   const handleDeleteMachine = useCallback(async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -40,10 +40,6 @@ export default function Home() {
         <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)' }}>Active Pipeline</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <Link href="/kickoff" className="vtr-btn">Project Initialization</Link>
-          <div className={`${styles.statusBadge} ${sseConnected ? styles.online : styles.offline}`}>
-            <span className={styles.indicator}></span>
-            {sseConnected ? "SYSTEM ONLINE" : "CONNECTING..."}
-          </div>
         </div>
       </div>
 

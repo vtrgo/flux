@@ -1,8 +1,11 @@
 'use client'
 
 import React from 'react'
+import { useSSEConnectionStatus } from './SSEProvider'
 
 export const Logo = ({ className = '', width = 45, height = 45 }: { className?: string, width?: number, height?: number }) => {
+  const sseConnected = useSSEConnectionStatus()
+  
   return (
     <div className={`vtr-logo-container ${className}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
       <img 
@@ -36,6 +39,27 @@ export const Logo = ({ className = '', width = 45, height = 45 }: { className?: 
         }}>
           Manufacturing Execution System
         </span>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          marginTop: '4px',
+          fontFamily: 'var(--font-mono), monospace',
+          fontSize: '0.45rem',
+          color: sseConnected ? 'var(--vtr-theme-primary, var(--accent-green, #00ff00))' : 'var(--vtr-theme-accent, var(--accent-amber, #ffb000))',
+          letterSpacing: '0.1em',
+          fontWeight: 600
+        }}>
+          <span style={{
+            width: '4px',
+            height: '4px',
+            borderRadius: '50%',
+            backgroundColor: sseConnected ? 'var(--vtr-theme-primary, var(--accent-green, #00ff00))' : 'var(--vtr-theme-accent, var(--accent-amber, #ffb000))',
+            boxShadow: '0 0 4px currentColor',
+            animation: sseConnected ? 'pulse 2s infinite' : 'none'
+          }}></span>
+          {sseConnected ? "SYSTEM ONLINE" : "CONNECTING..."}
+        </div>
       </div>
     </div>
   )
