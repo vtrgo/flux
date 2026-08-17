@@ -1,4 +1,4 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export async function fetchApi<T = any>(endpoint: string, options: RequestInit & { params?: Record<string, string> } = {}): Promise<T> {
   let url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;

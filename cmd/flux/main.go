@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/vtrgo/flux"
 	"github.com/vtrgo/flux/internal/api"
@@ -22,6 +26,10 @@ func main() {
 	if err := db.InitDB(connStr); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+	defer func() {
+		log.Println("Closing database connections...")
+		db.DB.Close()
+	}()
 
 	api.InitHub()
 
@@ -39,10 +47,37 @@ func main() {
 		port = "8080"
 	}
 
-	handler := api.CorsMiddleware(mux)
+	// Chain middlewares: Logger -> PanicRecovery -> CORS -> Router
+	handler := api.RequestLoggerMiddleware(
+		api.PanicRecoveryMiddleware(
+			api.CorsMiddleware(mux),
+		),
+	)
 
-	log.Printf("vtrFlux API Server listening on :%s\n", port)
-	if err := http.ListenAndServe(":"+port, handler); err != nil {
-		log.Fatalf("Server failed: %v", err)
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: handler,
 	}
+
+	go func() {
+		log.Printf("vtrFlux API Server listening on :%s\n", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server exiting")
 }
