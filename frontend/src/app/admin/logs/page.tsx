@@ -15,27 +15,13 @@ type LogEntry = {
 export default function LogsViewerPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [preset, setPreset] = useState<string>('user');
   const [activeLevels, setActiveLevels] = useState<Record<string, boolean>>({
+    SYSTEM: true,
     DEBUG: true,
     INFO: true,
     WARN: true,
     ERROR: true
   });
-  
-  // Read preset and configure levels
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const p = urlParams.get('preset') || 'user';
-      setPreset(p);
-      if (p === 'system') {
-        setActiveLevels({ SYSTEM: true, INFO: true, WARN: true, ERROR: true });
-      } else {
-        setActiveLevels({ DEBUG: true, INFO: true, WARN: true, ERROR: true });
-      }
-    }
-  }, []);
   
   // Load initial logs
   useEffect(() => {
@@ -119,16 +105,14 @@ export default function LogsViewerPage() {
     }
   };
 
-  const availableLevels = preset === 'system' 
-    ? ['SYSTEM', 'ERROR', 'WARN', 'INFO'] 
-    : ['DEBUG', 'ERROR', 'WARN', 'INFO'];
+  const availableLevels = ['SYSTEM', 'DEBUG', 'INFO', 'WARN', 'ERROR'];
 
   return (
     <main style={{ padding: '2rem', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#1e1e1e' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <h1 style={{ fontFamily: 'monospace', color: '#fff', margin: 0, fontSize: '1.5rem' }}>
-            &gt; {preset === 'system' ? 'SYSTEM LOGS' : 'USER LOGS'}
+            &gt; SERVER LOGS
           </h1>
           <span style={{ 
             padding: '4px 8px', 

@@ -52,11 +52,8 @@ export default function AdminPage() {
           Monitor system health, access real-time server logs, and review user audit activity securely.
         </p>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <Link href="/admin/logs?preset=user" className="vtr-btn vtr-btn-primary" style={{ display: 'inline-block', padding: '0.75rem 1.5rem' }}>
-            User Logs
-          </Link>
-          <Link href="/admin/logs?preset=system" className="vtr-btn vtr-btn-primary" style={{ display: 'inline-block', padding: '0.75rem 1.5rem' }}>
-            System Logs
+          <Link href="/admin/logs" className="vtr-btn vtr-btn-primary" style={{ display: 'inline-block', padding: '0.75rem 1.5rem' }}>
+            View Live Server Logs →
           </Link>
         </div>
       </section>

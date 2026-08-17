@@ -1323,3 +1323,62 @@
 {"time":"2026-08-17T10:11:03.685486176-04:00","level":"INFO","msg":"vtrFlux API Server listening","port":"8080"}
 {"time":"2026-08-17T10:12:59.701815488-04:00","level":"INFO","msg":"Shutting down server..."}
 {"time":"2026-08-17T10:13:09.702637574-04:00","level":"ERROR","msg":"Server forced to shutdown","error":"context deadline exceeded"}
+{"time":"2026-08-17T10:13:46.358435339-04:00","level":"INFO","msg":"Starting vtrFlux API Server..."}
+{"time":"2026-08-17T10:13:46.36212173-04:00","level":"INFO","msg":"Database connection successfully established."}
+{"time":"2026-08-17T10:13:46.362653028-04:00","level":"INFO","msg":"vtrFlux API Server listening","port":"8080"}
+{"time":"2026-08-17T10:13:48.365189291-04:00","level":"SYSTEM","msg":"Server successfully started and stabilized","port":"8080","status":"online"}
+{"time":"2026-08-17T10:14:19.056047937-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/admin/logs/","status":200,"duration":"1.709898ms"}
+{"time":"2026-08-17T10:14:19.085255992-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:33640","method":"GET","path":"/api/sse","status":200,"duration":"30.285614584s"}
+{"time":"2026-08-17T10:14:19.108223958-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60002","method":"GET","path":"/_next/static/media/70bc3e132a0a741e-s.p.3t6q91iet4nsy.woff2","status":200,"duration":"177.6µs"}
+{"time":"2026-08-17T10:14:19.125002932-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"GET","path":"/_next/static/chunks/3f3qq2zss_cvg.css","status":200,"duration":"114.5µs"}
+{"time":"2026-08-17T10:14:19.125012132-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/_next/static/media/83afe278b6a6bb3c-s.p.2bn3s6zvc0dyp.woff2","status":200,"duration":"162.799µs"}
+{"time":"2026-08-17T10:14:19.307552956-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60044","method":"GET","path":"/_next/static/chunks/2jvy4veosd9k8.js","status":200,"duration":"144.7µs"}
+{"time":"2026-08-17T10:14:19.307571156-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60032","method":"GET","path":"/assets/Triangle Icon_Solid.png","status":200,"duration":"149µs"}
+{"time":"2026-08-17T10:14:19.52327953-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/_next/static/chunks/39bdv8zbvwcba.js","status":200,"duration":"161.5µs"}
+{"time":"2026-08-17T10:14:19.552909085-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/_next/static/chunks/turbopack-17k0ibfbjh1n1.js","status":200,"duration":"76µs"}
+{"time":"2026-08-17T10:14:19.566403065-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"GET","path":"/_next/static/chunks/3n-k319vhvu8e.js","status":200,"duration":"77.8µs"}
+{"time":"2026-08-17T10:14:19.574220053-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/_next/static/chunks/2h8v7tjrswm9w.js","status":200,"duration":"85µs"}
+{"time":"2026-08-17T10:14:19.844369744-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60002","method":"GET","path":"/_next/static/chunks/1zbq8u6p3m7g-.js","status":200,"duration":"297.01135ms"}
+{"time":"2026-08-17T10:14:20.1381429-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60044","method":"GET","path":"/_next/static/chunks/0e6t78x6zb_q1.js","status":200,"duration":"601.91799ms"}
+{"time":"2026-08-17T10:14:20.586448722-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60002","method":"GET","path":"/favicon.ico","status":200,"duration":"128.6µs"}
+{"time":"2026-08-17T10:14:20.606502792-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60044","method":"GET","path":"/api/logs","status":200,"duration":"2.416597ms"}
+{"time":"2026-08-17T10:14:20.63687615-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"HEAD","path":"/","status":200,"duration":"21.1µs"}
+{"time":"2026-08-17T10:14:20.638103149-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"HEAD","path":"/design/","status":200,"duration":"35.1µs"}
+{"time":"2026-08-17T10:14:20.639381047-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"HEAD","path":"/kitting/","status":200,"duration":"19.8µs"}
+{"time":"2026-08-17T10:14:20.642253243-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"HEAD","path":"/machine-shop/","status":200,"duration":"20.6µs"}
+{"time":"2026-08-17T10:14:20.646578037-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/__next._tree.txt","status":200,"duration":"32.1µs"}
+{"time":"2026-08-17T10:14:20.647058737-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/design/__next._tree.txt","status":200,"duration":"40.5µs"}
+{"time":"2026-08-17T10:14:20.647154037-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"GET","path":"/kitting/__next._tree.txt","status":200,"duration":"17.2µs"}
+{"time":"2026-08-17T10:14:20.654932727-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/machine-shop/__next._tree.txt","status":200,"duration":"64.6µs"}
+{"time":"2026-08-17T10:14:20.658481722-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"GET","path":"/_next/static/chunks/20hpmtn2yqa_-.css","status":200,"duration":"114.8µs"}
+{"time":"2026-08-17T10:14:20.65966972-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"HEAD","path":"/laser/","status":200,"duration":"36.3µs"}
+{"time":"2026-08-17T10:14:20.673671802-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/_next/static/chunks/1-g6bnn28o7ok.css","status":200,"duration":"92µs"}
+{"time":"2026-08-17T10:14:20.673687202-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"HEAD","path":"/electrical-controls/","status":200,"duration":"13.7µs"}
+{"time":"2026-08-17T10:14:20.673757802-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"HEAD","path":"/assembly/","status":200,"duration":"32.5µs"}
+{"time":"2026-08-17T10:14:20.680587093-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"HEAD","path":"/enclosures/","status":200,"duration":"24µs"}
+{"time":"2026-08-17T10:14:20.680744293-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/laser/__next._tree.txt","status":200,"duration":"14.5µs"}
+{"time":"2026-08-17T10:14:20.687896684-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"GET","path":"/electrical-controls/__next._tree.txt","status":200,"duration":"21.1µs"}
+{"time":"2026-08-17T10:14:20.688478483-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/assembly/__next._tree.txt","status":200,"duration":"13.3µs"}
+{"time":"2026-08-17T10:14:20.699598868-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/enclosures/__next._tree.txt","status":200,"duration":"18.6µs"}
+{"time":"2026-08-17T10:14:20.704027562-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"HEAD","path":"/admin/","status":200,"duration":"18.999µs"}
+{"time":"2026-08-17T10:14:20.708704356-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/__next.__PAGE__.txt","status":200,"duration":"79.8µs"}
+{"time":"2026-08-17T10:14:20.708822156-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/design/__next.design.__PAGE__.txt","status":200,"duration":"75.5µs"}
+{"time":"2026-08-17T10:14:20.719927842-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"GET","path":"/admin/__next._tree.txt","status":200,"duration":"25.1µs"}
+{"time":"2026-08-17T10:14:20.719949342-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/kitting/__next.kitting.__PAGE__.txt","status":200,"duration":"37.4µs"}
+{"time":"2026-08-17T10:14:20.73660162-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/machine-shop/__next.machine-shop.__PAGE__.txt","status":200,"duration":"53.2µs"}
+{"time":"2026-08-17T10:14:20.73662592-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"GET","path":"/_next/static/chunks/0-f83a2t4wynj.js","status":200,"duration":"93.6µs"}
+{"time":"2026-08-17T10:14:20.752827299-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/_next/static/chunks/00u50u2lnynde.js","status":200,"duration":"71.1µs"}
+{"time":"2026-08-17T10:14:20.756284294-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/laser/__next.laser.__PAGE__.txt","status":200,"duration":"63.1µs"}
+{"time":"2026-08-17T10:14:20.763840984-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:59992","method":"GET","path":"/assembly/__next.assembly.__PAGE__.txt","status":200,"duration":"54.9µs"}
+{"time":"2026-08-17T10:14:20.765306082-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60012","method":"GET","path":"/electrical-controls/__next.electrical-controls.__PAGE__.txt","status":200,"duration":"60.299µs"}
+{"time":"2026-08-17T10:14:20.769845477-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/enclosures/__next.enclosures.__PAGE__.txt","status":200,"duration":"51µs"}
+{"time":"2026-08-17T10:14:20.784602557-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/admin/__next.admin.__PAGE__.txt","status":200,"duration":"100.5µs"}
+{"time":"2026-08-17T10:14:20.799131038-04:00","level":"SYSTEM","msg":"HTTP Request","ip":"192.168.1.133:60024","method":"GET","path":"/_next/static/chunks/3khixjnvvhy0j.js","status":200,"duration":"24.8µs"}
+{"time":"2026-08-17T10:14:48.046096327-04:00","level":"INFO","msg":"Shutting down server..."}
+{"time":"2026-08-17T10:14:58.047630713-04:00","level":"ERROR","msg":"Server forced to shutdown","error":"context deadline exceeded"}
+{"time":"2026-08-17T10:16:35.109154448-04:00","level":"INFO","msg":"Starting vtrFlux API Server..."}
+{"time":"2026-08-17T10:16:35.112496843-04:00","level":"INFO","msg":"Database connection successfully established."}
+{"time":"2026-08-17T10:16:35.113060043-04:00","level":"INFO","msg":"vtrFlux API Server listening","port":"8080"}
+{"time":"2026-08-17T10:16:37.113787328-04:00","level":"SYSTEM","msg":"Server successfully started and stabilized","port":"8080","status":"online"}
+{"time":"2026-08-17T10:16:38.743332276-04:00","level":"INFO","msg":"Shutting down server..."}
+{"time":"2026-08-17T10:16:48.746868391-04:00","level":"ERROR","msg":"Server forced to shutdown","error":"context deadline exceeded"}
