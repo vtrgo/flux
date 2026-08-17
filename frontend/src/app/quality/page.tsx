@@ -8,6 +8,7 @@ import styles from "./quality.module.css";
 import { Machine, Defect } from "../../types";
 
 import { IssueModal } from "../../components/IssueModal";
+import { FilterButtonGroup } from "../../components/FilterButtonGroup";
 
 export default function QualityResolutionHub() {
   const [defects, setDefects] = useState<Defect[]>([]);
@@ -16,6 +17,11 @@ export default function QualityResolutionHub() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
+
+  // Filter & Search State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeDepartment, setActiveDepartment] = useState<string>("All");
+  const [activeSeverity, setActiveSeverity] = useState<string>("All");
 
   const fetchData = async () => {
     try {
@@ -86,9 +92,24 @@ export default function QualityResolutionHub() {
     }
   };
 
-  const openDefects = defects.filter(d => d.status === 'open');
-  const fixedDefects = defects.filter(d => d.status === 'fixed');
-  const verifiedDefects = defects.filter(d => d.status === 'verified');
+  const uniqueAssignedDepts = Array.from(new Set(defects.map(d => d.assigned_department))).filter(Boolean);
+  const uniqueSeverities = Array.from(new Set(defects.map(d => d.severity))).filter(Boolean);
+
+  const filteredDefects = defects.filter(defect => {
+    const matchesSearch = 
+      searchQuery === "" || 
+      defect.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      defect.order_number?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesAssignedDept = activeDepartment === "All" || defect.assigned_department === activeDepartment;
+    const matchesSeverity = activeSeverity === "All" || defect.severity === activeSeverity;
+
+    return matchesSearch && matchesAssignedDept && matchesSeverity;
+  });
+
+  const openDefects = filteredDefects.filter(d => d.status === 'open');
+  const fixedDefects = filteredDefects.filter(d => d.status === 'fixed');
+  const verifiedDefects = filteredDefects.filter(d => d.status === 'verified');
 
   if (loading) return <div className={styles.loading}>INITIALIZING HUB...</div>;
 
@@ -103,6 +124,36 @@ export default function QualityResolutionHub() {
           </Link>
         </div>
       </header>
+
+      <div className={styles.filters}>
+        <input 
+          autoFocus
+          type="text" 
+          placeholder="Search description or order..." 
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="vtr-input"
+          style={{ flex: 1, minWidth: '200px', maxWidth: '300px' }}
+        />
+        
+        {uniqueAssignedDepts.length > 0 && (
+          <FilterButtonGroup 
+            options={["All", ...uniqueAssignedDepts]} 
+            activeOption={activeDepartment} 
+            onChange={setActiveDepartment} 
+            label="Assigned" 
+          />
+        )}
+        
+        {uniqueSeverities.length > 0 && (
+          <FilterButtonGroup 
+            options={["All", ...uniqueSeverities]} 
+            activeOption={activeSeverity} 
+            onChange={setActiveSeverity} 
+            label="Severity" 
+          />
+        )}
+      </div>
 
       <div className={styles.grid}>
         {/* OPEN COLUMN */}

@@ -22,6 +22,17 @@
   text-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
 }
 
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  background: var(--vtr-card-bg, #1a1a1a);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--vtr-card-border, #333);
+  flex-wrap: wrap;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
