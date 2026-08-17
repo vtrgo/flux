@@ -103,9 +103,6 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
             <span>+ ADD ISSUE</span>
             <span style={{ fontSize: '0.65rem', opacity: 0.7, textTransform: 'none' }}>(Press &apos;C&apos;)</span>
           </button>
-          <Link href="/" className="vtr-btn vtr-btn-secondary">
-            ← Back to Dashboard
-          </Link>
         </div>
       </header>
 
