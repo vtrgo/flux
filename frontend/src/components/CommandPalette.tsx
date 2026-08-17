@@ -22,7 +22,7 @@ export function CommandPalette() {
   useAppHotkeys("meta+k, ctrl+k", (e) => {
     e.preventDefault();
     setOpen((open) => !open);
-  });
+  }, { enableOnFormTags: true });
 
   // Also close on escape, though cmdk handles this internally too
   useAppHotkeys(

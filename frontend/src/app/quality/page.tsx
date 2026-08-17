@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSSE } from "../../components/SSEProvider";
 import { fetchApi } from "../../lib/api";
 import Link from "next/link";
@@ -9,6 +9,7 @@ import { Machine, Defect } from "../../types";
 
 import { IssueModal } from "../../components/IssueModal";
 import { FilterButtonGroup } from "../../components/FilterButtonGroup";
+import { useAppHotkeys } from "../../hooks/useAppHotkeys";
 
 export default function QualityResolutionHub() {
   const [defects, setDefects] = useState<Defect[]>([]);
@@ -22,6 +23,8 @@ export default function QualityResolutionHub() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeDepartment, setActiveDepartment] = useState<string>("All");
   const [activeSeverity, setActiveSeverity] = useState<string>("All");
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = async () => {
     try {
@@ -61,6 +64,16 @@ export default function QualityResolutionHub() {
     setEditingDefect(null);
     setIsModalOpen(true);
   };
+
+  useAppHotkeys('/', (e) => {
+    e.preventDefault();
+    searchInputRef.current?.focus();
+  });
+
+  useAppHotkeys('c', (e) => {
+    e.preventDefault();
+    openNewModal();
+  });
 
   const openEditModal = (defect: Defect) => {
     setEditingDefect(defect);
@@ -116,22 +129,28 @@ export default function QualityResolutionHub() {
   return (
     <main className={styles.container}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Quality & Project Hub</h1>
+        <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>Quality & Resolution Hub</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button className="vtr-btn" onClick={openNewModal}>+ ADD ISSUE</button>
+          <button className="vtr-btn" onClick={openNewModal} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
+            <span>+ ADD ISSUE</span>
+            <span style={{ fontSize: '0.65rem', opacity: 0.7, textTransform: 'none' }}>(Press &apos;C&apos;)</span>
+          </button>
           <Link href="/" className="vtr-btn vtr-btn-secondary">
-            ← Dashboard
+            ← Back to Dashboard
           </Link>
         </div>
       </header>
 
       <div className={styles.filters}>
         <input 
-          autoFocus
+          ref={searchInputRef}
           type="text" 
           placeholder="Search description or order..." 
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Escape') setSearchQuery('');
+          }}
           className="vtr-input"
           style={{ flex: 1, minWidth: '200px', maxWidth: '300px' }}
         />

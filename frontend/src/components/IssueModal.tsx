@@ -86,6 +86,14 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     }
   };
 
+  // Smart form submission
+  useAppHotkeys('ctrl+enter, meta+enter', () => {
+    if (isOpen) {
+      const submitEvent = { preventDefault: () => {} } as React.FormEvent;
+      handleFormSubmit(submitEvent);
+    }
+  }, { enableOnFormTags: true }, [isOpen, formData, editingDefect]);
+
   if (!isOpen) return null;
 
   return (
@@ -105,7 +113,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               className="vtr-input"
             >
               <option value="" disabled>Select a machine...</option>
-              {machines.map(m => <option key={m.id} value={m.id}>{m.order_number}</option>)}
+              {machines.map(m => <option key={m.id} value={m.id}>{m.order_number} - {m.model_type}</option>)}
             </select>
           </div>
           

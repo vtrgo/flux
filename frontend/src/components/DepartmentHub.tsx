@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { fetchApi } from "../lib/api";
 import { useDepartmentIssues } from "../hooks/useDepartmentIssues";
 import Link from "next/link";
 import styles from "../app/quality/quality.module.css";
 import { IssueModal } from "./IssueModal";
 import { IssueCard } from "./IssueCard";
+import { FilterButtonGroup } from "./FilterButtonGroup";
+import { useAppHotkeys } from "../hooks/useAppHotkeys";
 
 import { Defect } from "../types";
 
@@ -21,10 +23,25 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSeverity, setActiveSeverity] = useState<string>("All");
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const openNewModal = () => {
     setEditingDefect(null);
     setIsModalOpen(true);
   };
+
+  useAppHotkeys('/', (e) => {
+    e.preventDefault();
+    searchInputRef.current?.focus();
+  });
+
+  useAppHotkeys('c', (e) => {
+    e.preventDefault();
+    openNewModal();
+  });
 
   const openEditModal = (defect: Defect, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -56,7 +73,20 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
 
   if (loading) return <div className={styles.loading}>LOADING {title.toUpperCase()}...</div>;
 
-  const issuesByMachine = issues.reduce((acc, issue) => {
+  const uniqueSeverities = Array.from(new Set(issues.map(d => d.severity))).filter(Boolean);
+
+  const filteredIssues = issues.filter(issue => {
+    const matchesSearch = 
+      searchQuery === "" || 
+      issue.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      issue.order_number?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesSeverity = activeSeverity === "All" || issue.severity === activeSeverity;
+
+    return matchesSearch && matchesSeverity;
+  });
+
+  const issuesByMachine = filteredIssues.reduce((acc, issue) => {
     if (!acc[issue.machine_id]) {
       acc[issue.machine_id] = { order_number: issue.order_number, issues: [] };
     }
@@ -69,12 +99,39 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
       <header className={styles.header}>
         <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>{title}</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button className="vtr-btn" onClick={openNewModal}>+ ADD ISSUE</button>
+          <button className="vtr-btn" onClick={openNewModal} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
+            <span>+ ADD ISSUE</span>
+            <span style={{ fontSize: '0.65rem', opacity: 0.7, textTransform: 'none' }}>(Press &apos;C&apos;)</span>
+          </button>
           <Link href="/" className="vtr-btn vtr-btn-secondary">
             ← Back to Dashboard
           </Link>
         </div>
       </header>
+
+      <div className={styles.filters}>
+        <input 
+          ref={searchInputRef}
+          type="text" 
+          placeholder="Search description or order..." 
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Escape') setSearchQuery('');
+          }}
+          className="vtr-input"
+          style={{ flex: 1, minWidth: '200px', maxWidth: '300px' }}
+        />
+        
+        {uniqueSeverities.length > 0 && (
+          <FilterButtonGroup 
+            options={["All", ...uniqueSeverities]} 
+            activeOption={activeSeverity} 
+            onChange={setActiveSeverity} 
+            label="Severity" 
+          />
+        )}
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem', marginBottom: '3rem' }}>
         {Object.entries(issuesByMachine).length === 0 ? (

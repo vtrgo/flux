@@ -11,7 +11,15 @@ interface IssueCardProps {
 
 export function IssueCard({ issue, onClick, cardStyle, actions }: IssueCardProps) {
   return (
-    <div className={styles.card} style={cardStyle} onClick={onClick}>
+    <div 
+      className={styles.card} 
+      style={cardStyle} 
+      onClick={onClick}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onClick();
+      }}
+    >
       <div className={styles.cardHeader}>
         <span className={styles.orderNumber}>{issue.order_number}</span>
         <span className={`${styles.severity} ${styles[issue.severity] || ''}`}>{issue.status}</span>
