@@ -1,0 +1,137 @@
+.card {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.1);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--vtr-theme-primary);
+}
+
+.deleteBtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: 1px solid var(--accent-red);
+  color: var(--accent-red);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.deleteBtn:hover {
+  background: rgba(255, 51, 51, 0.1);
+}
+
+.orderNumber {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.modelType {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.summaryBadge {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.departmentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+.deptCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deptCard:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.deptCardCritical {
+  border-color: var(--accent-red);
+}
+
+.deptCardModerate {
+  border-color: var(--accent-amber);
+}
+
+.deptCardMinor {
+  border-color: var(--vtr-theme-primary);
+}
+
+.deptTitle {
+  color: var(--vtr-theme-primary);
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.deptStats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.noIssues {
+  color: var(--vtr-theme-neutral);
+  font-style: italic;
+  padding: 0.25rem 0;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+}
+
+.statCritical {
+  color: var(--accent-red);
+}
+
+.statModerate {
+  color: var(--accent-amber);
+}
+
+.statMinor {
+  color: var(--vtr-theme-primary);
+}
+
+.divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0.25rem 0;
+}
+
+.statClosed {
+  color: var(--vtr-theme-neutral);
+}

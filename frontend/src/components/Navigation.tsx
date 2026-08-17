@@ -12,6 +12,7 @@ export function Navigation() {
 
   return (
     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+      <Link href="/quality" className={getClassName("/quality")}>Quality</Link>
       <Link href="/design" className={getClassName("/design")}>Design</Link>
       <Link href="/kitting" className={getClassName("/kitting")}>Kitting</Link>
       <Link href="/machine-shop" className={getClassName("/machine-shop")}>Machine Shop</Link>

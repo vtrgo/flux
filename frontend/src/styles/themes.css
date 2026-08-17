@@ -139,7 +139,7 @@
   border-color: var(--vtr-theme-primary, #6AB2E2);
 }
 
-.vtr-btn-primary {
+.vtr-btn.vtr-btn-primary {
   background: linear-gradient(135deg, var(--vtr-theme-primary, #6AB2E2), var(--vtr-theme-secondary, #009BA6));
   color: #000000;
   font-weight: 700;
@@ -152,7 +152,7 @@
   transition: all 0.3s ease;
 }
 
-.vtr-btn-primary:hover {
+.vtr-btn.vtr-btn-primary:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 6px 22px var(--vtr-glow-color, rgba(106, 178, 226, 0.7));
   filter: brightness(1.1);

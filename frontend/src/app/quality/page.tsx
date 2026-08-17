@@ -116,7 +116,7 @@ export default function QualityResolutionHub() {
   return (
     <main className={styles.container}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Global Quality & ECR Portal</h1>
+        <h1 className={styles.title}>Quality & Project Hub</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button className="vtr-btn" onClick={openNewModal}>+ ADD ISSUE</button>
           <Link href="/" className="vtr-btn vtr-btn-secondary">
