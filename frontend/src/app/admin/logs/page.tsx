@@ -58,7 +58,11 @@ export default function LogsViewerPage() {
           
           // Reverse to put newest at the top
           parsedLogs.reverse();
-          setLogs(parsedLogs);
+          setLogs(prev => {
+            const seen = new Set(prev.map(l => l.time + l.message));
+            const uniqueParsed = parsedLogs.filter(l => !seen.has(l.time + l.message));
+            return [...prev, ...uniqueParsed];
+          });
         }
       })
       .catch(err => console.error("Failed to fetch initial logs", err));
@@ -170,6 +174,7 @@ export default function LogsViewerPage() {
       {/* Virtualized Log Container */}
       <div style={{ flex: 1, backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '8px', overflow: 'hidden' }}>
         <Virtuoso
+          style={{ height: '100%' }}
           data={filteredLogs}
           itemContent={(index, log) => (
             <div style={{ 
