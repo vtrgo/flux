@@ -84,8 +84,7 @@ func handleAddDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("design_feedback_added", newFeedback)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, http.StatusOK, newFeedback)
+	respondJSON(w, http.StatusCreated, newFeedback)
 }
 
 // handleGetAllDesignFeedback fetches all design feedback across all machines

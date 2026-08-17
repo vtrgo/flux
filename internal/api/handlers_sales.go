@@ -90,8 +90,7 @@ func createSalesOrder(w http.ResponseWriter, r *http.Request) {
 
 	BroadcastEvent("sales_order_created", newOrder)
 
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, http.StatusOK, newOrder)
+	respondJSON(w, http.StatusCreated, newOrder)
 }
 
 func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +128,6 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	BroadcastEvent("sales_order_updated", map[string]string{"id": id})
-	w.WriteHeader(http.StatusOK)
 	respondJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
@@ -147,6 +145,5 @@ func deleteSalesOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	BroadcastEvent("sales_order_deleted", map[string]string{"id": id})
-	w.WriteHeader(http.StatusOK)
 	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }

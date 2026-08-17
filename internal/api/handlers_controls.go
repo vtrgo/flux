@@ -121,8 +121,7 @@ func handleAddControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("controls_checkpoint_added", newCheckpoint)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, http.StatusOK, newCheckpoint)
+	respondJSON(w, http.StatusCreated, newCheckpoint)
 }
 
 // handleUpdateControlsCheckpoint marks a checkpoint as passed and records the actual value

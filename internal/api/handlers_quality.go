@@ -134,8 +134,7 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("defect_added", newDefect)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, http.StatusOK, newDefect)
+	respondJSON(w, http.StatusCreated, newDefect)
 }
 
 // handleGetAllDefects fetches all defects across all machines for the Quality Resolution Hub

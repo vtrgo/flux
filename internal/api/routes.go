@@ -201,8 +201,7 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 
 	BroadcastEvent("machine_created", newMachine)
 
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, http.StatusOK, newMachine)
+	respondJSON(w, http.StatusCreated, newMachine)
 }
 
 func handleDeleteMachine(w http.ResponseWriter, r *http.Request) {

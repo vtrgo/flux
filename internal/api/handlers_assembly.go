@@ -118,8 +118,7 @@ func handleAddAssemblyTask(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("assembly_task_added", newTask)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, http.StatusOK, newTask)
+	respondJSON(w, http.StatusCreated, newTask)
 }
 
 // handleUpdateAssemblyTask marks an assembly task as complete

@@ -122,8 +122,7 @@ func handleAddKittingPart(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("kitting_part_added", newPart)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, http.StatusOK, newPart)
+	respondJSON(w, http.StatusCreated, newPart)
 }
 
 // handleUpdateKittingPart marks a part as fulfilled

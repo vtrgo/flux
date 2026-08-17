@@ -118,8 +118,7 @@ func handleAddEnclosuresTask(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("enclosures_task_added", newTask)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.WriteHeader(http.StatusCreated)
-	respondJSON(w, http.StatusOK, newTask)
+	respondJSON(w, http.StatusCreated, newTask)
 }
 
 // handleUpdateEnclosuresTask marks an enclosures task as complete
