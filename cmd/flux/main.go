@@ -78,6 +78,12 @@ func main() {
 		}
 	}()
 
+	// Broadcast a system log event after a brief settling time for administrators
+	go func() {
+		time.Sleep(2 * time.Second)
+		logger.System("Server successfully started and stabilized", "port", port, "status", "online")
+	}()
+
 	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
