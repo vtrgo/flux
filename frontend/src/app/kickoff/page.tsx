@@ -1,29 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSSE } from "../../components/SSEProvider";
 import { fetchApi } from "../../lib/api";
 import styles from "./kickoff.module.css";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useAppHotkeys } from "../../hooks/useAppHotkeys";
 
 import { SalesOrder, Machine } from "../../types";
+import { SalesOrderModal } from "../../components/SalesOrderModal";
+import { SpawnMachineModal } from "../../components/SpawnMachineModal";
 
-export default function SalesDashboard() {
+function SalesDashboardContent() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   
-  const [customerName, setCustomerName] = useState("");
-  const [poNumber, setPoNumber] = useState("");
-  const [internalProjectNumber, setInternalProjectNumber] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [responsiblePerson, setResponsiblePerson] = useState("");
-  const [salesRep, setSalesRep] = useState("");
-  const [targetDate, setTargetDate] = useState("");
-
-  const [spawningOrder, setSpawningOrder] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  const [isSalesOrderModalOpen, setIsSalesOrderModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<SalesOrder | null>(null);
-  const [newMachineModel, setNewMachineModel] = useState("");
-  const [newMachineSN, setNewMachineSN] = useState("");
+  
+  const [spawningOrderContext, setSpawningOrderContext] = useState<{ id: string, name: string } | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get("new") === "true") {
+      setIsSalesOrderModalOpen(true);
+      router.replace("/kickoff");
+    }
+  }, [searchParams, router]);
+
+  useAppHotkeys('c', (e) => {
+    if (!isSalesOrderModalOpen && !spawningOrderContext && !editingOrder) {
+      e.preventDefault();
+      setIsSalesOrderModalOpen(true);
+    }
+  }, { enableOnFormTags: false }, [isSalesOrderModalOpen, spawningOrderContext, editingOrder]);
 
   const fetchOrders = async () => {
     try {
@@ -54,29 +67,6 @@ export default function SalesDashboard() {
     fetchMachines();
   }, []);
 
-  const createOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await fetchApi("sales_orders", {
-      method: "POST",
-      body: JSON.stringify({
-        customer_name: customerName,
-        po_number: poNumber,
-        internal_project_number: internalProjectNumber,
-        project_name: projectName,
-        responsible_person: responsiblePerson,
-        sales_rep: salesRep,
-        target_ship_date: targetDate ? new Date(targetDate).toISOString() : undefined,
-      }),
-    });
-    setCustomerName("");
-    setPoNumber("");
-    setInternalProjectNumber("");
-    setProjectName("");
-    setResponsiblePerson("");
-    setSalesRep("");
-    setTargetDate("");
-  };
-
   const updateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingOrder) return;
@@ -85,6 +75,7 @@ export default function SalesDashboard() {
       body: JSON.stringify(editingOrder),
     });
     setEditingOrder(null);
+    fetchOrders();
   };
 
   const deleteOrder = async (id: string) => {
@@ -103,63 +94,28 @@ export default function SalesDashboard() {
     });
   };
 
-  const spawnMachine = async (orderId: string) => {
-    if (!newMachineModel || !newMachineSN) return;
-    await fetchApi("machines", {
-      method: "POST",
-      body: JSON.stringify({
-        sales_order_id: orderId,
-        order_number: newMachineSN,
-        model_type: newMachineModel,
-      }),
-    });
-    setSpawningOrder(null);
-    setNewMachineModel("");
-    setNewMachineSN("");
-  };
-
   return (
     <main className={styles.container}>
-      <header className={styles.header}>
+      <header className={styles.header} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 className={styles.title}>Project Kickoff</h1>
+        <button className="vtr-btn" onClick={() => setIsSalesOrderModalOpen(true)}>
+          Create Project (Press &apos;C&apos;)
+        </button>
       </header>
 
-      <section className={styles.card}>
-        <h2 style={{ marginBottom: "1.5rem", color: "var(--vtr-theme-primary)" }}>New Sales Order</h2>
-        <form onSubmit={createOrder}>
-          <div className={styles.formGrid}>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Customer Name</label>
-              <input required className={styles.input} value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Acme Corp" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>PO Number</label>
-              <input required className={styles.input} value={poNumber} onChange={e => setPoNumber(e.target.value)} placeholder="PO-12345" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Internal Project #</label>
-              <input className={styles.input} value={internalProjectNumber} onChange={e => setInternalProjectNumber(e.target.value)} placeholder="PRJ-9942" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Project Name</label>
-              <input className={styles.input} value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="VibroBowl Automation" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Responsible Person (PM)</label>
-              <input className={styles.input} value={responsiblePerson} onChange={e => setResponsiblePerson(e.target.value)} placeholder="Bob Manager" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Sales Rep</label>
-              <input className={styles.input} value={salesRep} onChange={e => setSalesRep(e.target.value)} placeholder="Jane Doe" />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Target Ship Date</label>
-              <input type="date" className={styles.input} value={targetDate} onChange={e => setTargetDate(e.target.value)} />
-            </div>
-          </div>
-          <button type="submit" className="vtr-btn">Create Order</button>
-        </form>
-      </section>
+      <SalesOrderModal 
+        isOpen={isSalesOrderModalOpen} 
+        onClose={() => setIsSalesOrderModalOpen(false)} 
+        onSuccess={fetchOrders}
+      />
+      
+      <SpawnMachineModal
+        isOpen={!!spawningOrderContext}
+        onClose={() => setSpawningOrderContext(null)}
+        orderId={spawningOrderContext?.id || ""}
+        orderName={spawningOrderContext?.name || ""}
+        onSuccess={fetchMachines}
+      />
 
       <section>
         <h2 style={{ marginBottom: "1.5rem" }}>Active Pipeline</h2>
@@ -208,18 +164,10 @@ export default function SalesDashboard() {
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="vtr-btn vtr-btn-secondary" onClick={() => setEditingOrder(order)}>Edit</button>
-                    <button className="vtr-btn vtr-btn-secondary" onClick={() => setSpawningOrder(spawningOrder === order.id ? null : order.id)}>+ Spawn</button>
+                    <button className="vtr-btn vtr-btn-secondary" onClick={() => setSpawningOrderContext({ id: order.id, name: order.customer_name })}>+ Spawn</button>
                     <button className="vtr-btn vtr-btn-secondary" style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }} onClick={() => deleteOrder(order.id)}>🗑️</button>
                   </div>
                 </div>
-
-                {spawningOrder === order.id && (
-                  <div className={styles.machineSpawner}>
-                    <input className={styles.input} style={{ flex: 1 }} placeholder="Part (e.g. Housing Base)" value={newMachineModel} onChange={e => setNewMachineModel(e.target.value)} />
-                    <input className={styles.input} style={{ flex: 1 }} placeholder="S/N or Internal Tracking" value={newMachineSN} onChange={e => setNewMachineSN(e.target.value)} />
-                    <button className="vtr-btn" onClick={() => spawnMachine(order.id)}>Spawn</button>
-                  </div>
-                )}
 
                 {orderMachines.length > 0 && (
                   <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
@@ -246,5 +194,13 @@ export default function SalesDashboard() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function SalesDashboard() {
+  return (
+    <Suspense fallback={<div style={{ padding: '2rem' }}>Loading Kickoff Dashboard...</div>}>
+      <SalesDashboardContent />
+    </Suspense>
   );
 }

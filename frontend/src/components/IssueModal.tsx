@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { fetchApi } from "../lib/api";
 import { ACTIVE_DEPARTMENTS, formatDepartmentName } from "../lib/departments";
 import styles from "../app/quality/quality.module.css";
+import { useAppHotkeys } from "../hooks/useAppHotkeys";
 
 import { Machine, Defect } from "../types";
 
@@ -25,6 +26,12 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     description: '',
     notes: ''
   });
+
+  useAppHotkeys('escape', () => {
+    if (isOpen) {
+      onClose();
+    }
+  }, { enableOnFormTags: true }, [isOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -152,6 +159,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               value={formData.description} 
               onChange={e => setFormData({...formData, description: e.target.value})}
               required
+              autoFocus
               rows={4}
               className="vtr-input"
               style={{ resize: 'vertical' }}

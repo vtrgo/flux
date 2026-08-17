@@ -5,6 +5,7 @@ import { fetchApi } from "../lib/api";
 import { Defect } from "../types";
 import { formatDepartmentName } from "../lib/departments";
 import styles from "../app/page.module.css";
+import { useAppHotkeys } from "../hooks/useAppHotkeys";
 
 interface DefectModalProps {
   machineId: string;
@@ -16,6 +17,8 @@ interface DefectModalProps {
 export function DefectModal({ machineId, department, machineName, onClose }: DefectModalProps) {
   const [defects, setDefects] = useState<Defect[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useAppHotkeys('escape', () => onClose(), { enableOnFormTags: true }, [onClose]);
 
   useEffect(() => {
     fetchApi<Defect[]>(`machines/${machineId}/defects`)

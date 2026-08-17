@@ -15,6 +15,7 @@ import { SSEProvider } from "../components/SSEProvider";
 import Link from 'next/link';
 import { Logo } from "../components/Logo";
 import { Navigation } from "../components/Navigation";
+import { CommandPalette } from "../components/CommandPalette";
 
 export default function RootLayout({
   children,
@@ -39,7 +40,9 @@ export default function RootLayout({
               </Link>
               <Navigation />
             </header>
+            <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>
             {children}
+            <CommandPalette />
           </SSEProvider>
         </ThemeProvider>
       </body>

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "== [1/2] Running Go Backend Tests & Linter =="
+echo "== [1/3] Running Go Backend Tests & Linter =="
 # Filter out unintended Go packages hidden inside Next.js node_modules
 PACKAGES=$(go list ./... | grep -v /node_modules/)
 
@@ -12,8 +12,13 @@ echo "-> Running Go Unit Tests..."
 # -count=1 disables test caching to guarantee fresh execution
 go test $PACKAGES -v -count=1
 
-echo "== [2/2] Validating Frontend Type Integrity & Linter =="
+echo "== [2/3] Validating Frontend Type Integrity, Tests & Static Export =="
 (cd frontend && npm run lint)
+(cd frontend && npm run test)
+rm -rf frontend/.next
 (cd frontend && npm run build)
 
-echo "== [Success] All tests and verifications passed =="
+echo "== [3/3] Compiling Embedded Go Executable =="
+go build -o bin/flux cmd/flux/main.go
+
+echo "== [Success] All tests passed. Single Executable compiled to 'bin/flux' =="

@@ -85,6 +85,10 @@ To guarantee accurate `Content-Type` headers and to prevent internal data leakag
 1. **Separation of Concerns:** Do not build "God components" (like a single `page.tsx` handling fetching, SSE patching, and complex UI rendering). Extract data-fetching and SSE orchestration logic into custom React hooks (e.g., `src/hooks/useDashboardData.ts`).
 2. **Reusable UI:** Identify duplicated UI structures (like identical cards or columns) and abstract them into reusable components inside `src/components/`, utilizing CSS modules to encapsulate their styling.
 
+## Styling & CSS Modules
+1. **Verify Existing Styles:** Before importing a CSS module (e.g., `import styles from '../admin.module.css'`), agents **MUST** explicitly verify that the CSS file exists using directory listing or file viewing tools. Never assume a CSS module exists based purely on the route name.
+2. **Inline Styles vs Modules:** For simple one-off pages or minor layout adjustments, prefer using React inline styles referencing existing global CSS variables (e.g., `var(--vtr-theme-primary)`) rather than creating unnecessary new CSS files or blindly importing non-existent ones.
+
 ## Data Aggregation & Client Filtering
 1. **Server-Side Filtering:** Avoid fetching large collections of data (e.g. `GET /api/defects`) only to filter them on the client via `array.filter()`. Always append query parameters to the URL using the `fetchApi` utility (`{ params: { key: value } }`) and perform the `WHERE` filter at the database layer in the Go backend.
 2. **Backend Aggregation:** Do not use `array.reduce()` or similar mapping loops in React components to calculate sums, totals, or aggregated metrics (e.g., project-level summaries). All data aggregation must be performed at the database layer using SQL `GROUP BY` and `JOIN` clauses, exposed via dedicated Go API endpoints.
