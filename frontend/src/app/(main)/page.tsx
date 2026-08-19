@@ -2,16 +2,16 @@
 
 import { useState, useCallback } from 'react';
 
-import { fetchApi } from '../lib/api';
-import { useDashboardData } from '../hooks/useDashboardData';
+import { fetchApi } from '../../lib/api';
+import { useDashboardData } from '../../hooks/useDashboardData';
 import Link from 'next/link';
 import styles from './page.module.css';
 
-import { DefectModal } from '../components/DefectModal';
-import { MachineCard } from '../components/MachineCard';
-import { ProjectCard } from '../components/ProjectCard';
-import { SalesOrder, Machine, DefectSummary } from "../types";
-import { ACTIVE_DEPARTMENTS } from '../lib/departments';
+import { DefectModal } from '../../components/DefectModal';
+import { MachineCard } from '../../components/MachineCard';
+import { ProjectCard } from '../../components/ProjectCard';
+import { SalesOrder, Machine, DefectSummary } from "../../types";
+import { ACTIVE_DEPARTMENTS } from '../../lib/departments';
 
 export default function Home() {
   const { orders, machines, defectSummaries, projectSummaries, loading } = useDashboardData();

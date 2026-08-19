@@ -12,7 +12,6 @@ export const metadata: Metadata = {
 
 import { ThemeProvider } from "../components/ThemeProvider";
 import { SSEProvider } from "../components/SSEProvider";
-import { GlobalHeader } from "../components/GlobalHeader";
 import { CommandPalette } from "../components/CommandPalette";
 
 export default function RootLayout({
@@ -25,7 +24,6 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           <SSEProvider>
-            <GlobalHeader />
             <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>
             {children}
             <CommandPalette />

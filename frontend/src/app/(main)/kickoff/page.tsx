@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSSE } from "../../components/SSEProvider";
-import { fetchApi } from "../../lib/api";
+import { useSSE } from "../../../components/SSEProvider";
+import { fetchApi } from "../../../lib/api";
 import styles from "./kickoff.module.css";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useAppHotkeys } from "../../hooks/useAppHotkeys";
+import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 
-import { SalesOrder, Machine } from "../../types";
-import { SalesOrderModal } from "../../components/SalesOrderModal";
-import { SpawnMachineModal } from "../../components/SpawnMachineModal";
+import { SalesOrder, Machine } from "../../../types";
+import { SalesOrderModal } from "../../../components/SalesOrderModal";
+import { SpawnMachineModal } from "../../../components/SpawnMachineModal";
 
 function SalesDashboardContent() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);

@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useSSE } from "../../components/SSEProvider";
-import { fetchApi } from "../../lib/api";
+import { useSSE } from "../../../components/SSEProvider";
+import { fetchApi } from "../../../lib/api";
 import Link from "next/link";
 import styles from "./quality.module.css";
-import { Machine, Defect } from "../../types";
+import { Machine, Defect } from "../../../types";
 
-import { IssueModal } from "../../components/IssueModal";
-import { FilterButtonGroup } from "../../components/FilterButtonGroup";
-import { useAppHotkeys } from "../../hooks/useAppHotkeys";
+import { IssueModal } from "../../../components/IssueModal";
+import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
+import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 
 export default function QualityResolutionHub() {
   const [defects, setDefects] = useState<Defect[]>([]);

@@ -1,4 +1,4 @@
-import { ThemeSelector } from "../../components/ThemeSelector";
+import { ThemeSelector } from "../../../components/ThemeSelector";
 import Link from 'next/link';
 
 export default function AdminPage() {

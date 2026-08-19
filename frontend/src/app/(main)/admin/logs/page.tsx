@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { fetchApi } from '../../../lib/api';
-import { useSSE } from '../../../components/SSEProvider';
+import { fetchApi } from '../../../../lib/api';
+import { useSSE } from '../../../../components/SSEProvider';
 import { Virtuoso } from 'react-virtuoso';
 
 type LogEntry = {

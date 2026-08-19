@@ -2,15 +2,15 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useSSE } from "../../components/SSEProvider";
-import { fetchApi } from "../../lib/api";
+import { useSSE } from "../../../components/SSEProvider";
+import { fetchApi } from "../../../lib/api";
 import Link from "next/link";
 import styles from "./machine.module.css";
-import { ACTIVE_DEPARTMENTS } from "../../lib/departments";
+import { ACTIVE_DEPARTMENTS } from "../../../lib/departments";
 
-import { IssueModal } from "../../components/IssueModal";
+import { IssueModal } from "../../../components/IssueModal";
 
-import { Machine, SalesOrder, Defect } from "../../types";
+import { Machine, SalesOrder, Defect } from "../../../types";
 
 function MachineDetailContent() {
   const searchParams = useSearchParams();
