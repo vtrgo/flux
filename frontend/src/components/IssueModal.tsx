@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { fetchApi } from "../lib/api";
 import { ACTIVE_DEPARTMENTS, formatDepartmentName } from "../lib/departments";
-import styles from "../app/quality/quality.module.css";
+import styles from "../app/(main)/quality/quality.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 
 import { Machine, Defect } from "../types";

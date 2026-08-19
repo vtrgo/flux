@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { fetchApi } from "../lib/api";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
-import styles from "../app/kickoff/kickoff.module.css";
+import styles from "../app/(main)/kickoff/kickoff.module.css";
 
 interface SalesOrderModalProps {
   isOpen: boolean;

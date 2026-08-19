@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { fetchApi } from "../lib/api";
 import { useDepartmentIssues } from "../hooks/useDepartmentIssues";
 import Link from "next/link";
-import styles from "../app/quality/quality.module.css";
+import styles from "../app/(main)/quality/quality.module.css";
 import { IssueModal } from "./IssueModal";
 import { IssueCard } from "./IssueCard";
 import { FilterButtonGroup } from "./FilterButtonGroup";

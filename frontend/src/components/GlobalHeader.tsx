@@ -1,13 +1,10 @@
 "use client";
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { Logo } from "./Logo";
 import { Navigation } from "./Navigation";
 
 export function GlobalHeader() {
-  const pathname = usePathname();
-
   return (
     <header style={{ 
       display: 'flex', 
@@ -24,7 +21,7 @@ export function GlobalHeader() {
       <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
         <Logo width={45} height={45} />
       </Link>
-      {pathname !== '/display' && <Navigation />}
+      <Navigation />
     </header>
   );
 }
