@@ -82,11 +82,13 @@ export default function DisplayDashboard() {
           <div style={{ display: 'flex', gap: '3rem', alignItems: 'center' }}>
             <Logo width={65} height={65} />
             <div style={{ borderLeft: '2px solid var(--vtr-theme-border)', paddingLeft: '3rem' }}>
-              <h1 style={{ fontSize: '4rem', margin: 0, fontWeight: 'bold' }}>{currentProject.customer_name}</h1>
+              <h1 style={{ fontSize: '4rem', margin: 0, fontWeight: 'bold' }}>
+                {currentProject.internal_project_number && `${currentProject.internal_project_number} `}
+                {currentProject.customer_name}
+                {currentProject.project_name && ` (${currentProject.project_name})`}
+              </h1>
               <div style={{ fontSize: '1.5rem', color: 'var(--vtr-theme-text-muted)', marginTop: '0.75rem', display: 'flex', gap: '2rem' }}>
                 <span><strong style={{color: 'white'}}>PO:</strong> {currentProject.po_number}</span>
-                {currentProject.internal_project_number && <span><strong style={{color: 'white'}}>Proj #:</strong> {currentProject.internal_project_number}</span>}
-                {currentProject.project_name && <span><strong style={{color: 'white'}}>Project:</strong> {currentProject.project_name}</span>}
                 {currentProject.responsible_person && <span><strong style={{color: 'white'}}>Lead:</strong> {currentProject.responsible_person}</span>}
               </div>
             </div>
