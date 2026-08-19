@@ -8,10 +8,6 @@ import { Navigation } from "./Navigation";
 export function GlobalHeader() {
   const pathname = usePathname();
 
-  if (pathname === '/display') {
-    return null;
-  }
-
   return (
     <header style={{ 
       display: 'flex', 
@@ -28,7 +24,7 @@ export function GlobalHeader() {
       <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
         <Logo width={45} height={45} />
       </Link>
-      <Navigation />
+      {pathname !== '/display' && <Navigation />}
     </header>
   );
 }
