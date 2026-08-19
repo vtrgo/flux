@@ -22,12 +22,21 @@ func handleSalesOrders(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSalesOrders(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.DB.Query(`
+	statusNeq := r.URL.Query().Get("status_neq")
+
+	query := `
 		SELECT 
 			id, customer_name, po_number, internal_project_number, project_name, responsible_person, sales_rep, target_ship_date, actual_ship_date, status, created_at
 		FROM sales_orders
-		ORDER BY created_at DESC
-	`)
+	`
+	var args []interface{}
+	if statusNeq != "" {
+		query += " WHERE status != $1"
+		args = append(args, statusNeq)
+	}
+	query += " ORDER BY created_at DESC"
+
+	rows, err := db.DB.Query(query, args...)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return

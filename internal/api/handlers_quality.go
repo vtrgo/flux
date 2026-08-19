@@ -435,11 +435,25 @@ func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 
 // handleGetProjectDefectSummaries aggregates defect counts by sales order
 func handleGetMachineDefectSummaries(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.DB.Query(`
-		SELECT machine_id, status, COUNT(*) 
-		FROM defects 
-		GROUP BY machine_id, status
-	`)
+	soStatusNeq := r.URL.Query().Get("so_status_neq")
+
+	query := `
+		SELECT d.machine_id, d.status, COUNT(*) 
+		FROM defects d
+		JOIN machines m ON d.machine_id = m.id
+	`
+	var args []interface{}
+	if soStatusNeq != "" {
+		query += `
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE so.status != $1 OR m.sales_order_id IS NULL
+		`
+		args = append(args, soStatusNeq)
+	}
+
+	query += " GROUP BY d.machine_id, d.status"
+
+	rows, err := db.DB.Query(query, args...)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to query machine defect summaries: ", err)
 		return
@@ -485,13 +499,23 @@ func handleGetMachineDefectSummaries(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleGetProjectDefectSummaries(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.DB.Query(`
+	soStatusNeq := r.URL.Query().Get("so_status_neq")
+
+	query := `
 		SELECT m.sales_order_id, d.status, COUNT(*) 
 		FROM defects d
 		JOIN machines m ON d.machine_id = m.id
+		JOIN sales_orders so ON m.sales_order_id = so.id
 		WHERE m.sales_order_id IS NOT NULL
-		GROUP BY m.sales_order_id, d.status
-	`)
+	`
+	var args []interface{}
+	if soStatusNeq != "" {
+		query += " AND so.status != $1"
+		args = append(args, soStatusNeq)
+	}
+	query += " GROUP BY m.sales_order_id, d.status"
+
+	rows, err := db.DB.Query(query, args...)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to query project defect summaries: ", err)
 		return

@@ -12,10 +12,10 @@ export function usePublicDashboardData() {
     try {
       setLoading(true);
       const [salesOrdersRes, summariesRes, machinesRes, machSummariesRes] = await Promise.all([
-        fetchApi('/sales_orders'),
-        fetchApi('/defects/project_summary'),
-        fetchApi('/machines'),
-        fetchApi('/defects/machine_summary')
+        fetchApi('/sales_orders', { params: { status_neq: 'fulfilled' } }),
+        fetchApi('/defects/project_summary', { params: { so_status_neq: 'fulfilled' } }),
+        fetchApi('/machines', { params: { sales_order_status_neq: 'fulfilled' } }),
+        fetchApi('/defects/machine_summary', { params: { so_status_neq: 'fulfilled' } })
       ]);
 
       const salesOrders: SalesOrder[] = salesOrdersRes || [];

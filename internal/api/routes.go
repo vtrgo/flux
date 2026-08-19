@@ -129,7 +129,9 @@ func handleMachines(w http.ResponseWriter, r *http.Request) {
 }
 
 func getMachines(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.DB.Query(`
+	soStatusNeq := r.URL.Query().Get("sales_order_status_neq")
+
+	query := `
 		SELECT 
 			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.actual_ship_date, m.created_at,
 			COUNT(DISTINCT k.id) as kitting_count,
@@ -141,9 +143,22 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN assembly_tasks a ON m.id = a.machine_id
 		LEFT JOIN controls_checkpoints c ON m.id = c.machine_id
 		LEFT JOIN defects d ON m.id = d.machine_id
+	`
+	var args []interface{}
+	if soStatusNeq != "" {
+		query += `
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE so.status != $1 OR m.sales_order_id IS NULL
+		`
+		args = append(args, soStatusNeq)
+	}
+
+	query += `
 		GROUP BY m.id
 		ORDER BY m.created_at DESC
-	`)
+	`
+
+	rows, err := db.DB.Query(query, args...)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
