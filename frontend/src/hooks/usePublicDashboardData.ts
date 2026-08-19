@@ -103,7 +103,7 @@ export function usePublicDashboardData() {
 
   // Hook into SSE for realtime updates. Any defect change might affect counts.
   // We re-fetch the data to ensure accuracy.
-  useSSE('defect_created', () => {
+  useSSE('defect_added', () => {
     loadData();
   });
   useSSE('defect_updated', () => {
@@ -119,6 +119,12 @@ export function usePublicDashboardData() {
     loadData();
   });
   useSSE('sales_order_deleted', () => {
+    loadData();
+  });
+  useSSE('machine_created', () => {
+    loadData();
+  });
+  useSSE('machine_deleted', () => {
     loadData();
   });
 
