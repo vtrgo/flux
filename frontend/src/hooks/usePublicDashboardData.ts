@@ -6,6 +6,10 @@ export interface DisplayProject {
   id: string;
   customer_name: string;
   po_number: string;
+  project_name: string | null;
+  internal_project_number: string | null;
+  responsible_person: string | null;
+  sales_rep: string | null;
   target_ship_date: string | null;
   status: string;
   defects: {
@@ -68,6 +72,10 @@ export function usePublicDashboardData() {
             id: so.id,
             customer_name: so.customer_name,
             po_number: so.po_number,
+            project_name: so.project_name || null,
+            internal_project_number: so.internal_project_number || null,
+            responsible_person: so.responsible_person || null,
+            sales_rep: so.sales_rep || null,
             target_ship_date: so.target_ship_date,
             status: so.status,
             defects: {
