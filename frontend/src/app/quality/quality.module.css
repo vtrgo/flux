@@ -31,6 +31,9 @@
   border-radius: 8px;
   border: 1px solid var(--vtr-card-border, #333);
   flex-wrap: wrap;
+  position: sticky;
+  top: 77px; /* 77px accounts for the ~77px height of the global banner (padding + logo + borders) */
+  z-index: 40;
 }
 
 .grid {

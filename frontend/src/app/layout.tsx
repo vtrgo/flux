@@ -33,7 +33,11 @@ export default function RootLayout({
               alignItems: 'center', 
               padding: '1rem 2rem', 
               borderBottom: '1px solid var(--vtr-card-border, var(--border-color))',
-              background: 'var(--vtr-card-bg, transparent)'
+              background: 'var(--bg-primary, rgba(18, 18, 18, 0.85))',
+              backdropFilter: 'blur(8px)',
+              position: 'sticky',
+              top: 0,
+              zIndex: 50
             }}>
               <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
                 <Logo width={45} height={45} />
