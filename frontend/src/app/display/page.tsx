@@ -73,7 +73,6 @@ export default function DisplayDashboard() {
         {/* Header section */}
         <header style={{ 
           padding: '2rem 4rem', 
-          borderBottom: '2px solid var(--vtr-theme-border)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
@@ -100,6 +99,8 @@ export default function DisplayDashboard() {
           </div>
         </header>
 
+        <hr style={{ width: '80%', border: 'none', borderTop: '2px solid var(--vtr-theme-border)', margin: '0 auto', opacity: 0.6 }} />
+
         {/* Main Content / Machine Details List */}
         <main style={{ 
           flex: 1, 
@@ -115,10 +116,11 @@ export default function DisplayDashboard() {
                 padding: '1rem 2rem',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifyContent: 'flex-start',
+                gap: '4rem',
                 boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                   <div style={{ width: '400px' }}>
                     <h3 style={{ fontSize: '1.5rem', margin: 0, fontWeight: 'bold' }}>{machine.order_number}</h3>
                     <div style={{ fontSize: '1.1rem', color: 'var(--vtr-theme-text-muted)', marginTop: '0.25rem' }}>{machine.model_type}</div>
@@ -132,11 +134,14 @@ export default function DisplayDashboard() {
                       fontSize: '0.9rem',
                       fontWeight: 'bold',
                       background: 'rgba(255,255,255,0.1)',
-                      textTransform: 'uppercase'
+                      textTransform: 'uppercase',
+                      width: '120px',
+                      textAlign: 'center'
                     }}>
                       {machine.status.replace('_', ' ')}
                     </span>
                   )}
+                  {machine.status === 'engineering' && <div style={{ width: '120px' }}></div>}
                 </div>
 
                 {/* Compact Horizontal Metrics */}
