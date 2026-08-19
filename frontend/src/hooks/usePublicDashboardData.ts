@@ -32,7 +32,7 @@ export function usePublicDashboardData() {
         fetchApi('/sales_orders'),
         fetchApi('/defects/project_summary'),
         fetchApi('/machines'),
-        fetchApi('/defects/summary')
+        fetchApi('/defects/machine_summary')
       ]);
 
       const salesOrders = salesOrdersRes || [];

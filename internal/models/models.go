@@ -138,6 +138,13 @@ type ProjectDefectSummary struct {
 	TotalClosed  int       `json:"total_closed"`
 }
 
+type MachineDefectSummary struct {
+	MachineID    uuid.UUID `json:"machine_id"`
+	TotalOpen    int       `json:"total_open"`
+	TotalPending int       `json:"total_pending"`
+	TotalClosed  int       `json:"total_closed"`
+}
+
 type MachineShopTask struct {
 	ID          uuid.UUID  `json:"id"`
 	MachineID   uuid.UUID  `json:"machine_id"`

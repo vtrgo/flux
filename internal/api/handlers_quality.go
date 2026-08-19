@@ -434,6 +434,56 @@ func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetProjectDefectSummaries aggregates defect counts by sales order
+func handleGetMachineDefectSummaries(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.DB.Query(`
+		SELECT machine_id, status, COUNT(*) 
+		FROM defects 
+		GROUP BY machine_id, status
+	`)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to query machine defect summaries: ", err)
+		return
+	}
+	defer rows.Close()
+
+	summaryMap := make(map[uuid.UUID]*models.MachineDefectSummary)
+
+	for rows.Next() {
+		var machineID uuid.UUID
+		var status string
+		var count int
+
+		if err := rows.Scan(&machineID, &status, &count); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to scan machine summary row: ", err)
+			return
+		}
+
+		if _, exists := summaryMap[machineID]; !exists {
+			summaryMap[machineID] = &models.MachineDefectSummary{
+				MachineID: machineID,
+			}
+		}
+
+		s := summaryMap[machineID]
+
+		if status == "open" {
+			s.TotalOpen += count
+		} else if status == "fixed" {
+			s.TotalPending += count
+		} else if status == "verified" {
+			s.TotalClosed += count
+		}
+	}
+
+	var summaries []models.MachineDefectSummary
+	for _, v := range summaryMap {
+		summaries = append(summaries, *v)
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	respondJSON(w, http.StatusOK, summaries)
+}
+
 func handleGetProjectDefectSummaries(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
 		SELECT m.sales_order_id, d.status, COUNT(*) 
