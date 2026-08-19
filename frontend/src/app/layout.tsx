@@ -12,9 +12,7 @@ export const metadata: Metadata = {
 
 import { ThemeProvider } from "../components/ThemeProvider";
 import { SSEProvider } from "../components/SSEProvider";
-import Link from 'next/link';
-import { Logo } from "../components/Logo";
-import { Navigation } from "../components/Navigation";
+import { GlobalHeader } from "../components/GlobalHeader";
 import { CommandPalette } from "../components/CommandPalette";
 
 export default function RootLayout({
@@ -27,23 +25,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <ThemeProvider>
           <SSEProvider>
-            <header style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              padding: '1rem 2rem', 
-              borderBottom: '1px solid var(--vtr-card-border, var(--border-color))',
-              background: 'var(--bg-primary, rgba(18, 18, 18, 0.85))',
-              backdropFilter: 'blur(8px)',
-              position: 'sticky',
-              top: 0,
-              zIndex: 50
-            }}>
-              <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-                <Logo width={45} height={45} />
-              </Link>
-              <Navigation />
-            </header>
+            <GlobalHeader />
             <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>
             {children}
             <CommandPalette />

@@ -1,0 +1,17 @@
+.carouselWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  animation: fadeInRight 0.5s ease-out forwards;
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
