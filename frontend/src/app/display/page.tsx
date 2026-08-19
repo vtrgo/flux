@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { usePublicDashboardData } from '../../hooks/usePublicDashboardData';
 import styles from './display.module.css';
 
 import { Logo } from '../../components/Logo';
+import { HeaderMetric } from '../../components/HeaderMetric';
+import { DisplayMachineRow } from '../../components/DisplayMachineRow';
 
 const CYCLE_DURATION_MS = 10000; // 10 seconds per slide
 
@@ -115,55 +117,8 @@ export default function DisplayDashboard() {
           overflowY: 'auto'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {currentProject.machines && currentProject.machines.map((machine: any) => (
-              <div key={machine.id} style={{
-                background: 'var(--vtr-theme-surface)',
-                border: '1px solid var(--vtr-theme-border)',
-                borderRadius: '8px',
-                padding: '1rem 2rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                gap: '4rem',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                  <div style={{ width: '400px' }}>
-                    <h3 style={{ fontSize: '1.5rem', margin: 0, fontWeight: 'bold' }}>{machine.order_number}</h3>
-                    <div style={{ fontSize: '1.1rem', color: 'var(--vtr-theme-text-muted)', marginTop: '0.25rem' }}>{machine.model_type}</div>
-                  </div>
-                  
-                  {/* Status Badge (Suppress Engineering) */}
-                  {machine.status !== 'engineering' && (
-                    <span style={{ 
-                      padding: '0.4rem 1rem', 
-                      borderRadius: '20px', 
-                      fontSize: '0.9rem',
-                      fontWeight: 'bold',
-                      background: 'rgba(255,255,255,0.1)',
-                      textTransform: 'uppercase',
-                      width: '120px',
-                      textAlign: 'center'
-                    }}>
-                      {machine.status.replace('_', ' ')}
-                    </span>
-                  )}
-                  {machine.status === 'engineering' && <div style={{ width: '120px' }}></div>}
-                </div>
-
-                {/* Compact Horizontal Metrics */}
-                <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
-                    <span style={{ color: 'var(--vtr-theme-text-muted)' }}>OPEN:</span> <span style={{ color: '#ef4444', marginLeft: '0.5rem' }}>{machine.defects?.total_open || 0}</span>
-                  </div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
-                    <span style={{ color: 'var(--vtr-theme-text-muted)' }}>PENDING:</span> <span style={{ color: '#eab308', marginLeft: '0.5rem' }}>{machine.defects?.total_pending || 0}</span>
-                  </div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>
-                    <span style={{ color: 'var(--vtr-theme-text-muted)' }}>CLOSED:</span> <span style={{ color: '#22c55e', marginLeft: '0.5rem' }}>{machine.defects?.total_closed || 0}</span>
-                  </div>
-                </div>
-              </div>
+            {currentProject.machines && currentProject.machines.map((machine) => (
+              <DisplayMachineRow key={machine.id} machine={machine} />
             ))}
             {(!currentProject.machines || currentProject.machines.length === 0) && (
               <div style={{ fontSize: '1.5rem', color: 'var(--vtr-theme-text-muted)', textAlign: 'center', marginTop: '4rem' }}>
@@ -194,15 +149,6 @@ export default function DisplayDashboard() {
           transition: 'width 100ms linear'
         }} />
       </footer>
-    </div>
-  );
-}
-
-function HeaderMetric({ title, value, color }: { title: string, value: number, color: string }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <span style={{ fontSize: '1rem', textTransform: 'uppercase', color: 'var(--vtr-theme-text-muted)' }}>{title}</span>
-      <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: color, lineHeight: 1, marginTop: '0.25rem' }}>{value}</span>
     </div>
   );
 }

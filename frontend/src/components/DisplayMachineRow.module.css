@@ -1,0 +1,78 @@
+.row {
+  background: var(--vtr-theme-surface);
+  border: 1px solid var(--vtr-theme-border);
+  border-radius: 8px;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.machineInfo {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.machineText {
+  width: 400px;
+}
+
+.machineName {
+  font-size: 1.5rem;
+  margin: 0;
+  font-weight: bold;
+}
+
+.machineModel {
+  font-size: 1.1rem;
+  color: var(--vtr-theme-text-muted);
+  margin-top: 0.25rem;
+}
+
+.statusBadge {
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  background: rgba(255, 255, 255, 0.1);
+  text-transform: uppercase;
+  width: 120px;
+  text-align: center;
+}
+
+.statusSpacer {
+  width: 120px;
+}
+
+.metricsContainer {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.metric {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.metricLabel {
+  color: var(--vtr-theme-text-muted);
+}
+
+.metricOpen {
+  color: #ef4444;
+  margin-left: 0.5rem;
+}
+
+.metricPending {
+  color: #eab308;
+  margin-left: 0.5rem;
+}
+
+.metricClosed {
+  color: #22c55e;
+  margin-left: 0.5rem;
+}

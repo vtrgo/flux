@@ -58,3 +58,28 @@ export interface ProjectDefectSummary {
   total_pending: number;
   total_closed: number;
 }
+
+export interface MachineDefectSummary {
+  machine_id: string;
+  total_open: number;
+  total_pending: number;
+  total_closed: number;
+}
+
+export interface DisplayProject {
+  id: string;
+  customer_name: string;
+  po_number: string;
+  project_name: string | null;
+  internal_project_number: string | null;
+  responsible_person: string | null;
+  sales_rep: string | null;
+  target_ship_date: string | null;
+  status: string;
+  defects: {
+    total_open: number;
+    total_pending: number;
+    total_closed: number;
+  };
+  machines: (Machine & { defects: MachineDefectSummary })[];
+}
