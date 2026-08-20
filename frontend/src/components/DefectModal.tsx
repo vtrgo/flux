@@ -6,6 +6,7 @@ import { Defect } from "../types";
 import { formatDepartmentName } from "../lib/departments";
 import styles from "../app/page.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
+import { IssueCard } from "./IssueCard";
 
 interface DefectModalProps {
   machineId: string;
@@ -128,60 +129,34 @@ export function DefectModal({ machineId, department, machineName, onClose }: Def
               </div>
             ) : (
               defects.map((d) => (
-                <div
+                <IssueCard
                   key={d.id}
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    padding: "1rem",
-                    borderRadius: "6px",
-                    borderLeft: `4px solid ${
-                      d.severity === "critical"
-                        ? "var(--accent-red)"
-                        : d.severity === "moderate"
-                        ? "var(--accent-amber)"
-                        : "var(--vtr-theme-primary)"
-                    }`,
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                    <span style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
-                      Status: {d.status.toUpperCase()}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "0.75rem",
-                        background: "rgba(255,255,255,0.1)",
-                        padding: "2px 6px",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      {d.severity.toUpperCase()}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
-                    <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--text-secondary)", flex: 1 }}>
-                      {d.description}
-                    </p>
-                    {d.status === "open" && (
-                      <button
-                        onClick={() => handleMarkFixed(d.id)}
-                        className="vtr-btn"
-                        style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", alignSelf: "flex-end" }}
-                      >
-                        Mark Fixed
-                      </button>
-                    )}
-                    {d.status === "fixed" && (
-                      <button
-                        onClick={() => handleSignOff(d.id)}
-                        className="vtr-btn"
-                        style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", alignSelf: "flex-end", background: "var(--vtr-theme-primary)", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
-                      >
-                        Sign Off
-                      </button>
-                    )}
-                  </div>
-                </div>
+                  issue={d}
+                  onClick={() => {}}
+                  cardStyle={{ cursor: 'default', borderLeft: `4px solid ${d.severity === "critical" ? "var(--accent-red)" : d.severity === "moderate" ? "var(--accent-amber)" : "var(--vtr-theme-primary)"}` }}
+                  actions={
+                    <>
+                      {d.status === "open" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleMarkFixed(d.id); }}
+                          className="vtr-btn"
+                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                        >
+                          Mark Fixed
+                        </button>
+                      )}
+                      {d.status === "fixed" && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSignOff(d.id); }}
+                          className="vtr-btn"
+                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem", background: "var(--vtr-theme-primary)", color: "white", border: "none" }}
+                        >
+                          Sign Off
+                        </button>
+                      )}
+                    </>
+                  }
+                />
               ))
             )}
           </div>

@@ -73,6 +73,7 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/defects/summary", handleGetAllDefectsSummary)
 	mux.HandleFunc("GET /api/defects/machine_summary", handleGetMachineDefectSummaries)
 	mux.HandleFunc("GET /api/defects/project_summary", handleGetProjectDefectSummaries)
+	mux.HandleFunc("GET /api/defects/project_department_summary", handleGetProjectDepartmentDefectSummaries)
 	mux.HandleFunc("PUT /api/defects/{defect_id}", handleUpdateDefect)
 	mux.HandleFunc("PUT /api/defects/{defect_id}/edit", handleEditDefect)
 	mux.HandleFunc("DELETE /api/defects/{defect_id}", handleDeleteDefect)

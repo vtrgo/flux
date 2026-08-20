@@ -8,6 +8,7 @@ import styles from "./quality.module.css";
 import { Machine, Defect } from "../../../types";
 
 import { IssueModal } from "../../../components/IssueModal";
+import { IssueCard } from "../../../components/IssueCard";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
@@ -183,27 +184,17 @@ export default function QualityResolutionHub() {
             {openDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No open issues.</p>
             ) : openDefects.map(defect => (
-              <div key={defect.id} className={styles.card} onClick={() => openEditModal(defect)}>
-                <div className={styles.cardHeader}>
-                  <span className={styles.orderNumber}>{defect.order_number}</span>
-                  <span className={`${styles.severity} ${styles[defect.severity]}`}>{defect.severity}</span>
-                </div>
-                <p className={styles.description}>{defect.description}</p>
-                {defect.notes && (
-                  <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                    <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
-                  </div>
-                )}
-                <div className={styles.department}>
-                  <span>Src: {defect.source_department}</span>
-                  <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
-                </div>
-                <AttachmentViewer issueId={defect.id} />
-                <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                  <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'fixed')}>MARK FIXED</button>
-                  <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                </div>
-              </div>
+              <IssueCard
+                key={defect.id}
+                issue={defect}
+                onClick={() => openEditModal(defect)}
+                actions={
+                  <>
+                    <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'fixed')}>MARK FIXED</button>
+                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
+                  </>
+                }
+              />
             ))}
           </div>
         </section>
@@ -218,28 +209,18 @@ export default function QualityResolutionHub() {
             {fixedDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No fixes pending verification.</p>
             ) : fixedDefects.map(defect => (
-              <div key={defect.id} className={styles.card} onClick={() => openEditModal(defect)}>
-                <div className={styles.cardHeader}>
-                  <span className={styles.orderNumber}>{defect.order_number}</span>
-                  <span className={`${styles.severity} ${styles[defect.severity]}`}>{defect.severity}</span>
-                </div>
-                <p className={styles.description}>{defect.description}</p>
-                {defect.notes && (
-                  <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                    <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
-                  </div>
-                )}
-                <div className={styles.department}>
-                  <span>Src: {defect.source_department}</span>
-                  <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
-                </div>
-                <AttachmentViewer issueId={defect.id} />
-                <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                  <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'verified')}>SIGN OFF</button>
-                  <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>REJECT</button>
-                  <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                </div>
-              </div>
+              <IssueCard
+                key={defect.id}
+                issue={defect}
+                onClick={() => openEditModal(defect)}
+                actions={
+                  <>
+                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'verified')}>SIGN OFF</button>
+                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>REJECT</button>
+                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
+                  </>
+                }
+              />
             ))}
           </div>
         </section>
@@ -254,27 +235,18 @@ export default function QualityResolutionHub() {
             {verifiedDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No cleared issues.</p>
             ) : verifiedDefects.map(defect => (
-              <div key={defect.id} className={styles.card} style={{ opacity: 0.6 }} onClick={() => openEditModal(defect)}>
-                <div className={styles.cardHeader}>
-                  <span className={styles.orderNumber}>{defect.order_number}</span>
-                  <span className={`${styles.severity} ${styles[defect.severity]}`}>{defect.severity}</span>
-                </div>
-                <p className={styles.description}>{defect.description}</p>
-                {defect.notes && (
-                  <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                    <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
-                  </div>
-                )}
-                <div className={styles.department}>
-                  <span>Src: {defect.source_department}</span>
-                  <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
-                </div>
-                <AttachmentViewer issueId={defect.id} />
-                <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                  <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>RE-OPEN</button>
-                  <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                </div>
-              </div>
+              <IssueCard
+                key={defect.id}
+                issue={defect}
+                onClick={() => openEditModal(defect)}
+                cardStyle={{ opacity: 0.6 }}
+                actions={
+                  <>
+                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>RE-OPEN</button>
+                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
+                  </>
+                }
+              />
             ))}
           </div>
         </section>

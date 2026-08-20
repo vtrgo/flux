@@ -138,3 +138,26 @@ When making deployment-related modifications or writing build scripts, agents mu
 3. **Build Execution**:
    - A complete build is accomplished by sequentially running the frontend build, followed by `go build` in the backend. 
    - Never attempt to deploy Node.js / Next.js server runtimes to production. The Go binary is the solitary production artifact.
+
+## Structured Logging (Go)
+To ensure trace-ability and consistent log formatting, the standard library `log` and `fmt.Println` are strictly forbidden for backend operational logging.
+1. **Use `slog`:** All backend logging must utilize the standard library `log/slog` package.
+2. **Context-Rich Key/Values:** Always include contextual data as key-value pairs (e.g., `slog.Error("Failed to update defect", "defect_id", id, "error", err)` or `slog.Info("SSE connection established", "client_ip", r.RemoteAddr)`).
+
+## React Render Optimizations
+To preserve performance on heavily trafficked views like the Dashboard and Department Hubs:
+1. **Component Memoization:** Heavily duplicated list components (e.g., `<IssueCard />`, `<MachineCard />`) must be wrapped in `React.memo` to prevent unnecessary re-renders.
+2. **Stable References:** Never pass inline arrow functions (e.g., `onClick={() => handleDelete()}`) as props to memoized child components within `.map()` loops. You must extract these handlers and wrap them in `useCallback` to preserve referential equality.
+
+## UI Component Standardization
+To guarantee a completely unified visual language across the MES:
+1. **Defect/Issue Representation:** Under no circumstances should an agent build bespoke, inline DOM structures (e.g., raw `<div>` cards) to represent a deficiency. All defects, regardless of route (Dashboard, Machine view, Quality Hub), **MUST** be rendered using the shared `<IssueCard />` component to guarantee consistent severity tagging and interaction patterns.
+
+## Testing React State
+When writing or updating Vitest files for React components that asynchronously fetch data on mount (e.g., `AttachmentViewer`):
+1. **Use `act()`:** You must wrap the initial render inside an asynchronous `act` block to allow the simulated network promises to resolve before the test asserts against the DOM.
+   ```tsx
+   await act(async () => {
+     render(<AttachmentViewer issueId="123" />);
+   });
+   ```

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Share_Tech_Mono } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: '--font-mono' });
+const shareTechMono = Share_Tech_Mono({ subsets: ["latin"], weight: "400", variable: '--font-digital' });
 
 export const metadata: Metadata = {
   title: "vtrFlux - Manufacturing Execution System",
@@ -23,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} ${shareTechMono.variable}`}>
         <ThemeProvider>
           <SSEProvider>
             <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>

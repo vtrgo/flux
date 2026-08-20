@@ -9,6 +9,7 @@ import styles from "./machine.module.css";
 import { ACTIVE_DEPARTMENTS } from "../../../lib/departments";
 
 import { IssueModal } from "../../../components/IssueModal";
+import { IssueCard } from "../../../components/IssueCard";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
@@ -162,24 +163,13 @@ function MachineDetailContent() {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {deptIssues.map(defect => (
-                  <div key={defect.id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem', cursor: 'pointer', transition: 'all 0.2s ease', ...getStyle?.(defect) }} onClick={() => openEditModal(defect)}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>{defect.severity.toUpperCase()}</span>
-                    </div>
-                    <p style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '0.875rem', lineHeight: '1.4' }}>{defect.description}</p>
-                    {defect.notes && (
-                      <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                        <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
-                      </div>
-                    )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                      <div style={{ color: 'var(--text-secondary)' }}>Source: {defect.source_department}</div>
-                    </div>
-                    <AttachmentViewer issueId={defect.id} />
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                      {renderActions(defect)}
-                    </div>
-                  </div>
+                  <IssueCard
+                    key={defect.id}
+                    issue={{ ...defect, order_number: machine.order_number }}
+                    onClick={() => openEditModal(defect)}
+                    cardStyle={getStyle?.(defect)}
+                    actions={renderActions(defect)}
+                  />
                 ))}
               </div>
             </div>

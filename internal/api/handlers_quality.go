@@ -579,6 +579,80 @@ func handleGetProjectDefectSummaries(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, summaries)
 }
 
+func handleGetProjectDepartmentDefectSummaries(w http.ResponseWriter, r *http.Request) {
+	soStatusNeq := r.URL.Query().Get("so_status_neq")
+
+	query := `
+		SELECT m.sales_order_id, d.assigned_department, d.status, COUNT(*) 
+		FROM defects d
+		JOIN machines m ON d.machine_id = m.id
+		JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE m.sales_order_id IS NOT NULL
+	`
+	var args []interface{}
+	if soStatusNeq != "" {
+		query += " AND so.status != $1"
+		args = append(args, soStatusNeq)
+	}
+	query += " GROUP BY m.sales_order_id, d.assigned_department, d.status"
+
+	rows, err := db.DB.Query(query, args...)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to query project department defect summaries: ", err)
+		return
+	}
+	defer rows.Close()
+
+	// Use a composite key
+	type summaryKey struct {
+		SalesOrderID       uuid.UUID
+		AssignedDepartment string
+	}
+	summaryMap := make(map[summaryKey]*models.ProjectDepartmentDefectSummary)
+
+	for rows.Next() {
+		var salesOrderID uuid.UUID
+		var dept string
+		var status string
+		var count int
+
+		if err := rows.Scan(&salesOrderID, &dept, &status, &count); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to scan project department summary row: ", err)
+			return
+		}
+
+		key := summaryKey{SalesOrderID: salesOrderID, AssignedDepartment: dept}
+		if _, exists := summaryMap[key]; !exists {
+			summaryMap[key] = &models.ProjectDepartmentDefectSummary{
+				SalesOrderID:       salesOrderID,
+				AssignedDepartment: dept,
+			}
+		}
+
+		s := summaryMap[key]
+
+		if status == "open" {
+			s.TotalOpen += count
+		} else if status == "fixed" {
+			s.TotalPending += count
+		} else if status == "verified" {
+			s.TotalClosed += count
+		}
+	}
+
+	var summaries []models.ProjectDepartmentDefectSummary
+	for _, v := range summaryMap {
+		summaries = append(summaries, *v)
+	}
+
+	if summaries == nil {
+		summaries = []models.ProjectDepartmentDefectSummary{}
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	respondJSON(w, http.StatusOK, summaries)
+}
+
 // handleEditDefect fully updates a defect
 func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 	defectID := r.PathValue("defect_id")

@@ -66,6 +66,14 @@ export interface MachineDefectSummary {
   total_closed: number;
 }
 
+export interface ProjectDepartmentDefectSummary {
+  sales_order_id: string;
+  assigned_department: string;
+  total_open: number;
+  total_pending: number;
+  total_closed: number;
+}
+
 export interface DisplayProject {
   id: string;
   customer_name: string;
@@ -81,5 +89,9 @@ export interface DisplayProject {
     total_pending: number;
     total_closed: number;
   };
-  machines: (Machine & { defects: MachineDefectSummary })[];
+  department_totals: Record<string, { total_open: number; total_pending: number }>;
+  machines: (Machine & { 
+    departmentDefects: DefectSummary[];
+    machine_totals: { total_open: number; total_pending: number };
+  })[];
 }

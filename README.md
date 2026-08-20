@@ -4,7 +4,7 @@ Flux is a custom, real-time Manufacturing Execution System (MES) and issue-track
 
 ## Architecture
 
-Flux is built on a high-performance, single-executable paradigm. The modern frontend is statically exported and baked directly into the Go backend binary, resulting in an incredibly simple deployment model.
+Flux is built on a high-performance, single-executable paradigm. The modern Next.js frontend is statically exported and baked directly into the Go backend binary, resulting in an incredibly simple deployment model.
 
 *   **Backend:** Go (Standard Library Routing `http.ServeMux`)
 *   **Database:** PostgreSQL (Raw `database/sql`)
@@ -14,23 +14,26 @@ Flux is built on a high-performance, single-executable paradigm. The modern fron
 
 ## Key Features
 
-*   **Real-Time Department Hubs:** Live Kanban-style boards for Design, Kitting, Machine Shop, Laser, Assembly, Electrical Controls, and Enclosures.
-*   **Server-Side Filtering:** Highly optimized data pipelines that filter defects and tasks at the database level before reaching the client.
-*   **Live Telemetry (SSE):** Seamless state patching across all active clients. When a task status changes on the floor, the dashboard updates instantly without page reloads.
-*   **Component Modularity:** A strictly typed React architecture utilizing decoupled state hooks and reusable UI components.
+*   **Active Pipeline Dashboard:** A nested-grid executive dashboard displaying active sales orders, project machines, and aggregated deficiency totals horizontally across all operational departments.
+*   **Real-Time Department Hubs:** Dedicated Kanban-style hubs for Design, Kitting, Machine Shop, Laser, Assembly, Electrical Controls, and Enclosures. 
+*   **Quality Resolution Hub:** A global triage center for all quality issues, allowing cross-departmental coordination to clear defects.
+*   **Unified Defect Tracking:** All deficiencies are strictly typed and displayed via uniform `IssueCard` components, guaranteeing consistent severity tagging across all views.
+*   **Server-Side Aggregation & Filtering:** Highly optimized data pipelines that filter defects and aggregate project/machine totals via SQL `GROUP BY` before ever reaching the client.
+*   **Live Telemetry (SSE):** Seamless state patching across all active clients. When a task status changes on the floor, the dashboard and department hubs update instantly without page reloads.
+*   **Project Kickoff Pipeline:** A centralized routing interface for initializing new projects into the production environment.
 
 ## Quick Start & Development
 
 We provide automated scripts to make spinning up the environment simple.
 
 ### 1. Database Initialization
-Ensure PostgreSQL is running, then use the bootstrap script to automatically create the database, apply all schema migrations, and optionally seed it with sample data:
+Ensure PostgreSQL is running, then use the bootstrap script to automatically create the `flux` database, apply all schema migrations, and optionally seed it with sample data:
 ```bash
 ./scripts/bootstrap_flux_db.sh
 ```
 
 ### 2. Testing
-Before running or building, ensure the environment is healthy by executing the unified test suite (which validates Go handlers and type-checks the Next.js frontend):
+Before running or building, ensure the environment is healthy by executing the unified test suite (which validates Go handlers via `httptest` and type-checks the Next.js frontend via `vitest`):
 ```bash
 ./scripts/test.sh
 ```
@@ -59,9 +62,9 @@ This script will automatically generate the Next.js static export, embed it into
 
 ## Codebase Organization
 
-*   `/cmd/flux`: The application entry point.
-*   `/internal/api`: Go HTTP handlers, SSE broadcasting, and unified JSON responses.
+*   `/cmd/flux`: The Go application entry point.
+*   `/internal/api`: Go HTTP handlers, SSE broadcasting, unified JSON responses, and structured `slog` logging.
 *   `/internal/models`: Data structures reflecting the PostgreSQL schema.
-*   `/frontend/src/app`: Next.js pages and routing.
-*   `/frontend/src/components`: Reusable UI modules (e.g., `IssueCard`, `DepartmentHub`).
+*   `/frontend/src/app`: Next.js page router (Dashboard, Departments, Quality).
+*   `/frontend/src/components`: Reusable, heavily memoized UI modules (e.g., `IssueCard`, `DepartmentHub`).
 *   `/frontend/src/hooks`: Decoupled data-fetching and SSE state orchestration.

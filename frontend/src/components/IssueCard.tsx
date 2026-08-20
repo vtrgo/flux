@@ -23,7 +23,7 @@ export function IssueCard({ issue, onClick, cardStyle, actions }: IssueCardProps
     >
       <div className={styles.cardHeader}>
         <span className={styles.orderNumber}>{issue.order_number}</span>
-        <span className={`${styles.severity} ${styles[issue.severity] || ''}`}>{issue.status}</span>
+        <span className={`${styles.severity} ${styles[issue.severity] || ''}`}>{issue.severity}</span>
       </div>
       <h3 className={styles.source}>Source: {issue.source_department}</h3>
       <p className={styles.description}>{issue.description}</p>

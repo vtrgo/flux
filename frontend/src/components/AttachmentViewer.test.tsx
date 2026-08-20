@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { AttachmentViewer } from './AttachmentViewer';
 
 vi.mock('../lib/api', () => ({
@@ -13,7 +13,11 @@ vi.mock('./SSEProvider', () => ({
 
 describe('AttachmentViewer Component', () => {
   it('renders nothing when no attachments', async () => {
-    const { container } = render(<AttachmentViewer issueId="123" />);
+    let container: any;
+    await act(async () => {
+      const result = render(<AttachmentViewer issueId="123" />);
+      container = result.container;
+    });
     expect(container.firstChild).toBeNull();
   });
 });

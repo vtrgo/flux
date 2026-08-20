@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchApi } from '../lib/api';
 import { useSSE } from '../components/SSEProvider';
-import { SalesOrder, ProjectDefectSummary, Machine, MachineDefectSummary, DisplayProject } from '../types';
+import { SalesOrder, ProjectDefectSummary, Machine, DefectSummary, DisplayProject } from '../types';
 
 export function usePublicDashboardData() {
   const [projects, setProjects] = useState<DisplayProject[]>([]);
@@ -11,17 +11,21 @@ export function usePublicDashboardData() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [salesOrdersRes, summariesRes, machinesRes, machSummariesRes] = await Promise.all([
+      const [salesOrdersRes, summariesRes, machinesRes, defectSummariesRes, machineTotalsRes, deptTotalsRes] = await Promise.all([
         fetchApi('/sales_orders', { params: { status_neq: 'fulfilled' } }),
         fetchApi('/defects/project_summary', { params: { so_status_neq: 'fulfilled' } }),
         fetchApi('/machines', { params: { sales_order_status_neq: 'fulfilled' } }),
-        fetchApi('/defects/machine_summary', { params: { so_status_neq: 'fulfilled' } })
+        fetchApi('/defects/summary', { params: { so_status_neq: 'fulfilled' } }),
+        fetchApi('/defects/machine_summary', { params: { so_status_neq: 'fulfilled' } }),
+        fetchApi('/defects/project_department_summary', { params: { so_status_neq: 'fulfilled' } })
       ]);
 
       const salesOrders: SalesOrder[] = salesOrdersRes || [];
       const summaries: ProjectDefectSummary[] = summariesRes || [];
       const machinesList: Machine[] = machinesRes || [];
-      const machSummaries: MachineDefectSummary[] = machSummariesRes || [];
+      const defectSummaries: DefectSummary[] = defectSummariesRes || [];
+      const machineTotals = machineTotalsRes || [];
+      const deptTotals = deptTotalsRes || [];
 
       // Create a map of defect summaries
       const summaryMap = new Map<string, ProjectDefectSummary>();
@@ -29,21 +33,39 @@ export function usePublicDashboardData() {
         summaryMap.set(s.sales_order_id, s);
       });
 
-      // Create a map of machine defect summaries
-      const machSummaryMap = new Map<string, MachineDefectSummary>();
-      machSummaries.forEach((s) => {
-        machSummaryMap.set(s.machine_id, s);
+      const machineTotalMap = new Map();
+      machineTotals.forEach((m: any) => machineTotalMap.set(m.machine_id, m));
+      
+      const deptTotalMap = new Map();
+      deptTotals.forEach((d: any) => {
+        if (!deptTotalMap.has(d.sales_order_id)) {
+          deptTotalMap.set(d.sales_order_id, {});
+        }
+        deptTotalMap.get(d.sales_order_id)[d.assigned_department] = {
+          total_open: d.total_open,
+          total_pending: d.total_pending
+        };
+      });
+
+      // Create a map of machine defect summaries by machine_id (array of department summaries)
+      const machSummaryMap = new Map<string, DefectSummary[]>();
+      defectSummaries.forEach((s) => {
+        if (!machSummaryMap.has(s.machine_id)) {
+          machSummaryMap.set(s.machine_id, []);
+        }
+        machSummaryMap.get(s.machine_id)!.push(s);
       });
 
       // Group machines by sales order
-      const machinesBySo = new Map<string, (Machine & { defects: MachineDefectSummary })[]>();
+      const machinesBySo = new Map<string, (Machine & { departmentDefects: DefectSummary[], machine_totals: { total_open: number; total_pending: number } })[]>();
       machinesList.forEach((m) => {
-        const mSummary = machSummaryMap.get(m.id) || { machine_id: m.id, total_open: 0, total_pending: 0, total_closed: 0 };
-        const machineWithStats = { ...m, defects: mSummary };
+        const mSummaries = machSummaryMap.get(m.id) || [];
+        const mTotals = machineTotalMap.get(m.id) || { total_open: 0, total_pending: 0 };
+        const machineWithStats = { ...m, departmentDefects: mSummaries, machine_totals: mTotals };
         if (!machinesBySo.has(m.sales_order_id)) {
           machinesBySo.set(m.sales_order_id, []);
         }
-        machinesBySo.get(m.sales_order_id)!.push(machineWithStats);
+        machinesBySo.get(m.sales_order_id)!.push(machineWithStats as any);
       });
 
       // Filter to active orders and merge in summaries
@@ -66,6 +88,7 @@ export function usePublicDashboardData() {
               total_pending: summary.total_pending,
               total_closed: summary.total_closed
             },
+            department_totals: deptTotalMap.get(so.id) || {},
             machines: machinesBySo.get(so.id) || []
           };
         });
@@ -80,21 +103,87 @@ export function usePublicDashboardData() {
     }
   }, []);
 
+  const refetchSummaries = useCallback(async () => {
+    try {
+      const [summariesRes, defectSummariesRes, machineTotalsRes, deptTotalsRes] = await Promise.all([
+        fetchApi('/defects/project_summary', { params: { so_status_neq: 'fulfilled' } }),
+        fetchApi('/defects/summary', { params: { so_status_neq: 'fulfilled' } }),
+        fetchApi('/defects/machine_summary', { params: { so_status_neq: 'fulfilled' } }),
+        fetchApi('/defects/project_department_summary', { params: { so_status_neq: 'fulfilled' } })
+      ]);
+
+      const summaries: ProjectDefectSummary[] = summariesRes || [];
+      const defectSummaries: DefectSummary[] = defectSummariesRes || [];
+      const machineTotals = machineTotalsRes || [];
+      const deptTotals = deptTotalsRes || [];
+
+      // Create a map of defect summaries
+      const summaryMap = new Map<string, ProjectDefectSummary>();
+      summaries.forEach((s) => {
+        summaryMap.set(s.sales_order_id, s);
+      });
+
+      const machineTotalMap = new Map();
+      machineTotals.forEach((m: any) => machineTotalMap.set(m.machine_id, m));
+      
+      const deptTotalMap = new Map();
+      deptTotals.forEach((d: any) => {
+        if (!deptTotalMap.has(d.sales_order_id)) {
+          deptTotalMap.set(d.sales_order_id, {});
+        }
+        deptTotalMap.get(d.sales_order_id)[d.assigned_department] = {
+          total_open: d.total_open,
+          total_pending: d.total_pending
+        };
+      });
+
+      // Create a map of machine defect summaries by machine_id (array of department summaries)
+      const machSummaryMap = new Map<string, DefectSummary[]>();
+      defectSummaries.forEach((s) => {
+        if (!machSummaryMap.has(s.machine_id)) {
+          machSummaryMap.set(s.machine_id, []);
+        }
+        machSummaryMap.get(s.machine_id)!.push(s);
+      });
+
+      // Patch the existing projects in state
+      setProjects(prevProjects => prevProjects.map(proj => {
+        const newProjSummary = summaryMap.get(proj.id) || { total_open: 0, total_pending: 0, total_closed: 0 };
+        const newMachines = proj.machines.map(m => {
+          return { 
+            ...m, 
+            departmentDefects: machSummaryMap.get(m.id) || [],
+            machine_totals: machineTotalMap.get(m.id) || { total_open: 0, total_pending: 0 }
+          };
+        });
+
+        return {
+          ...proj,
+          defects: {
+            total_open: newProjSummary.total_open,
+            total_pending: newProjSummary.total_pending,
+            total_closed: newProjSummary.total_closed
+          },
+          department_totals: deptTotalMap.get(proj.id) || {},
+          machines: newMachines
+        };
+      }));
+    } catch (err) {
+      console.error("Failed to refetch summaries:", err);
+    }
+  }, []);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
 
   // Hook into SSE for realtime updates. Any defect change might affect counts.
-  // We re-fetch the data to ensure accuracy.
-  useSSE('defect_added', () => {
-    loadData();
-  });
-  useSSE('defect_updated', () => {
-    loadData();
-  });
-  useSSE('defect_deleted', () => {
-    loadData();
-  });
+  // For high-throughput defect changes, we just patch summaries.
+  useSSE('defect_added', refetchSummaries);
+  useSSE('defect_updated', refetchSummaries);
+  useSSE('defect_deleted', refetchSummaries);
+
+  // Destructive/cascading structural changes trigger a full reload
   useSSE('sales_order_created', () => {
     loadData();
   });
