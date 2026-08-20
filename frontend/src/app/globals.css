@@ -102,3 +102,8 @@ a {
   color: var(--bg-primary, #000);
   box-shadow: 0 0 12px var(--vtr-glow-color, rgba(0, 229, 255, 0.2));
 }
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

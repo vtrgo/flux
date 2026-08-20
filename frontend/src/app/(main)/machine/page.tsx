@@ -9,6 +9,7 @@ import styles from "./machine.module.css";
 import { ACTIVE_DEPARTMENTS } from "../../../lib/departments";
 
 import { IssueModal } from "../../../components/IssueModal";
+import { AttachmentViewer } from "../../../components/AttachmentViewer";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
 
@@ -171,10 +172,11 @@ function MachineDetailContent() {
                         <strong style={{ color: 'var(--vtr-theme-secondary)' }}>Note:</strong> {defect.notes}
                       </div>
                     )}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
                       <div style={{ color: 'var(--text-secondary)' }}>Source: {defect.source_department}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <AttachmentViewer issueId={defect.id} />
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                       {renderActions(defect)}
                     </div>
                   </div>

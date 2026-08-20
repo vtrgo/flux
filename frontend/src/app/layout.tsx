@@ -13,6 +13,8 @@ export const metadata: Metadata = {
 import { ThemeProvider } from "../components/ThemeProvider";
 import { SSEProvider } from "../components/SSEProvider";
 import { CommandPalette } from "../components/CommandPalette";
+import { Toaster } from 'sonner';
+import { GlobalSystemToasts } from "../components/GlobalSystemToasts";
 
 export default function RootLayout({
   children,
@@ -27,6 +29,8 @@ export default function RootLayout({
             <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>
             {children}
             <CommandPalette />
+            <Toaster theme="dark" position="bottom-right" />
+            <GlobalSystemToasts />
           </SSEProvider>
         </ThemeProvider>
       </body>

@@ -51,3 +51,6 @@ backend/data/
 
 # Binaries
 /flux
+bin/
+data/
+logs/

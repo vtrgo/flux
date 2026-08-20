@@ -5,6 +5,7 @@ import { fetchApi } from "../lib/api";
 import { ACTIVE_DEPARTMENTS, formatDepartmentName } from "../lib/departments";
 import styles from "../app/(main)/quality/quality.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
+import { toast } from "sonner";
 
 import { Machine, Defect } from "../types";
 
@@ -16,12 +17,20 @@ interface IssueModalProps {
   preselectedMachineId?: string;
 }
 
+import { ImageUploader } from "./ImageUploader";
+import { AttachmentViewer } from "./AttachmentViewer";
+
 export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality', preselectedMachineId }: IssueModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const defaultRoutedDept = defaultAssignedDept === 'quality' ? '' : defaultAssignedDept;
+
   const [formData, setFormData] = useState({
     machine_id: '',
     source_department: defaultAssignedDept,
-    assigned_department: defaultAssignedDept,
+    assigned_department: defaultRoutedDept,
     severity: 'moderate',
     description: '',
     notes: ''
@@ -38,8 +47,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
       fetchApi<Machine[]>('machines')
         .then(data => {
           setMachines(data || []);
-          if (!editingDefect && data && data.length > 0) {
-            setFormData(prev => ({ ...prev, machine_id: preselectedMachineId || data[0].id }));
+          if (!editingDefect && data && data.length > 0 && !preselectedMachineId) {
+            setFormData(prev => ({ ...prev, machine_id: data[0].id }));
           }
         })
         .catch(err => console.error("Failed to fetch machines", err));
@@ -48,7 +57,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         setFormData({
           machine_id: editingDefect.machine_id,
           source_department: editingDefect.source_department,
-          assigned_department: editingDefect.assigned_department || defaultAssignedDept,
+          assigned_department: editingDefect.assigned_department || defaultRoutedDept,
           severity: editingDefect.severity,
           description: editingDefect.description,
           notes: editingDefect.notes || ''
@@ -57,32 +66,59 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         setFormData({
           machine_id: preselectedMachineId || '',
           source_department: defaultAssignedDept,
-          assigned_department: defaultAssignedDept,
+          assigned_department: defaultRoutedDept,
           severity: 'moderate',
           description: '',
           notes: ''
         });
       }
     }
-  }, [isOpen, editingDefect, defaultAssignedDept, preselectedMachineId]);
+  }, [isOpen, editingDefect, defaultAssignedDept, defaultRoutedDept, preselectedMachineId]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       if (editingDefect) {
         await fetchApi(`defects/${editingDefect.id}/edit`, {
           method: 'PUT',
           body: JSON.stringify(formData)
         });
+        toast.success('Changes saved successfully!');
       } else {
-        await fetchApi(`machines/${formData.machine_id}/defects`, {
+        const newDefect = await fetchApi<Defect>(`machines/${formData.machine_id}/defects`, {
           method: 'POST',
           body: JSON.stringify(formData)
         });
+        
+        if (newDefect && pendingFiles.length > 0) {
+          const toastId = toast.loading(`Uploading ${pendingFiles.length} image(s)...`);
+          try {
+            for (const file of pendingFiles) {
+              const fd = new FormData();
+              fd.append("file", file);
+              await fetchApi(`issues/${newDefect.id}/attachments`, {
+                method: "POST",
+                body: fd,
+              });
+            }
+            toast.success('Issue and images saved successfully!', { id: toastId });
+          } catch (uploadErr) {
+            console.error("Upload error", uploadErr);
+            toast.error('Issue created, but failed to upload some images', { id: toastId });
+          }
+        } else {
+          toast.success('Issue saved successfully!');
+        }
       }
+      
+      setPendingFiles([]);
       onClose();
     } catch (err) {
       console.error("Failed to save defect", err);
+      toast.error('Failed to save issue');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -137,10 +173,11 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               <select 
                 value={formData.assigned_department} 
                 onChange={e => setFormData({...formData, assigned_department: e.target.value})}
+                required
                 className="vtr-input"
                 style={{ borderColor: 'var(--vtr-theme-primary)', color: 'var(--vtr-theme-primary)' }}
               >
-                <option value="quality">Quality</option>
+                <option value="" disabled>Select Department...</option>
                 {ACTIVE_DEPARTMENTS.map(d => (
                   <option key={d.key} value={d.key}>{d.key === 'design' ? 'Design (ECR)' : d.label}</option>
                 ))}
@@ -185,9 +222,57 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             />
           </div>
 
+          {editingDefect ? (
+            <>
+              <AttachmentViewer key={uploadCount} issueId={editingDefect.id} editable={true} />
+              <ImageUploader issueId={editingDefect.id} onUploadComplete={() => setUploadCount(prev => prev + 1)} />
+            </>
+          ) : (
+            <div style={{ marginTop: "0.5rem" }}>
+              <h3 style={{ fontFamily: "var(--font-mono)", fontSize: "0.85rem", color: "var(--vtr-theme-primary)", marginBottom: "0.5rem", textTransform: 'uppercase' }}>ATTACHMENTS (PENDING)</h3>
+              
+              {pendingFiles.length > 0 && (
+                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+                  {pendingFiles.map((f, i) => (
+                    <div key={i} style={{ border: "1px solid var(--border-color)", padding: "0.25rem", borderRadius: "4px", position: "relative" }}>
+                      <button 
+                        type="button"
+                        style={{ position: 'absolute', top: '-0.5rem', right: '-0.5rem', background: 'var(--accent-red)', color: 'white', border: 'none', borderRadius: '50%', width: '1.5rem', height: '1.5rem', cursor: 'pointer', zIndex: 10 }}
+                        onClick={() => setPendingFiles(prev => prev.filter((_, index) => index !== i))}
+                      >
+                        &times;
+                      </button>
+                      <img src={URL.createObjectURL(f)} alt="Pending upload preview" style={{ width: "80px", height: "80px", objectFit: "cover", display: "block" }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <input 
+                type="file" 
+                accept="image/*"
+                capture="environment"
+                multiple
+                id="new-issue-upload"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setPendingFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                  }
+                }}
+              />
+              <label htmlFor="new-issue-upload" className="vtr-btn vtr-btn-secondary" style={{ cursor: "pointer", display: "inline-block", fontSize: "0.75rem" }}>
+                + ADD PHOTO
+              </label>
+            </div>
+          )}
+
+
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button type="submit" className="vtr-btn" style={{ flex: 1 }}>{editingDefect ? 'SAVE CHANGES' : 'CREATE ISSUE'}</button>
-            <button type="button" className="vtr-btn vtr-btn-secondary" onClick={onClose}>CANCEL</button>
+            <button type="submit" className="vtr-btn" style={{ flex: 1 }} disabled={isSubmitting}>
+              {isSubmitting ? 'SAVING...' : (editingDefect ? 'SAVE CHANGES' : 'CREATE ISSUE')}
+            </button>
+            <button type="button" className="vtr-btn vtr-btn-secondary" onClick={onClose} disabled={isSubmitting}>CANCEL</button>
           </div>
         </form>
       </div>

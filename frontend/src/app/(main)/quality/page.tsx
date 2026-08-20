@@ -8,6 +8,7 @@ import styles from "./quality.module.css";
 import { Machine, Defect } from "../../../types";
 
 import { IssueModal } from "../../../components/IssueModal";
+import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 
@@ -197,6 +198,7 @@ export default function QualityResolutionHub() {
                   <span>Src: {defect.source_department}</span>
                   <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
                 </div>
+                <AttachmentViewer issueId={defect.id} />
                 <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
                   <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'fixed')}>MARK FIXED</button>
                   <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
@@ -231,6 +233,7 @@ export default function QualityResolutionHub() {
                   <span>Src: {defect.source_department}</span>
                   <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
                 </div>
+                <AttachmentViewer issueId={defect.id} />
                 <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
                   <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'verified')}>SIGN OFF</button>
                   <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>REJECT</button>
@@ -266,6 +269,7 @@ export default function QualityResolutionHub() {
                   <span>Src: {defect.source_department}</span>
                   <span style={{ color: 'var(--vtr-theme-primary)' }}>Rout: {defect.assigned_department}</span>
                 </div>
+                <AttachmentViewer issueId={defect.id} />
                 <div className={styles.actions} style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
                   <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>RE-OPEN</button>
                   <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>

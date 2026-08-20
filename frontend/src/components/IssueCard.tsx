@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './IssueCard.module.css';
 import { Defect } from '../types';
+import { AttachmentViewer } from './AttachmentViewer';
 
 interface IssueCardProps {
   issue: Defect;
@@ -31,6 +32,7 @@ export function IssueCard({ issue, onClick, cardStyle, actions }: IssueCardProps
           <strong className={styles.noteLabel}>Note:</strong> {issue.notes}
         </div>
       )}
+      <AttachmentViewer issueId={issue.id} />
       <div className={styles.actions}>
         {actions}
       </div>

@@ -25,3 +25,11 @@ As noted during the frontend refactor, the current codebase has some unoptimized
 # Future Deployment & Infrastructure
 - [ ] **One-Line Installer (`install.sh`):** Create a bulletproof installation shell script that users can run via a single `curl` command. This script should automatically install PostgreSQL if missing, configure the `flux` database, download the latest GitHub Release binary, and register it as a persistent `systemd` service.
 - [ ] **Auto-Update Mechanism:** Investigate adding an auto-update routine (e.g., polling a private release server and safely restarting the binary) so the shop floor screens never require manual intervention.
+
+# Future Image & Attachment Optimizations
+
+## Enterprise-Grade Upload Architecture
+- [ ] **Hard Request Size Limiting:** Inject an `http.MaxBytesReader` middleware on the upload route (`/api/issues/{id}/attachments`) to physically reject massive payloads and protect the server from disk exhaustion or DDOS attacks.
+- [ ] **Image Processing & Compression:** Integrate an image processing library (e.g., `golang.org/x/image` or `github.com/h2non/bimg`) to automatically compress high-res uploads and generate optimized WebP thumbnails to reduce network traffic on dashboard rendering.
+- [ ] **EXIF Data Stripping:** Implement metadata stripping during the file upload process to remove hidden GPS coordinates, camera models, and user data for enterprise compliance and privacy.
+- [ ] **Distributed Object Storage (S3):** Abstract the local `os.Write` logic behind a generic `Storage` interface. This will allow the application to seamlessly swap local disk storage for AWS S3, Google Cloud Storage, or MinIO to support horizontal scaling across multiple servers.
