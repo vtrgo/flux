@@ -6,8 +6,8 @@ set -euo pipefail
 DB_NAME="flux"
 MIGRATIONS_DIR="scripts/migrations"
 
-# Identify the original user even if run via sudo
-TARGET_USER="${SUDO_USER:-$USER}"
+# Identify the target database user (can be overridden via TARGET_USER env var)
+TARGET_USER="${TARGET_USER:-${SUDO_USER:-$USER}}"
 
 run_psql() {
     # cd to /tmp to prevent "could not change directory" warnings when postgres user tries to access /home
