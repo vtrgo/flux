@@ -97,3 +97,30 @@
   padding: 0.25rem;
   font-size: 0.75rem;
 }
+
+.timestamps {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary, #888);
+}
+
+.timestampItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.timestampLabel {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, #888);
+}
+
+.timestampValue {
+  color: var(--text-primary, #ccc);
+}

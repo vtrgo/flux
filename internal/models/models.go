@@ -112,6 +112,7 @@ type Defect struct {
 	Notes              *string    `json:"notes,omitempty"`
 	ResolvedBy         *string    `json:"resolved_by,omitempty"`
 	ResolvedAt         *time.Time `json:"resolved_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
 }
 
 // DefectSummary represents aggregated backend counts for defects per department

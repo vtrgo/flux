@@ -62,7 +62,7 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := db.DB.Query(`
-		SELECT id, machine_id, inspection_id, source_department, assigned_department, description, severity, status, notes, resolved_by, resolved_at
+		SELECT id, machine_id, inspection_id, source_department, assigned_department, description, severity, status, notes, resolved_by, resolved_at, created_at
 		FROM defects
 		WHERE machine_id = $1
 		ORDER BY status ASC
@@ -80,7 +80,7 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		var assigned sql.NullString
 		if err := rows.Scan(
 			&d.ID, &d.MachineID, &d.InspectionID, &d.SourceDepartment, &assigned, &d.Description,
-			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt,
+			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning defect: ", err)
 			return
@@ -125,11 +125,11 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 	err := db.DB.QueryRow(`
 		INSERT INTO defects (machine_id, source_department, assigned_department, description, severity, status, notes)
 		VALUES ($1, $2, $3, $4, $5, 'open', $6)
-		RETURNING id, machine_id, source_department, assigned_department, description, severity, status, notes, resolved_by, resolved_at
+		RETURNING id, machine_id, source_department, assigned_department, description, severity, status, notes, resolved_by, resolved_at, created_at
 	`, machineID, req.SourceDepartment, req.AssignedDepartment, req.Description, req.Severity, req.Notes).Scan(
 		&newDefect.ID, &newDefect.MachineID, &newDefect.SourceDepartment, &newDefect.AssignedDepartment,
 		&newDefect.Description, &newDefect.Severity, &newDefect.Status, &newDefect.Notes,
-		&newDefect.ResolvedBy, &newDefect.ResolvedAt,
+		&newDefect.ResolvedBy, &newDefect.ResolvedAt, &newDefect.CreatedAt,
 	)
 
 	if err != nil {
@@ -149,7 +149,7 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 	department := r.URL.Query().Get("department")
 
 	query := `
-		SELECT d.id, d.machine_id, m.order_number, d.source_department, d.assigned_department, d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at
+		SELECT d.id, d.machine_id, m.order_number, d.source_department, d.assigned_department, d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at
 		FROM defects d
 		JOIN machines m ON d.machine_id = m.id
 	`
@@ -183,7 +183,7 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 		var assigned sql.NullString
 		if err := rows.Scan(
 			&d.ID, &d.MachineID, &d.OrderNumber, &d.SourceDepartment, &assigned, &d.Description,
-			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt,
+			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning defect: ", err)
 			return
@@ -226,14 +226,22 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 		SET status = COALESCE(NULLIF($2, ''), status),
 		    assigned_department = COALESCE(NULLIF($3, ''), assigned_department),
 		    notes = COALESCE(NULLIF($4, ''), notes),
-		    resolved_at = CASE WHEN $2 IN ('fixed', 'verified') THEN NOW() ELSE resolved_at END, 
-		    resolved_by = CASE WHEN $2 IN ('fixed', 'verified') THEN 'user_quality_01' ELSE resolved_by END
+		    resolved_at = CASE 
+		        WHEN $2 IN ('fixed', 'verified') THEN NOW() 
+		        WHEN $2 = 'open' THEN NULL 
+		        ELSE resolved_at 
+		    END, 
+		    resolved_by = CASE 
+		        WHEN $2 IN ('fixed', 'verified') THEN 'user_quality_01' 
+		        WHEN $2 = 'open' THEN NULL 
+		        ELSE resolved_by 
+		    END
 		WHERE id = $1
-		RETURNING id, machine_id, source_department, assigned_department, description, severity, status, notes, resolved_by, resolved_at
+		RETURNING id, machine_id, source_department, assigned_department, description, severity, status, notes, resolved_by, resolved_at, created_at
 	`, defectID, req.Status, req.AssignedDepartment, req.Notes).Scan(
 		&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment,
 		&updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes,
-		&updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt,
+		&updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt,
 	)
 
 	if err != nil {
@@ -681,10 +689,10 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 		UPDATE defects 
 		SET source_department = $2, assigned_department = $3, severity = $4, description = $5
 		WHERE id = $1
-		RETURNING id, machine_id, source_department, assigned_department, description, severity, status, resolved_by, resolved_at
+		RETURNING id, machine_id, source_department, assigned_department, description, severity, status, notes, resolved_by, resolved_at, created_at
 	`, defectID, req.SourceDepartment, req.AssignedDepartment, req.Severity, req.Description).Scan(
 		&updated.ID, &updated.MachineID, &updated.SourceDepartment, &updated.AssignedDepartment,
-		&updated.Description, &updated.Severity, &updated.Status, &updated.ResolvedBy, &updated.ResolvedAt,
+		&updated.Description, &updated.Severity, &updated.Status, &updated.Notes, &updated.ResolvedBy, &updated.ResolvedAt, &updated.CreatedAt,
 	)
 
 	if err != nil {
