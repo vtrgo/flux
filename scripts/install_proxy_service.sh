@@ -15,6 +15,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Ensure Go binary path is accessible even under restricted sudo environments
+export PATH="$PATH:/usr/local/go/bin"
+
 DRY_RUN=0
 REQUESTED_USER=""
 
@@ -22,6 +25,14 @@ REQUESTED_USER=""
 for arg in "$@"; do
   if [ "$arg" == "--dry-run" ] || [ "$arg" == "-n" ]; then
     DRY_RUN=1
+  elif [ "$arg" == "--help" ] || [ "$arg" == "-h" ]; then
+    echo "Usage: $0 [--dry-run|-n] [TARGET_USER]"
+    echo ""
+    echo "Options:"
+    echo "  --dry-run, -n   Simulate installation without making system changes"
+    echo "  --help, -h      Display this help message"
+    echo "  TARGET_USER     Optional user account to run the service (defaults to 'electrical', 'justin', or current user)"
+    exit 0
   elif [ -z "$REQUESTED_USER" ] && [[ "$arg" != -* ]]; then
     REQUESTED_USER="$arg"
   fi
@@ -78,6 +89,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   echo "[Dry Run] Would run: setcap 'cap_net_bind_service=+ep' /usr/local/bin/vtrflux-proxy"
 else
   echo "== [2/3] Installing binary to /usr/local/bin/vtrflux-proxy =="
+  $SUDO_CMD install -d /usr/local/bin
   $SUDO_CMD install -m 755 "$BUILD_TMP/vtrflux-proxy" /usr/local/bin/vtrflux-proxy
 
   if command -v setcap >/dev/null 2>&1; then

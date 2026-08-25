@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -35,9 +38,18 @@ func GetConfig() (*ProxyConfig, error) {
 		target = "http://127.0.0.1:8080"
 	}
 
+	// Auto-prepend http:// scheme if omitted (e.g. TARGET_BACKEND=127.0.0.1:8080 or localhost:8080)
+	if !strings.Contains(target, "://") {
+		target = "http://" + target
+	}
+
 	targetURL, err := url.Parse(target)
 	if err != nil {
 		return nil, fmt.Errorf("invalid TARGET_BACKEND URL %q: %w", target, err)
+	}
+
+	if targetURL.Host == "" {
+		return nil, fmt.Errorf("invalid TARGET_BACKEND URL %q: missing host", target)
 	}
 
 	return &ProxyConfig{
@@ -46,7 +58,7 @@ func GetConfig() (*ProxyConfig, error) {
 	}, nil
 }
 
-// responseLogger wraps http.ResponseWriter to capture status code while supporting http.Flusher.
+// responseLogger wraps http.ResponseWriter to capture status code while supporting http.Flusher and http.Hijacker.
 type responseLogger struct {
 	http.ResponseWriter
 	statusCode  int
@@ -75,6 +87,19 @@ func (rw *responseLogger) Flush() {
 	}
 }
 
+// Hijack implements http.Hijacker to support connection hijacking (e.g., WebSockets).
+func (rw *responseLogger) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := rw.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
+}
+
+// Unwrap returns the underlying ResponseWriter for Go 1.20+ http.ResponseController support.
+func (rw *responseLogger) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
+}
+
 // loggingMiddleware logs incoming HTTP requests using slog.
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -101,10 +126,14 @@ func NewReverseProxy(targetURL *url.URL) *httputil.ReverseProxy {
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		origHost := req.Host
+		if origHost == "" && req.URL != nil {
+			origHost = req.URL.Host
+		}
+
 		originalDirector(req)
 
 		// Preserve or set X-Forwarded-Host
-		if req.Header.Get("X-Forwarded-Host") == "" {
+		if req.Header.Get("X-Forwarded-Host") == "" && origHost != "" {
 			req.Header.Set("X-Forwarded-Host", origHost)
 		}
 
@@ -120,6 +149,15 @@ func NewReverseProxy(targetURL *url.URL) *httputil.ReverseProxy {
 
 	// Custom ErrorHandler returns a clean JSON 502 Bad Gateway response when backend is unreachable
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		// Ignore client cancellations (e.g. browser navigation/closing tab) without error log spam
+		if errors.Is(err, context.Canceled) || (r.Context() != nil && errors.Is(r.Context().Err(), context.Canceled)) {
+			slog.Debug("Client disconnected before backend response",
+				"url", r.URL.String(),
+				"method", r.Method,
+			)
+			return
+		}
+
 		slog.Error("Reverse proxy backend error",
 			"url", r.URL.String(),
 			"method", r.Method,
