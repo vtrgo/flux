@@ -161,3 +161,26 @@ When writing or updating Vitest files for React components that asynchronously f
      render(<AttachmentViewer issueId="123" />);
    });
    ```
+
+# Token Economy & Context Optimization Guidelines
+
+## Surgical File Viewing & Search
+1. **Targeted Line Ranges (`view_file`)**: Always specify `StartLine` and `EndLine` when inspecting known functions, types, or line ranges. Avoid reading entire files over 100 lines unless full structural context is strictly required.
+2. **Filtered Searches (`grep_search` & `find_by_name`)**: Always specify `Includes` (e.g., `["*.go"]`, `["*.tsx"]`) and narrow `SearchPath` to target subdirectories rather than searching the repository root indiscriminately.
+
+## Command Output Management (`run_command`)
+1. **Quiet Flags & Paging**: Use quiet/compact flags on verbose CLI tools (e.g., `npm test -- --silent`, `go test -short`, `git log -n 5`).
+2. **Output Truncation**: Pipe potentially large command outputs to `head -n <N>` or `tail -n <N>` if only exit status or trailing summaries are required.
+
+## Surgical File Editing (`replace_file_content`)
+1. **Minimal Edit Windows**: Keep `TargetContent` and `ReplacementContent` scoped strictly to the minimal contiguous lines changing, avoiding encompassing surrounding unchanged functions.
+
+## Response Conciseness
+1. **No Artifact Duplication**: After creating or updating an artifact, reference the artifact directly without re-summarizing its full contents in chat text.
+
+## Rate Limit Mitigation & Execution Efficiency
+1. **Zero-Polling Policy**: Never execute iterative polling loops on background tasks or subagent conversation IDs. Rely strictly on the platform's automatic reactive wakeup.
+2. **Subagent Model Tiering**: For subagents assigned to codebase discovery, file surveys, or log scanning, explicitly set `Model: "flash"` or `"flash_lite"` rather than `"inherit"`, reserving top-tier models for high-complexity reasoning and architecture.
+3. **Targeted Iterative Testing**: During iterative development, execute only the specific test function or test file under development (e.g., `go test -run TestX ./...` or `npx vitest run path/to/file.test.tsx`). Only run the full `./scripts/test.sh` suite as the final verification step before handoff.
+4. **Compound Tool Efficiency**: Consolidate atomic shell queries (e.g., directory checking + git status) into single execution blocks where appropriate to minimize turn latency and API request count.
+
