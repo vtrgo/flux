@@ -10,7 +10,23 @@ interface IssueCardProps {
   actions: React.ReactNode;
 }
 
-export function IssueCard({ issue, onClick, cardStyle, actions }: IssueCardProps) {
+function formatTimestamp(dateString?: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+export const IssueCard = React.memo(function IssueCard({ issue, onClick, cardStyle, actions }: IssueCardProps) {
+  const isClosed = issue.status === 'fixed' || issue.status === 'verified';
+
   return (
     <div 
       className={styles.card} 
@@ -33,9 +49,27 @@ export function IssueCard({ issue, onClick, cardStyle, actions }: IssueCardProps
         </div>
       )}
       <AttachmentViewer issueId={issue.id} />
+      
+      {(issue.created_at || (issue.resolved_at && isClosed)) && (
+        <div className={styles.timestamps}>
+          {issue.created_at && (
+            <div className={styles.timestampItem}>
+              <span className={styles.timestampLabel}>Opened:</span>
+              <span className={styles.timestampValue}>{formatTimestamp(issue.created_at)}</span>
+            </div>
+          )}
+          {issue.resolved_at && isClosed && (
+            <div className={styles.timestampItem}>
+              <span className={styles.timestampLabel}>Closed:</span>
+              <span className={styles.timestampValue}>{formatTimestamp(issue.resolved_at)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className={styles.actions}>
         {actions}
       </div>
     </div>
   );
-}
+});

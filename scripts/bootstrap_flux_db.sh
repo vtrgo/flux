@@ -65,7 +65,16 @@ for migration_file in $(ls -v "$MIGRATIONS_DIR"/*.up.sql); do
     fi
 done
 
-# Fix permissions so the API user can actually access the tables created by the postgres role
+# Fix permissions and ownership so the API user can alter and access tables
+run_psql -c "DO \$\$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'ALTER TABLE public.' || quote_ident(r.tablename) || ' OWNER TO \"$TARGET_USER\";';
+    END LOOP;
+END
+\$\$;"
 run_psql -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"$TARGET_USER\";"
 run_psql -c "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"$TARGET_USER\";"
 run_psql -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO \"$TARGET_USER\";"
