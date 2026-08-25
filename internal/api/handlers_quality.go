@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/google/uuid"
 
@@ -258,19 +256,19 @@ func handleDeleteDefect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Clean up physical attachment files BEFORE the DB delete.
+	// The attachments table has ON DELETE CASCADE from defects, so once the
+	// defect row is deleted the attachment metadata rows vanish — we must
+	// query them first to know which files to remove from disk.
+	deleteAttachmentFilesForIssues([]string{defectID})
+
 	_, err := db.DB.Exec("DELETE FROM defects WHERE id = $1", defectID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to delete defect", err)
 		return
 	}
 
-	// Clean up physical attachment files from disk to prevent storage leaks
-	storageDir := filepath.Join("data", "attachments", defectID)
-	if err := os.RemoveAll(storageDir); err != nil {
-		slog.Error("Failed to delete attachment storage directory for defect", "defect_id", defectID, "error", err)
-	} else {
-		slog.Debug("Defect and associated physical attachments deleted", "defect_id", defectID)
-	}
+	slog.Debug("Defect and associated attachments deleted", "defect_id", defectID)
 
 	// We can broadcast a delete event so the UI can remove it
 	BroadcastEvent("defect_deleted", map[string]string{"id": defectID})

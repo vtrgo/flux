@@ -23,6 +23,61 @@ type Attachment struct {
 	CreatedAt time.Time        `json:"created_at"`
 }
 
+// getAttachmentsDir returns the base directory for attachment storage,
+// respecting the ATTACHMENTS_DIR environment variable with a default fallback.
+func getAttachmentsDir() string {
+	storageDir := os.Getenv("ATTACHMENTS_DIR")
+	if storageDir == "" {
+		storageDir = "data/attachments"
+	}
+	return storageDir
+}
+
+// deleteAttachmentFilesForIssues removes all physical attachment files from disk
+// for the given issue IDs. It queries the database for attachment metadata BEFORE
+// the DB rows are cascade-deleted, removes each file, then removes the issue
+// directories if they are empty. This must be called BEFORE the parent DB delete.
+func deleteAttachmentFilesForIssues(issueIDs []string) {
+	if len(issueIDs) == 0 {
+		return
+	}
+
+	storageDir := getAttachmentsDir()
+
+	for _, issueID := range issueIDs {
+		rows, err := db.DB.Query("SELECT id, filename FROM attachments WHERE issue_id = $1", issueID)
+		if err != nil {
+			slog.Error("Failed to query attachments for disk cleanup", "issue_id", issueID, "error", err)
+			continue
+		}
+
+		for rows.Next() {
+			var attID, originalFilename string
+			if err := rows.Scan(&attID, &originalFilename); err != nil {
+				slog.Error("Failed to scan attachment row during cleanup", "issue_id", issueID, "error", err)
+				continue
+			}
+
+			ext := filepath.Ext(originalFilename)
+			filePath := filepath.Join(storageDir, issueID, attID+ext)
+
+			if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+				slog.Error("Failed to delete attachment file during cascade", "attachment_id", attID, "file_path", filePath, "error", err)
+			} else {
+				slog.Debug("Cascade-deleted attachment file", "attachment_id", attID, "file_path", filePath)
+			}
+		}
+		rows.Close()
+
+		// Remove the issue directory if it is now empty
+		issueDir := filepath.Join(storageDir, issueID)
+		if err := os.Remove(issueDir); err != nil && !os.IsNotExist(err) {
+			// os.Remove on a non-empty dir returns an error, which is fine — means other files remain
+			slog.Debug("Issue attachment directory not removed (may still contain files)", "issue_id", issueID, "dir", issueDir)
+		}
+	}
+}
+
 func handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
 	issueID := r.PathValue("issue_id")
 	if issueID == "" {
@@ -54,10 +109,7 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
 	ext := filepath.Ext(header.Filename)
 	filename := attachmentID + ext
 
-	storageDir := os.Getenv("ATTACHMENTS_DIR")
-	if storageDir == "" {
-		storageDir = "data/attachments"
-	}
+	storageDir := getAttachmentsDir()
 	issueDir := filepath.Join(storageDir, issueID)
 
 	if err := os.MkdirAll(issueDir, 0755); err != nil {
@@ -140,10 +192,7 @@ func handleServeAttachment(w http.ResponseWriter, r *http.Request) {
 	ext := filepath.Ext(originalFilename)
 	filename := attachmentID + ext
 
-	storageDir := os.Getenv("ATTACHMENTS_DIR")
-	if storageDir == "" {
-		storageDir = "data/attachments"
-	}
+	storageDir := getAttachmentsDir()
 	filePath := filepath.Join(storageDir, issueID, filename)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -207,10 +256,7 @@ func handleDeleteAttachment(w http.ResponseWriter, r *http.Request) {
 	ext := filepath.Ext(originalFilename)
 	filename := attachmentID + ext
 
-	storageDir := os.Getenv("ATTACHMENTS_DIR")
-	if storageDir == "" {
-		storageDir = "data/attachments"
-	}
+	storageDir := getAttachmentsDir()
 	filePath := filepath.Join(storageDir, issueID, filename)
 
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {

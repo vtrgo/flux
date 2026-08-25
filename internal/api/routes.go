@@ -253,7 +253,24 @@ func handleDeleteMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := db.DB.Exec("DELETE FROM machines WHERE id = $1", id)
+	// Collect all defect IDs for this machine so we can clean up their
+	// attachment files from disk before the DB cascade wipes the metadata rows.
+	rows, err := db.DB.Query("SELECT id FROM defects WHERE machine_id = $1", id)
+	if err != nil {
+		slog.Error("Failed to query defects for machine attachment cleanup", "machine_id", id, "error", err)
+	} else {
+		var defectIDs []string
+		for rows.Next() {
+			var defectID string
+			if err := rows.Scan(&defectID); err == nil {
+				defectIDs = append(defectIDs, defectID)
+			}
+		}
+		rows.Close()
+		deleteAttachmentFilesForIssues(defectIDs)
+	}
+
+	_, err = db.DB.Exec("DELETE FROM machines WHERE id = $1", id)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to delete machine: ", err)
 		return
