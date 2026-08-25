@@ -97,10 +97,17 @@ fi
 echo "== [3/5] Building Next.js Static Frontend Export =="
 (
   cd "$FLUX_DIR/frontend"
-  # Run as the service user to preserve node_modules permissions
+  # Run as the service user to preserve node_modules permissions while passing current PATH/NVM
   if [ "$(id -u)" -eq 0 ] && [ "$SERVICE_USER" != "root" ]; then
-    sudo -u "$SERVICE_USER" npm ci
-    sudo -u "$SERVICE_USER" npm run build
+    sudo -u "$SERVICE_USER" -H env "PATH=$PATH" "HOME=/home/$SERVICE_USER" bash -c "
+      if [ -d \"/home/$SERVICE_USER/.nvm\" ]; then
+        export NVM_DIR=\"/home/$SERVICE_USER/.nvm\"
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
+      fi
+      cd '$FLUX_DIR/frontend'
+      npm ci
+      npm run build
+    "
   else
     npm ci
     npm run build
