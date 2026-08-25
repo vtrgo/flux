@@ -15,6 +15,13 @@
 
 set -euo pipefail
 
+# Ensure script is run with sudo
+if [ "$(id -u)" -ne 0 ]; then
+  echo "[Error] deploy_production.sh must be executed with sudo privileges." >&2
+  echo "Usage: sudo $0 $*" >&2
+  exit 1
+fi
+
 FLUX_DIR="${FLUX_DIR:-/opt/flux}"
 SERVICE_NAME="flux.service"
 GITHUB_REPO="vtrgo/flux"
@@ -117,8 +124,15 @@ echo "== [3/5] Building Next.js Static Frontend Export =="
 # 5. Compile Embedded Go Executable
 echo "== [4/5] Compiling Single Go Executable =="
 mkdir -p "$FLUX_DIR/bin"
-# Compile to both /opt/flux/flux and /opt/flux/bin/flux to support any systemd ExecStart configuration
-(cd "$FLUX_DIR" && go build -o "$FLUX_DIR/flux" cmd/flux/main.go)
+# Run go build under SERVICE_USER to leverage user's Go module and build cache
+if [ "$(id -u)" -eq 0 ] && [ "$SERVICE_USER" != "root" ]; then
+  sudo -u "$SERVICE_USER" -H env "PATH=$PATH" "HOME=/home/$SERVICE_USER" "GOCACHE=/home/$SERVICE_USER/.cache/go-build" "GOPATH=/home/$SERVICE_USER/go" bash -c "
+    cd '$FLUX_DIR'
+    go build -o '$FLUX_DIR/flux' cmd/flux/main.go
+  "
+else
+  (cd "$FLUX_DIR" && go build -o "$FLUX_DIR/flux" cmd/flux/main.go)
+fi
 cp "$FLUX_DIR/flux" "$FLUX_DIR/bin/flux"
 chown "$SERVICE_USER:$SERVICE_GROUP" "$FLUX_DIR/flux" "$FLUX_DIR/bin/flux"
 chmod 755 "$FLUX_DIR/flux" "$FLUX_DIR/bin/flux"
@@ -134,7 +148,7 @@ echo "== [5/5] Restarting Service & Validating Health =="
 if command -v systemctl >/dev/null 2>&1; then
   systemctl daemon-reload || true
   
-  if systemctl list-unit-files | grep -qw "$SERVICE_NAME"; then
+  if systemctl cat "$SERVICE_NAME" >/dev/null 2>&1 || systemctl cat "flux" >/dev/null 2>&1; then
     echo "Restarting $SERVICE_NAME..."
     systemctl restart "$SERVICE_NAME"
     
