@@ -99,6 +99,17 @@ type QualityInspection struct {
 	CompletedAt    *time.Time `json:"completed_at,omitempty"`
 }
 
+// User represents a system user
+type User struct {
+	ID         uuid.UUID  `json:"id"`
+	Username   string     `json:"username"`
+	FirstName  *string    `json:"first_name,omitempty"`
+	LastName   *string    `json:"last_name,omitempty"`
+	Department *string    `json:"department,omitempty"`
+	Role       *string    `json:"role,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
+}
+
 // Defect represents an issue found during quality inspection
 type Defect struct {
 	ID                 uuid.UUID  `json:"id"`
@@ -106,6 +117,8 @@ type Defect struct {
 	InspectionID       *uuid.UUID `json:"inspection_id,omitempty"`
 	SourceDepartment   string     `json:"source_department"`
 	AssignedDepartment string     `json:"assigned_department"`
+	AssignedUserID     *uuid.UUID `json:"assigned_user_id,omitempty"`
+	AssignedUserName   *string    `json:"assigned_user_name,omitempty"`
 	Description        string     `json:"description"`
 	Severity           string     `json:"severity"`
 	Status             string     `json:"status"`

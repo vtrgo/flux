@@ -19,6 +19,7 @@ interface IssueModalProps {
 
 import { ImageUploader } from "./ImageUploader";
 import { AttachmentViewer } from "./AttachmentViewer";
+import { useUsers } from "../hooks/useUsers";
 
 export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality', preselectedMachineId }: IssueModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -26,11 +27,13 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const defaultRoutedDept = defaultAssignedDept === 'quality' ? '' : defaultAssignedDept;
+  const { users } = useUsers();
 
   const [formData, setFormData] = useState({
     machine_id: '',
     source_department: defaultAssignedDept,
     assigned_department: defaultRoutedDept,
+    assigned_user_id: '',
     severity: 'moderate',
     description: '',
     notes: ''
@@ -58,6 +61,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           machine_id: editingDefect.machine_id,
           source_department: editingDefect.source_department,
           assigned_department: editingDefect.assigned_department || defaultRoutedDept,
+          assigned_user_id: editingDefect.assigned_user_id || '',
           severity: editingDefect.severity,
           description: editingDefect.description,
           notes: editingDefect.notes || ''
@@ -67,6 +71,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           machine_id: preselectedMachineId || '',
           source_department: defaultAssignedDept,
           assigned_department: defaultRoutedDept,
+          assigned_user_id: '',
           severity: 'moderate',
           description: '',
           notes: ''
@@ -153,7 +158,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </select>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SOURCE DEPT</label>
               <select 
@@ -180,6 +185,20 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                 <option value="" disabled>Select Department...</option>
                 {ACTIVE_DEPARTMENTS.map(d => (
                   <option key={d.key} value={d.key}>{d.key === 'design' ? 'Design (ECR)' : d.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ASSIGNEE</label>
+              <select 
+                value={formData.assigned_user_id} 
+                onChange={e => setFormData({...formData, assigned_user_id: e.target.value})}
+                className="vtr-input"
+              >
+                <option value="">Unassigned</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u.username}</option>
                 ))}
               </select>
             </div>

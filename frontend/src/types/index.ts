@@ -22,12 +22,23 @@ export interface Machine {
   created_at: string;
 }
 
+export interface User {
+  id: string;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  department?: string;
+  role?: string;
+}
+
 export interface Defect {
   id: string;
   machine_id: string;
   order_number: string;
   source_department: string;
   assigned_department: string;
+  assigned_user_id?: string;
+  assigned_user_name?: string;
   description: string;
   severity: string;
   status: string;

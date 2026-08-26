@@ -124,3 +124,8 @@
 .timestampValue {
   color: var(--text-primary, #ccc);
 }
+.assignee {
+  font-size: 0.85rem;
+  color: var(--vtr-theme-text-muted);
+  margin-top: 4px;
+}

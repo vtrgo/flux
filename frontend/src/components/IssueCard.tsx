@@ -43,6 +43,11 @@ export const IssueCard = React.memo(function IssueCard({ issue, onClick, cardSty
       </div>
       <h3 className={styles.source}>Source: {issue.source_department}</h3>
       <p className={styles.description}>{issue.description}</p>
+      {issue.assigned_user_name && (
+        <div className={styles.assignee}>
+          <strong>Assigned to:</strong> {issue.assigned_user_name}
+        </div>
+      )}
       {issue.notes && (
         <div className={styles.note}>
           <strong className={styles.noteLabel}>Note:</strong> {issue.notes}

@@ -78,6 +78,9 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/defects/{defect_id}/edit", handleEditDefect)
 	mux.HandleFunc("DELETE /api/defects/{defect_id}", handleDeleteDefect)
 
+	// Users endpoints
+	mux.HandleFunc("GET /api/users", handleGetUsers)
+
 	// Attachments endpoints (often tied to defects/issues)
 	mux.HandleFunc("POST /api/issues/{issue_id}/attachments", handleUploadAttachment)
 	mux.HandleFunc("GET /api/attachments/{attachment_id}", handleServeAttachment)
