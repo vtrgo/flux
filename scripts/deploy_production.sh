@@ -95,7 +95,7 @@ chown -R "$SERVICE_USER:$SERVICE_GROUP" "$FLUX_DIR"
 # 3. Apply Database Migrations
 echo "== [2/5] Enforcing Database Migrations =="
 if [ -f "$FLUX_DIR/scripts/bootstrap_flux_db.sh" ]; then
-  (cd "$FLUX_DIR" && bash ./scripts/bootstrap_flux_db.sh)
+  (cd "$FLUX_DIR" && DB_NAME="flux" bash ./scripts/bootstrap_flux_db.sh)
 else
   echo "[Warning] bootstrap_flux_db.sh not found. Skipping migration step."
 fi
