@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
@@ -46,6 +48,7 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		LastName   string `json:"last_name"`
 		Department string `json:"department"`
 		Role       string `json:"role"`
+		Password   string `json:"password"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -53,12 +56,23 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var passwordHash *string
+	if req.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to hash password", err)
+			return
+		}
+		hashStr := string(hash)
+		passwordHash = &hashStr
+	}
+
 	var newUser models.User
 	err := db.DB.QueryRow(`
-		INSERT INTO users (username, first_name, last_name, department, role)
-		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''))
+		INSERT INTO users (username, first_name, last_name, department, role, password_hash)
+		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6)
 		RETURNING id, username, first_name, last_name, department, role, created_at
-	`, req.Username, req.FirstName, req.LastName, req.Department, req.Role).Scan(
+	`, req.Username, req.FirstName, req.LastName, req.Department, req.Role, passwordHash).Scan(
 		&newUser.ID, &newUser.Username, &newUser.FirstName, &newUser.LastName, &newUser.Department, &newUser.Role, &newUser.CreatedAt,
 	)
 
@@ -87,6 +101,7 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		LastName   string `json:"last_name"`
 		Department string `json:"department"`
 		Role       string `json:"role"`
+		Password   string `json:"password"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -94,8 +109,24 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var err error
+	if req.Password != "" {
+		var hash []byte
+		hash, err = bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to hash password", err)
+			return
+		}
+		
+		_, err = db.DB.Exec(`UPDATE users SET password_hash = $1 WHERE id = $2`, string(hash), userID)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to update password", err)
+			return
+		}
+	}
+
 	var updatedUser models.User
-	err := db.DB.QueryRow(`
+	err = db.DB.QueryRow(`
 		UPDATE users
 		SET username = NULLIF($2, ''), 
 		    first_name = NULLIF($3, ''), 

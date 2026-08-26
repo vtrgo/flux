@@ -12,7 +12,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [formData, setFormData] = useState({ username: '', first_name: '', last_name: '', department: '', role: '' });
+  const [formData, setFormData] = useState({ username: '', first_name: '', last_name: '', department: '', role: '', password: '' });
 
   const loadUsers = async () => {
     setLoading(true);
@@ -31,7 +31,7 @@ export default function AdminUsersPage() {
   }, []);
 
   const startCreate = () => {
-    setFormData({ username: '', first_name: '', last_name: '', department: '', role: '' });
+    setFormData({ username: '', first_name: '', last_name: '', department: '', role: '', password: '' });
     setEditingUser(null);
     setIsCreating(true);
   };
@@ -42,7 +42,7 @@ export default function AdminUsersPage() {
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       department: user.department || '',
-      role: user.role || ''
+      role: user.role || '', password: ''
     });
     setEditingUser(user);
     setIsCreating(false);
@@ -213,6 +213,16 @@ export default function AdminUsersPage() {
                     <option key={d.key} value={d.key}>{d.label}</option>
                   ))}
                 </select>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>PASSWORD</label>
+                <input 
+                  type="password" 
+                  value={formData.password} 
+                  onChange={e => setFormData({...formData, password: e.target.value})} 
+                  className="vtr-input"
+                  placeholder={editingUser ? "Leave blank to keep unchanged" : ""}
+                />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ROLE</label>

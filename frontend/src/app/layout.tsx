@@ -16,6 +16,7 @@ import { SSEProvider } from "../components/SSEProvider";
 import { CommandPalette } from "../components/CommandPalette";
 import { Toaster } from 'sonner';
 import { GlobalSystemToasts } from "../components/GlobalSystemToasts";
+import { AuthProvider } from "../contexts/AuthContext";
 
 export default function RootLayout({
   children,
@@ -26,13 +27,15 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${jetbrainsMono.variable} ${shareTechMono.variable}`}>
         <ThemeProvider>
-          <SSEProvider>
-            <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>
-            {children}
-            <CommandPalette />
-            <Toaster theme="dark" position="bottom-right" />
-            <GlobalSystemToasts />
-          </SSEProvider>
+          <AuthProvider>
+            <SSEProvider>
+              <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>
+              {children}
+              <CommandPalette />
+              <Toaster theme="dark" position="bottom-right" />
+              <GlobalSystemToasts />
+            </SSEProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

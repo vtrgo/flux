@@ -101,13 +101,14 @@ type QualityInspection struct {
 
 // User represents a system user
 type User struct {
-	ID         uuid.UUID  `json:"id"`
-	Username   string     `json:"username"`
-	FirstName  *string    `json:"first_name,omitempty"`
-	LastName   *string    `json:"last_name,omitempty"`
-	Department *string    `json:"department,omitempty"`
-	Role       *string    `json:"role,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
+	ID           uuid.UUID  `json:"id"`
+	Username     string     `json:"username"`
+	FirstName    *string    `json:"first_name,omitempty"`
+	LastName     *string    `json:"last_name,omitempty"`
+	Department   *string    `json:"department,omitempty"`
+	Role         *string    `json:"role,omitempty"`
+	PasswordHash string     `json:"-"`
+	CreatedAt    time.Time  `json:"created_at"`
 }
 
 // Defect represents an issue found during quality inspection
@@ -119,6 +120,12 @@ type Defect struct {
 	AssignedDepartment string     `json:"assigned_department"`
 	AssignedUserID     *uuid.UUID `json:"assigned_user_id,omitempty"`
 	AssignedUserName   *string    `json:"assigned_user_name,omitempty"`
+	CreatedByUserID    *uuid.UUID `json:"created_by_user_id,omitempty"`
+	CreatedByUserName  *string    `json:"created_by_user_name,omitempty"`
+	FixedByUserID      *uuid.UUID `json:"fixed_by_user_id,omitempty"`
+	FixedByUserName    *string    `json:"fixed_by_user_name,omitempty"`
+	VerifiedByUserID   *uuid.UUID `json:"verified_by_user_id,omitempty"`
+	VerifiedByUserName *string    `json:"verified_by_user_name,omitempty"`
 	Description        string     `json:"description"`
 	Severity           string     `json:"severity"`
 	Status             string     `json:"status"`

@@ -62,9 +62,16 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := db.DB.Query(`
-		SELECT d.id, d.machine_id, d.inspection_id, d.source_department, d.assigned_department, d.assigned_user_id, u.username as assigned_user_name, d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at
+		SELECT d.id, d.machine_id, d.inspection_id, d.source_department, d.assigned_department, d.assigned_user_id, u.username as assigned_user_name, 
+              d.created_by_user_id, c.username as created_by_user_name, 
+              d.fixed_by_user_id, f.username as fixed_by_user_name, 
+              d.verified_by_user_id, v.username as verified_by_user_name,
+              d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at
 		FROM defects d
 		LEFT JOIN users u ON d.assigned_user_id = u.id
+		LEFT JOIN users c ON d.created_by_user_id = c.id
+		LEFT JOIN users f ON d.fixed_by_user_id = f.id
+		LEFT JOIN users v ON d.verified_by_user_id = v.id
 		WHERE d.machine_id = $1
 		ORDER BY d.status ASC
 	`, machineID)
@@ -80,7 +87,7 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		var d models.Defect
 		var assigned sql.NullString
 		if err := rows.Scan(
-			&d.ID, &d.MachineID, &d.InspectionID, &d.SourceDepartment, &assigned, &d.AssignedUserID, &d.AssignedUserName, &d.Description,
+			&d.ID, &d.MachineID, &d.InspectionID, &d.SourceDepartment, &assigned, &d.AssignedUserID, &d.AssignedUserName, &d.CreatedByUserID, &d.CreatedByUserName, &d.FixedByUserID, &d.FixedByUserName, &d.VerifiedByUserID, &d.VerifiedByUserName, &d.Description,
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning defect: ", err)
@@ -123,6 +130,7 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authUserID := getAuthenticatedUserID(r)
 	var assignedUserID interface{}
 	if req.AssignedUserID != nil && *req.AssignedUserID != "" {
 		assignedUserID = *req.AssignedUserID
@@ -131,17 +139,18 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 	var newDefect models.Defect
 	err := db.DB.QueryRow(`
 		WITH inserted AS (
-			INSERT INTO defects (machine_id, source_department, assigned_department, assigned_user_id, description, severity, status, notes)
-			VALUES ($1, $2, $3, $4, $5, $6, 'open', $7)
-			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at
+			INSERT INTO defects (machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, description, severity, status, notes)
+			VALUES ($1, $2, $3, $4, NULLIF($8, '')::uuid, $5, $6, 'open', $7)
+			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at
 		)
-		SELECT i.*, u.username as assigned_user_name 
+		SELECT i.*, u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name
 		FROM inserted i 
 		LEFT JOIN users u ON i.assigned_user_id = u.id
-	`, machineID, req.SourceDepartment, req.AssignedDepartment, assignedUserID, req.Description, req.Severity, req.Notes).Scan(
-		&newDefect.ID, &newDefect.MachineID, &newDefect.SourceDepartment, &newDefect.AssignedDepartment, &newDefect.AssignedUserID,
-		&newDefect.Description, &newDefect.Severity, &newDefect.Status, &newDefect.Notes,
-		&newDefect.ResolvedBy, &newDefect.ResolvedAt, &newDefect.CreatedAt, &newDefect.AssignedUserName,
+		LEFT JOIN users c ON i.created_by_user_id = c.id
+		LEFT JOIN users f ON i.fixed_by_user_id = f.id
+		LEFT JOIN users v ON i.verified_by_user_id = v.id
+	`, machineID, req.SourceDepartment, req.AssignedDepartment, assignedUserID, req.Description, req.Severity, req.Notes, authUserID).Scan(
+		&newDefect.ID, &newDefect.MachineID, &newDefect.SourceDepartment, &newDefect.AssignedDepartment, &newDefect.AssignedUserID, &newDefect.CreatedByUserID, &newDefect.FixedByUserID, &newDefect.VerifiedByUserID, &newDefect.Description, &newDefect.Severity, &newDefect.Status, &newDefect.Notes, &newDefect.ResolvedBy, &newDefect.ResolvedAt, &newDefect.CreatedAt, &newDefect.AssignedUserName, &newDefect.CreatedByUserName, &newDefect.FixedByUserName, &newDefect.VerifiedByUserName,
 	)
 
 	if err != nil {
@@ -161,10 +170,17 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 	department := r.URL.Query().Get("department")
 
 	query := `
-		SELECT d.id, d.machine_id, m.order_number, d.source_department, d.assigned_department, d.assigned_user_id, u.username as assigned_user_name, d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at
+		SELECT d.id, d.machine_id, m.order_number, d.source_department, d.assigned_department, d.assigned_user_id, u.username as assigned_user_name, 
+              d.created_by_user_id, c.username as created_by_user_name, 
+              d.fixed_by_user_id, f.username as fixed_by_user_name, 
+              d.verified_by_user_id, v.username as verified_by_user_name,
+              d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at
 		FROM defects d
 		JOIN machines m ON d.machine_id = m.id
 		LEFT JOIN users u ON d.assigned_user_id = u.id
+		LEFT JOIN users c ON d.created_by_user_id = c.id
+		LEFT JOIN users f ON d.fixed_by_user_id = f.id
+		LEFT JOIN users v ON d.verified_by_user_id = v.id
 	`
 	var args []interface{}
 
@@ -195,7 +211,7 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 		// Coalesce NULL assigned_department to empty string to avoid scan errors if we don't use pointers
 		var assigned sql.NullString
 		if err := rows.Scan(
-			&d.ID, &d.MachineID, &d.OrderNumber, &d.SourceDepartment, &assigned, &d.AssignedUserID, &d.AssignedUserName, &d.Description,
+			&d.ID, &d.MachineID, &d.OrderNumber, &d.SourceDepartment, &assigned, &d.AssignedUserID, &d.AssignedUserName, &d.CreatedByUserID, &d.CreatedByUserName, &d.FixedByUserID, &d.FixedByUserName, &d.VerifiedByUserID, &d.VerifiedByUserName, &d.Description,
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning defect: ", err)
@@ -230,6 +246,7 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authUserID := getAuthenticatedUserID(r)
 	var updatedDefect models.Defect
 	// If assigning department, update it. If updating status, update it.
 	// For simplicity, we just dynamically update what is passed.
@@ -249,17 +266,28 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 			        WHEN $2 IN ('fixed', 'verified') THEN 'user_quality_01' 
 			        WHEN $2 = 'open' THEN NULL 
 			        ELSE resolved_by 
+			    END,
+			    fixed_by_user_id = CASE
+			        WHEN $2 = 'fixed' THEN NULLIF($5, '')::uuid
+			        WHEN $2 = 'open' THEN NULL
+			        ELSE fixed_by_user_id
+			    END,
+			    verified_by_user_id = CASE
+			        WHEN $2 = 'verified' THEN NULLIF($5, '')::uuid
+			        WHEN $2 = 'open' THEN NULL
+			        ELSE verified_by_user_id
 			    END
 			WHERE id = $1
-			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at
+			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at
 		)
-		SELECT u_tbl.*, u.username as assigned_user_name
+		SELECT u_tbl.*, u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name
 		FROM updated u_tbl
 		LEFT JOIN users u ON u_tbl.assigned_user_id = u.id
-	`, defectID, req.Status, req.AssignedDepartment, req.Notes).Scan(
-		&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment, &updatedDefect.AssignedUserID,
-		&updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes,
-		&updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt, &updatedDefect.AssignedUserName,
+		LEFT JOIN users c ON u_tbl.created_by_user_id = c.id
+		LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
+		LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
+	`, defectID, req.Status, req.AssignedDepartment, req.Notes, authUserID).Scan(
+		&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment, &updatedDefect.AssignedUserID, &updatedDefect.CreatedByUserID, &updatedDefect.FixedByUserID, &updatedDefect.VerifiedByUserID, &updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes, &updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt, &updatedDefect.AssignedUserName, &updatedDefect.CreatedByUserName, &updatedDefect.FixedByUserName, &updatedDefect.VerifiedByUserName,
 	)
 
 	if err != nil {
@@ -714,7 +742,7 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 			UPDATE defects 
 			SET source_department = $2, assigned_department = $3, assigned_user_id = $4, severity = $5, description = $6
 			WHERE id = $1
-			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at
+			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at
 		)
 		SELECT u_tbl.*, u.username as assigned_user_name 
 		FROM updated u_tbl 

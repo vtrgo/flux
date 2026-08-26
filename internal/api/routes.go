@@ -78,6 +78,11 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/defects/{defect_id}/edit", handleEditDefect)
 	mux.HandleFunc("DELETE /api/defects/{defect_id}", handleDeleteDefect)
 
+	// Auth endpoints
+	mux.HandleFunc("POST /api/auth/login", handleLogin)
+	mux.HandleFunc("POST /api/auth/logout", handleLogout)
+	mux.HandleFunc("GET /api/auth/me", handleGetMe)
+
 	// Users endpoints
 	mux.HandleFunc("GET /api/users", handleGetUsers)
 	mux.HandleFunc("POST /api/users", handleCreateUser)

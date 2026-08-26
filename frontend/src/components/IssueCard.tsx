@@ -59,13 +59,13 @@ export const IssueCard = React.memo(function IssueCard({ issue, onClick, cardSty
         <div className={styles.timestamps}>
           {issue.created_at && (
             <div className={styles.timestampItem}>
-              <span className={styles.timestampLabel}>Opened:</span>
+              <span className={styles.timestampLabel}>Opened{issue.created_by_user_name ? ` by ${issue.created_by_user_name}` : ''}:</span>
               <span className={styles.timestampValue}>{formatTimestamp(issue.created_at)}</span>
             </div>
           )}
           {issue.resolved_at && isClosed && (
             <div className={styles.timestampItem}>
-              <span className={styles.timestampLabel}>Closed:</span>
+              <span className={styles.timestampLabel}>{issue.status === 'verified' ? 'Verified' : 'Fixed'}{issue.verified_by_user_name ? ` by ${issue.verified_by_user_name}` : issue.fixed_by_user_name ? ` by ${issue.fixed_by_user_name}` : ''}:</span>
               <span className={styles.timestampValue}>{formatTimestamp(issue.resolved_at)}</span>
             </div>
           )}
