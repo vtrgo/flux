@@ -61,7 +61,7 @@ describe('IssueCard Component', () => {
     });
 
     expect(screen.getByText('Opened:')).toBeDefined();
-    expect(screen.getByText('Closed:')).toBeDefined();
+    expect(screen.getByText('Fixed:')).toBeDefined();
   });
 
   it('does not render closed timestamp when issue is reopened (status is open)', async () => {
