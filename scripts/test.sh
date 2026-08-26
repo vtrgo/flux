@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "== [0/3] Bootstrapping Test Database =="
+export DB_NAME="flux_test"
+export DATABASE_URL="host=/var/run/postgresql dbname=flux_test sslmode=disable"
+
+if ! psql -lqt | cut -d \| -f 1 | grep -qw "flux_test"; then
+  echo "Error: flux_test database does not exist."
+  echo "Please provision it first by running: DB_NAME=flux_test ./scripts/bootstrap_flux_db.sh"
+  exit 1
+fi
+
 echo "== [1/3] Running Go Backend Tests & Linter =="
 # Filter out unintended Go packages hidden inside Next.js node_modules
 PACKAGES=$(go list ./... | grep -v /node_modules/)

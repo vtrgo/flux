@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-DB_NAME="flux"
+DB_NAME="${DB_NAME:-flux}"
 MIGRATIONS_DIR="scripts/migrations"
 
 # Identify the target database user (can be overridden via TARGET_USER env var)
