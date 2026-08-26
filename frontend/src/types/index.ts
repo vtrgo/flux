@@ -34,18 +34,24 @@ export interface User {
 export interface Defect {
   id: string;
   machine_id: string;
-  order_number: string;
+  inspection_id?: string;
   source_department: string;
   assigned_department: string;
   assigned_user_id?: string;
   assigned_user_name?: string;
+  created_by_user_id?: string;
+  created_by_user_name?: string;
+  fixed_by_user_id?: string;
+  fixed_by_user_name?: string;
+  verified_by_user_id?: string;
+  verified_by_user_name?: string;
   description: string;
   severity: string;
-  status: string;
+  status: string; // 'open', 'fixed', 'verified'
   notes?: string;
   resolved_by?: string;
   resolved_at?: string;
-  created_at?: string;
+  created_at: string;
 }
 
 export interface DefectSummary {
