@@ -34,6 +34,7 @@ export interface User {
 export interface Defect {
   id: string;
   machine_id: string;
+  order_number: string;
   inspection_id?: string;
   source_department: string;
   assigned_department: string;
