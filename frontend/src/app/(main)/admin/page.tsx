@@ -46,6 +46,27 @@ export default function AdminPage() {
         marginBottom: '2rem'
       }}>
         <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', color: 'var(--vtr-theme-primary, var(--text-primary))', marginBottom: '1.5rem' }}>
+          User Administration
+        </h2>
+        <p style={{ color: 'var(--vtr-theme-neutral, var(--text-secondary))', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+          Manage user accounts, roles, and department assignments.
+        </p>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Link href="/admin/users" className="vtr-btn vtr-btn-primary" style={{ display: 'inline-block', padding: '0.75rem 1.5rem' }}>
+            Manage Users →
+          </Link>
+        </div>
+      </section>
+
+      <section style={{ 
+        backgroundColor: 'var(--vtr-card-bg, var(--bg-secondary))',
+        border: '1px solid var(--vtr-card-border, var(--border-color))',
+        borderRadius: '12px',
+        padding: '2rem',
+        backdropFilter: 'blur(8px)',
+        marginBottom: '2rem'
+      }}>
+        <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', color: 'var(--vtr-theme-primary, var(--text-primary))', marginBottom: '1.5rem' }}>
           Observability & Diagnostics
         </h2>
         <p style={{ color: 'var(--vtr-theme-neutral, var(--text-secondary))', marginBottom: '1.5rem', lineHeight: 1.6 }}>

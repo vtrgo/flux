@@ -197,8 +197,19 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                 className="vtr-input"
               >
                 <option value="">Unassigned</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>{u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u.username}</option>
+                {[...users].sort((a, b) => {
+                  const aIsSource = a.department === formData.source_department ? 1 : 0;
+                  const bIsSource = b.department === formData.source_department ? 1 : 0;
+                  if (aIsSource !== bIsSource) {
+                    return bIsSource - aIsSource; // Put matching department first
+                  }
+                  // Secondary sort alphabetically by username
+                  return a.username.localeCompare(b.username);
+                }).map(u => (
+                  <option key={u.id} value={u.id}>
+                    {u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u.username}
+                    {u.department === formData.source_department ? ' (Dept Match)' : ''}
+                  </option>
                 ))}
               </select>
             </div>
