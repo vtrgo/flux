@@ -744,12 +744,15 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 			WHERE id = $1
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at
 		)
-		SELECT u_tbl.*, u.username as assigned_user_name 
+		SELECT u_tbl.*, u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name 
 		FROM updated u_tbl 
 		LEFT JOIN users u ON u_tbl.assigned_user_id = u.id
+		LEFT JOIN users c ON u_tbl.created_by_user_id = c.id
+		LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
+		LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
 	`, defectID, req.SourceDepartment, req.AssignedDepartment, assignedUserID, req.Severity, req.Description).Scan(
-		&updated.ID, &updated.MachineID, &updated.SourceDepartment, &updated.AssignedDepartment, &updated.AssignedUserID,
-		&updated.Description, &updated.Severity, &updated.Status, &updated.Notes, &updated.ResolvedBy, &updated.ResolvedAt, &updated.CreatedAt, &updated.AssignedUserName,
+		&updated.ID, &updated.MachineID, &updated.SourceDepartment, &updated.AssignedDepartment, &updated.AssignedUserID, &updated.CreatedByUserID, &updated.FixedByUserID, &updated.VerifiedByUserID,
+		&updated.Description, &updated.Severity, &updated.Status, &updated.Notes, &updated.ResolvedBy, &updated.ResolvedAt, &updated.CreatedAt, &updated.AssignedUserName, &updated.CreatedByUserName, &updated.FixedByUserName, &updated.VerifiedByUserName,
 	)
 
 	if err != nil {
