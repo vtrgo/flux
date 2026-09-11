@@ -124,4 +124,49 @@ func TestAuthHandlers(t *testing.T) {
 			t.Errorf("Expected empty auth_token cookie on logout")
 		}
 	})
+
+	t.Run("Change Password - Unauthorized without Cookie", func(t *testing.T) {
+		body, _ := json.Marshal(ChangePasswordRequest{
+			CurrentPassword: "oldpassword",
+			NewPassword:     "newpassword123",
+		})
+		req := httptest.NewRequest(http.MethodPost, "/api/auth/change_password", bytes.NewReader(body))
+		rr := httptest.NewRecorder()
+
+		handleChangePassword(rr, req)
+
+		if rr.Code != http.StatusUnauthorized {
+			t.Fatalf("Expected 401 Unauthorized, got %d", rr.Code)
+		}
+	})
+
+	t.Run("Change Password - Too Short", func(t *testing.T) {
+		// Log in first to get cookie
+		DefaultAuthenticator = &mockAuthenticator{authenticatedUser: testUser, shouldFail: false}
+		loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader([]byte(`{"username":"jdoe","password":"pw"}`)))
+		loginRr := httptest.NewRecorder()
+		handleLogin(loginRr, loginReq)
+
+		var cookie *http.Cookie
+		for _, c := range loginRr.Result().Cookies() {
+			if c.Name == "auth_token" {
+				cookie = c
+				break
+			}
+		}
+
+		body, _ := json.Marshal(ChangePasswordRequest{
+			CurrentPassword: "oldpassword",
+			NewPassword:     "12345", // < 6 chars
+		})
+		req := httptest.NewRequest(http.MethodPost, "/api/auth/change_password", bytes.NewReader(body))
+		req.AddCookie(cookie)
+		rr := httptest.NewRecorder()
+
+		handleChangePassword(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("Expected 400 Bad Request, got %d", rr.Code)
+		}
+	})
 }

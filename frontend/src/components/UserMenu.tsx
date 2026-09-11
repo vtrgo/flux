@@ -46,14 +46,27 @@ export function UserMenu() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.15rem' }}>
-        <span style={{ 
-          fontFamily: 'var(--font-mono)', 
-          fontSize: '0.85rem', 
-          fontWeight: 600,
-          color: 'var(--vtr-theme-primary, var(--accent-cyan))' 
-        }}>
+        <button
+          onClick={() => router.push('/profile')}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            fontFamily: 'var(--font-mono)', 
+            fontSize: '0.85rem', 
+            fontWeight: 600,
+            color: 'var(--vtr-theme-primary, var(--accent-cyan))',
+            textAlign: 'right',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.25rem'
+          }}
+          title="Manage profile and change password"
+        >
           {user.first_name ? `${user.first_name} (${user.username})` : user.username}
-        </span>
+          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>⚙️</span>
+        </button>
         <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
           {deptLabel && (
             <span style={{

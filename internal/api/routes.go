@@ -82,6 +82,7 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/auth/login", handleLogin)
 	mux.HandleFunc("POST /api/auth/logout", handleLogout)
 	mux.HandleFunc("GET /api/auth/me", handleGetMe)
+	mux.HandleFunc("POST /api/auth/change_password", handleChangePassword)
 
 	// Users endpoints
 	mux.HandleFunc("GET /api/users", handleGetUsers)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
@@ -22,6 +23,11 @@ type Credentials struct {
 type Claims struct {
 	UserID string `json:"user_id"`
 	jwt.RegisteredClaims
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +110,76 @@ func handleGetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, user)
+}
+
+func handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	userID := getAuthenticatedUserID(r)
+	if userID == "" {
+		respondError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
+		return
+	}
+
+	if req.NewPassword == "" {
+		respondError(w, http.StatusBadRequest, "New password cannot be empty", nil)
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		respondError(w, http.StatusBadRequest, "New password must be at least 6 characters", nil)
+		return
+	}
+
+	// Fetch current password hash and auth_provider
+	var currentHash sql.NullString
+	var authProvider string
+	err := db.DB.QueryRow(`
+		SELECT password_hash, auth_provider
+		FROM users WHERE id = $1
+	`, userID).Scan(&currentHash, &authProvider)
+
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Database error", err)
+		return
+	}
+
+	if authProvider != "local" {
+		respondError(w, http.StatusBadRequest, "Password management is not available for external corporate accounts", nil)
+		return
+	}
+
+	// If current password hash exists, verify the user's current password
+	if currentHash.Valid && currentHash.String != "" {
+		if req.CurrentPassword == "" {
+			respondError(w, http.StatusBadRequest, "Current password is required", nil)
+			return
+		}
+		if err := bcrypt.CompareHashAndPassword([]byte(currentHash.String), []byte(req.CurrentPassword)); err != nil {
+			respondError(w, http.StatusUnauthorized, "Current password does not match", nil)
+			return
+		}
+	}
+
+	// Hash new password
+	newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to hash password", err)
+		return
+	}
+
+	_, err = db.DB.Exec(`UPDATE users SET password_hash = $1 WHERE id = $2`, string(newHash), userID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to update password", err)
+		return
+	}
+
+	slog.Info("User updated password successfully", "user_id", userID)
+	respondJSON(w, http.StatusOK, map[string]string{"message": "Password updated successfully"})
 }
 
 // getAuthenticatedUserID is a helper that parses the JWT token from cookies
