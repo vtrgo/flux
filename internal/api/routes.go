@@ -29,7 +29,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 
 func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/machines", handleMachines)
-	mux.HandleFunc("DELETE /api/machines/{id}", handleDeleteMachine)
+	mux.Handle("DELETE /api/machines/{id}", RequireRole("admin", "manager")(http.HandlerFunc(handleDeleteMachine)))
 
 	// Sales endpoints
 	mux.HandleFunc("/api/sales_orders", handleSalesOrders)
@@ -53,7 +53,7 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/sales_orders/{id}/ship", handleShipSalesOrder)
 	mux.HandleFunc("POST /api/sales_orders/{id}/close", handleCloseSalesOrder)
 	mux.HandleFunc("POST /api/sales_orders/{id}/reopen", handleReopenSalesOrder)
-	mux.HandleFunc("DELETE /api/sales_orders/{id}", deleteSalesOrder)
+	mux.Handle("DELETE /api/sales_orders/{id}", RequireRole("admin", "manager")(http.HandlerFunc(deleteSalesOrder)))
 
 	// Enclosures endpoints
 	mux.HandleFunc("GET /api/enclosures", handleGetAllEnclosures)
@@ -79,7 +79,7 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/defects/project_department_summary", handleGetProjectDepartmentDefectSummaries)
 	mux.HandleFunc("PUT /api/defects/{defect_id}", handleUpdateDefect)
 	mux.HandleFunc("PUT /api/defects/{defect_id}/edit", handleEditDefect)
-	mux.HandleFunc("DELETE /api/defects/{defect_id}", handleDeleteDefect)
+	mux.Handle("DELETE /api/defects/{defect_id}", RequireRole("admin", "manager")(http.HandlerFunc(handleDeleteDefect)))
 
 	// Auth endpoints
 	mux.HandleFunc("POST /api/auth/login", handleLogin)
@@ -89,9 +89,9 @@ func RegisterRoutes(mux *http.ServeMux) {
 
 	// Users endpoints
 	mux.HandleFunc("GET /api/users", handleGetUsers)
-	mux.HandleFunc("POST /api/users", handleCreateUser)
-	mux.HandleFunc("PUT /api/users/{id}", handleUpdateUser)
-	mux.HandleFunc("DELETE /api/users/{id}", handleDeleteUser)
+	mux.Handle("POST /api/users", RequireRole("admin")(http.HandlerFunc(handleCreateUser)))
+	mux.Handle("PUT /api/users/{id}", RequireRole("admin")(http.HandlerFunc(handleUpdateUser)))
+	mux.Handle("DELETE /api/users/{id}", RequireRole("admin")(http.HandlerFunc(handleDeleteUser)))
 
 	// Attachments endpoints (often tied to defects/issues)
 	mux.HandleFunc("POST /api/issues/{issue_id}/attachments", handleUploadAttachment)
@@ -266,12 +266,6 @@ func handleDeleteMachine(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
-		return
-	}
-
-	// Verify Admin Role
-	if _, err := requireAdminOrManager(r); err != nil {
-		respondError(w, http.StatusForbidden, "Forbidden: Only administrators can delete machines", nil)
 		return
 	}
 

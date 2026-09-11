@@ -261,12 +261,6 @@ func deleteSalesOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify Admin Role
-	if _, err := requireAdminOrManager(r); err != nil {
-		respondError(w, http.StatusForbidden, "Forbidden: Only administrators can delete projects", nil)
-		return
-	}
-
 	_, err := db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", id)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Database error: ", err)

@@ -247,7 +247,7 @@ func TestSalesOrders(t *testing.T) {
 		reqUnauth := httptest.NewRequest(http.MethodDelete, "/api/sales_orders/"+createdOrder.ID.String(), nil)
 		rrUnauth := httptest.NewRecorder()
 		mux.ServeHTTP(rrUnauth, reqUnauth)
-		if rrUnauth.Code != http.StatusForbidden {
+		if rrUnauth.Code != http.StatusUnauthorized {
 			t.Errorf("expected 403 Forbidden for non-admin delete, got %d", rrUnauth.Code)
 		}
 
@@ -257,7 +257,7 @@ func TestSalesOrders(t *testing.T) {
 		reqAuth := httptest.NewRequest(http.MethodDelete, "/api/sales_orders/"+createdOrder.ID.String(), nil)
 		reqAuth.AddCookie(adminCookie)
 		rrAuth := httptest.NewRecorder()
-		mux.ServeHTTP(rrAuth, reqAuth)
+		AuthMiddleware(mux).ServeHTTP(rrAuth, reqAuth)
 
 		if status := rrAuth.Code; status != http.StatusOK {
 			t.Errorf("handler returned wrong status code for admin: got %v want %v: %s", status, http.StatusOK, rrAuth.Body.String())

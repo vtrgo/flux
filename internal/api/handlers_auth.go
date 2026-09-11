@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -204,35 +203,6 @@ func getAuthenticatedUserID(r *http.Request) string {
 	return claims.UserID
 }
 
-// getAuthenticatedUser returns the full authenticated user record, or nil if not authenticated
-func getAuthenticatedUser(r *http.Request) *models.User {
-	userID := getAuthenticatedUserID(r)
-	if userID == "" {
-		return nil
-	}
 
-	var user models.User
-	err := db.DB.QueryRow(`
-		SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
-		FROM users WHERE id = $1
-	`, userID).Scan(
-		&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role,
-		&user.AuthProvider, &user.ExternalID, &user.CreatedAt,
-	)
-	if err != nil {
-		return nil
-	}
-	return &user
-}
 
-// requireAdminOrManager verifies if the request is from an authenticated user with an 'admin' or 'manager' role
-func requireAdminOrManager(r *http.Request) (*models.User, error) {
-	user := getAuthenticatedUser(r)
-	if user == nil {
-		return nil, errors.New("unauthorized")
-	}
-	if user.Role == nil || (strings.ToLower(*user.Role) != "admin" && strings.ToLower(*user.Role) != "manager") {
-		return user, errors.New("forbidden")
-	}
-	return user, nil
-}
+

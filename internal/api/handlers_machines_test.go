@@ -96,8 +96,8 @@ func TestMachines(t *testing.T) {
 		reqUnauth := httptest.NewRequest(http.MethodDelete, "/api/machines/"+createdMachineID, nil)
 		rrUnauth := httptest.NewRecorder()
 		mux.ServeHTTP(rrUnauth, reqUnauth)
-		if rrUnauth.Code != http.StatusForbidden {
-			t.Errorf("handler returned wrong status code for unauthenticated delete: got %v want %v", rrUnauth.Code, http.StatusForbidden)
+		if rrUnauth.Code != http.StatusUnauthorized {
+			t.Errorf("handler returned wrong status code for unauthenticated delete: got %v want %v", rrUnauth.Code, http.StatusUnauthorized)
 		}
 
 		// 2. Admin request should succeed with 200 OK
@@ -105,7 +105,7 @@ func TestMachines(t *testing.T) {
 		reqAuth := httptest.NewRequest(http.MethodDelete, "/api/machines/"+createdMachineID, nil)
 		reqAuth.AddCookie(adminCookie)
 		rrAuth := httptest.NewRecorder()
-		mux.ServeHTTP(rrAuth, reqAuth)
+		AuthMiddleware(mux).ServeHTTP(rrAuth, reqAuth)
 
 		if status := rrAuth.Code; status != http.StatusOK {
 			t.Errorf("handler returned wrong status code for admin: got %v want %v", status, http.StatusOK)

@@ -41,7 +41,8 @@ func TestUsersEndpoints(t *testing.T) {
 		body, _ := json.Marshal(u)
 		req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(body))
 		rr := httptest.NewRecorder()
-		mux.ServeHTTP(rr, req)
+		req.AddCookie(createTestRoleCookie(t, "admin"))
+		AuthMiddleware(mux).ServeHTTP(rr, req)
 		if rr.Code != http.StatusCreated {
 			t.Fatalf("Failed to create test user: %v", rr.Body.String())
 		}
@@ -50,7 +51,8 @@ func TestUsersEndpoints(t *testing.T) {
 	t.Run("Get Users - Unfiltered Returns All", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/users", nil)
 		rr := httptest.NewRecorder()
-		mux.ServeHTTP(rr, req)
+		req.AddCookie(createTestRoleCookie(t, "admin"))
+		AuthMiddleware(mux).ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("Expected 200 OK, got %d", rr.Code)
@@ -69,7 +71,8 @@ func TestUsersEndpoints(t *testing.T) {
 	t.Run("Get Users - Filtered by Department", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/users?department=assembly", nil)
 		rr := httptest.NewRecorder()
-		mux.ServeHTTP(rr, req)
+		req.AddCookie(createTestRoleCookie(t, "admin"))
+		AuthMiddleware(mux).ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("Expected 200 OK, got %d", rr.Code)
