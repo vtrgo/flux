@@ -87,16 +87,28 @@ func TestMachines(t *testing.T) {
 		}
 	})
 
-	t.Run("Delete Machine - Success", func(t *testing.T) {
+	t.Run("Delete Machine - Authorization Checks", func(t *testing.T) {
 		if createdMachineID == "" {
 			t.Skip("Skipping delete test because machine was not created")
 		}
-		req := httptest.NewRequest(http.MethodDelete, "/api/machines/"+createdMachineID, nil)
-		rr := httptest.NewRecorder()
-		mux.ServeHTTP(rr, req)
 
-		if status := rr.Code; status != http.StatusOK {
-			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		// 1. Non-admin request should fail with 403 Forbidden
+		reqUnauth := httptest.NewRequest(http.MethodDelete, "/api/machines/"+createdMachineID, nil)
+		rrUnauth := httptest.NewRecorder()
+		mux.ServeHTTP(rrUnauth, reqUnauth)
+		if rrUnauth.Code != http.StatusForbidden {
+			t.Errorf("handler returned wrong status code for unauthenticated delete: got %v want %v", rrUnauth.Code, http.StatusForbidden)
+		}
+
+		// 2. Admin request should succeed with 200 OK
+		adminCookie := createTestAdminCookie(t)
+		reqAuth := httptest.NewRequest(http.MethodDelete, "/api/machines/"+createdMachineID, nil)
+		reqAuth.AddCookie(adminCookie)
+		rrAuth := httptest.NewRecorder()
+		mux.ServeHTTP(rrAuth, reqAuth)
+
+		if status := rrAuth.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code for admin: got %v want %v", status, http.StatusOK)
 		}
 	})
 }

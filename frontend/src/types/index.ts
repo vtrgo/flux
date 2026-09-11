@@ -8,7 +8,7 @@ export interface SalesOrder {
   sales_rep?: string;
   target_ship_date?: string;
   actual_ship_date?: string;
-  status: 'open' | 'partially_shipped' | 'fulfilled';
+  status: 'open' | 'partially_shipped' | 'fulfilled' | 'shipped' | 'closed';
   created_at: string;
 }
 

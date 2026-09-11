@@ -52,7 +52,8 @@ func handleGetAllEnclosures(w http.ResponseWriter, r *http.Request) {
 		SELECT e.id, e.machine_id, m.order_number, e.task_name, e.status, e.started_at, e.completed_at, e.signed_off_by, e.notes
 		FROM enclosures_tasks e
 		JOIN machines m ON e.machine_id = m.id
-		WHERE m.status != 'shipped'
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE m.status != 'shipped' AND (so.status IS NULL OR so.status != 'closed')
 		ORDER BY e.status DESC, m.created_at DESC
 	`)
 

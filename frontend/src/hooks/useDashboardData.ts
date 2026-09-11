@@ -12,10 +12,10 @@ export function useDashboardData() {
 
   useEffect(() => {
     Promise.all([
-      fetchApi('sales_orders'),
-      fetchApi('machines'),
+      fetchApi('sales_orders', { params: { status_neq: 'closed' } }),
+      fetchApi('machines', { params: { sales_order_status_neq: 'closed' } }),
       fetchApi('defects/summary'),
-      fetchApi('defects/project_summary')
+      fetchApi('defects/project_summary', { params: { so_status_neq: 'closed' } })
     ])
       .then(([ordData, macData, defData, projData]) => {
         setOrders(ordData || []);
@@ -30,7 +30,18 @@ export function useDashboardData() {
       });
   }, []);
 
+  const refetchSummaries = useCallback(() => {
+    Promise.all([
+      fetchApi<DefectSummary[]>('defects/summary'),
+      fetchApi<ProjectDefectSummary[]>('defects/project_summary', { params: { so_status_neq: 'closed' } })
+    ]).then(([macData, projData]) => {
+      setDefectSummaries(macData || []);
+      setProjectSummaries(projData || []);
+    });
+  }, []);
+
   useSSE('sales_order_created', (added: SalesOrder) => {
+    if (added.status === 'closed') return;
     setOrders(prev => {
       if (prev.find(o => o.id === added.id)) return prev;
       return [...prev, added];
@@ -39,21 +50,22 @@ export function useDashboardData() {
 
   useSSE('sales_order_updated', (updated: SalesOrder) => {
     setOrders(prev => {
+      // If project was closed, remove from active dashboard list
+      if (updated.status === 'closed') {
+        return prev.filter(o => o.id !== updated.id);
+      }
       const exists = prev.find(o => o.id === updated.id);
       if (exists) return prev.map(o => o.id === updated.id ? updated : o);
       return [...prev, updated];
     });
+    // If closed or reopened, refresh machines and summaries
+    if (updated.status === 'closed' || updated.status === 'open') {
+      fetchApi<Machine[]>('machines', { params: { sales_order_status_neq: 'closed' } }).then(macData => {
+        if (macData) setMachines(macData);
+      });
+      refetchSummaries();
+    }
   });
-
-  const refetchSummaries = useCallback(() => {
-    Promise.all([
-      fetchApi<DefectSummary[]>('defects/summary'),
-      fetchApi<ProjectDefectSummary[]>('defects/project_summary')
-    ]).then(([macData, projData]) => {
-      setDefectSummaries(macData || []);
-      setProjectSummaries(projData || []);
-    });
-  }, []);
 
   useSSE('sales_order_deleted', (deleted: { id: string }) => {
     setOrders(prev => prev.filter(o => o.id !== deleted.id));

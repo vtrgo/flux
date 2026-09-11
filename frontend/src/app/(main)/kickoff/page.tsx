@@ -11,10 +11,12 @@ import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 import { SalesOrder, Machine } from "../../../types";
 import { SalesOrderModal } from "../../../components/SalesOrderModal";
 import { SpawnMachineModal } from "../../../components/SpawnMachineModal";
+import { Authorize } from "../../../components/Authorize";
 
 function SalesDashboardContent() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -78,11 +80,43 @@ function SalesDashboardContent() {
     fetchOrders();
   };
 
+  const shipOrder = async (id: string) => {
+    if (!window.confirm("Are you sure you want to mark this project as Shipped?")) return;
+    try {
+      await fetchApi(`sales_orders/${id}/ship`, { method: "POST" });
+      fetchOrders();
+    } catch (err) {
+      console.error("Failed to ship project:", err);
+    }
+  };
+
+  const closeOrder = async (id: string) => {
+    if (!window.confirm("Are you sure you want to close and archive this project? It will be moved to the Archived tab and hidden from active shop views.")) return;
+    try {
+      await fetchApi(`sales_orders/${id}/close`, { method: "POST" });
+      fetchOrders();
+    } catch (err) {
+      console.error("Failed to close project:", err);
+    }
+  };
+
+  const reopenOrder = async (id: string) => {
+    if (!window.confirm("Are you sure you want to reopen this project? It will return to the active pipeline.")) return;
+    try {
+      await fetchApi(`sales_orders/${id}/reopen`, { method: "POST" });
+      fetchOrders();
+    } catch (err) {
+      console.error("Failed to reopen project:", err);
+    }
+  };
+
   const deleteOrder = async (id: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this project? This cannot be undone.")) return;
+    if (!window.confirm("Are you sure you want to permanently delete this project and all its machines? This cannot be undone.")) return;
     await fetchApi(`sales_orders/${id}`, {
       method: "DELETE",
     });
+    fetchOrders();
+    fetchMachines();
   };
 
   const deleteMachine = async (e: React.MouseEvent, id: string) => {
@@ -92,7 +126,12 @@ function SalesDashboardContent() {
     await fetchApi(`machines/${id}`, {
       method: "DELETE",
     });
+    fetchMachines();
   };
+
+  const activeOrders = orders.filter(o => o.status !== 'closed');
+  const archivedOrders = orders.filter(o => o.status === 'closed');
+  const displayedOrders = activeTab === 'active' ? activeOrders : archivedOrders;
 
   return (
     <main className={styles.container}>
@@ -117,81 +156,183 @@ function SalesDashboardContent() {
         onSuccess={fetchMachines}
       />
 
-      <section>
-        <h2 style={{ marginBottom: "1.5rem" }}>Active Pipeline</h2>
-        <div className={styles.orderList}>
-          {orders.map(order => {
-            const orderMachines = machines.filter(m => m.sales_order_id === order.id);
-            const isEditing = editingOrder?.id === order.id;
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+        <button
+          onClick={() => setActiveTab('active')}
+          style={{
+            background: activeTab === 'active' ? 'var(--vtr-theme-primary)' : 'transparent',
+            color: activeTab === 'active' ? '#000' : 'var(--text-secondary)',
+            fontWeight: activeTab === 'active' ? 600 : 400,
+            border: 'none',
+            padding: '0.5rem 1.25rem',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          Active Pipeline ({activeOrders.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('archived')}
+          style={{
+            background: activeTab === 'archived' ? 'var(--vtr-theme-primary)' : 'transparent',
+            color: activeTab === 'archived' ? '#000' : 'var(--text-secondary)',
+            fontWeight: activeTab === 'archived' ? 600 : 400,
+            border: 'none',
+            padding: '0.5rem 1.25rem',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+        >
+          Archived Projects ({archivedOrders.length})
+        </button>
+      </div>
 
-            if (isEditing) {
+      <section>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h2 style={{ margin: 0 }}>
+            {activeTab === 'active' ? 'Active Pipeline' : 'Archived & Closed Projects'}
+          </h2>
+        </div>
+
+        {displayedOrders.length === 0 ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+            {activeTab === 'active' ? 'No active projects in the pipeline.' : 'No archived projects found.'}
+          </div>
+        ) : (
+          <div className={styles.orderList}>
+            {displayedOrders.map(order => {
+              const orderMachines = machines.filter(m => m.sales_order_id === order.id);
+              const isEditing = editingOrder?.id === order.id;
+
+              if (isEditing) {
+                return (
+                  <div key={order.id} className={styles.orderCard}>
+                    <form onSubmit={updateOrder}>
+                      <div className={styles.formGrid}>
+                        <div className={styles.formGroup}><label className={styles.label}>Customer Name</label><input required className={styles.input} value={editingOrder.customer_name} onChange={e => setEditingOrder({...editingOrder, customer_name: e.target.value})} /></div>
+                        <div className={styles.formGroup}><label className={styles.label}>PO Number</label><input required className={styles.input} value={editingOrder.po_number} onChange={e => setEditingOrder({...editingOrder, po_number: e.target.value})} /></div>
+                        <div className={styles.formGroup}><label className={styles.label}>Internal Project #</label><input className={styles.input} value={editingOrder.internal_project_number || ''} onChange={e => setEditingOrder({...editingOrder, internal_project_number: e.target.value})} /></div>
+                        <div className={styles.formGroup}><label className={styles.label}>Project Name</label><input className={styles.input} value={editingOrder.project_name || ''} onChange={e => setEditingOrder({...editingOrder, project_name: e.target.value})} /></div>
+                        <div className={styles.formGroup}><label className={styles.label}>PM</label><input className={styles.input} value={editingOrder.responsible_person || ''} onChange={e => setEditingOrder({...editingOrder, responsible_person: e.target.value})} /></div>
+                        <div className={styles.formGroup}><label className={styles.label}>Status</label>
+                          <select className={styles.input} value={editingOrder.status} onChange={e => setEditingOrder({...editingOrder, status: e.target.value as SalesOrder['status']})}>
+                            <option value="open">Open</option>
+                            <option value="partially_shipped">Partially Shipped</option>
+                            <option value="fulfilled">Fulfilled</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="closed">Closed</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                        <button type="submit" className="vtr-btn">Save Changes</button>
+                        <button type="button" className="vtr-btn vtr-btn-secondary" onClick={() => setEditingOrder(null)}>Cancel</button>
+                      </div>
+                    </form>
+                  </div>
+                );
+              }
+
               return (
-                <div key={order.id} className={styles.orderCard}>
-                  <form onSubmit={updateOrder}>
-                    <div className={styles.formGrid}>
-                      <div className={styles.formGroup}><label className={styles.label}>Customer Name</label><input required className={styles.input} value={editingOrder.customer_name} onChange={e => setEditingOrder({...editingOrder, customer_name: e.target.value})} /></div>
-                      <div className={styles.formGroup}><label className={styles.label}>PO Number</label><input required className={styles.input} value={editingOrder.po_number} onChange={e => setEditingOrder({...editingOrder, po_number: e.target.value})} /></div>
-                      <div className={styles.formGroup}><label className={styles.label}>Internal Project #</label><input className={styles.input} value={editingOrder.internal_project_number || ''} onChange={e => setEditingOrder({...editingOrder, internal_project_number: e.target.value})} /></div>
-                      <div className={styles.formGroup}><label className={styles.label}>Project Name</label><input className={styles.input} value={editingOrder.project_name || ''} onChange={e => setEditingOrder({...editingOrder, project_name: e.target.value})} /></div>
-                      <div className={styles.formGroup}><label className={styles.label}>PM</label><input className={styles.input} value={editingOrder.responsible_person || ''} onChange={e => setEditingOrder({...editingOrder, responsible_person: e.target.value})} /></div>
-                      <div className={styles.formGroup}><label className={styles.label}>Status</label>
-                        <select className={styles.input} value={editingOrder.status} onChange={e => setEditingOrder({...editingOrder, status: e.target.value as 'open' | 'partially_shipped' | 'fulfilled'})}>
-                          <option value="open">Open</option>
-                          <option value="partially_shipped">Partially Shipped</option>
-                          <option value="fulfilled">Fulfilled</option>
-                        </select>
+                <div 
+                  key={order.id} 
+                  className={styles.orderCard}
+                  style={order.status === 'closed' ? { opacity: 0.85, borderLeftColor: 'var(--text-secondary)' } : order.status === 'shipped' ? { borderLeftColor: 'var(--accent-green, #22c55e)' } : undefined}
+                >
+                  <div className={styles.orderHeader}>
+                    <div>
+                      <h3 className={styles.orderTitle}>{order.customer_name} {order.project_name ? `- ${order.project_name}` : ''} (PO: {order.po_number})</h3>
+                      <div className={styles.orderSubtitle}>
+                        {order.internal_project_number && <span style={{marginRight: '1rem'}}>Project #: {order.internal_project_number}</span>}
+                        {order.responsible_person && <span style={{marginRight: '1rem'}}>PM: {order.responsible_person}</span>}
+                        Target Ship: {order.target_ship_date ? new Date(order.target_ship_date).toLocaleDateString() : 'TBD'}
+                        {order.actual_ship_date && <span style={{marginLeft: '1rem', color: 'var(--accent-green, #22c55e)'}}>Shipped: {new Date(order.actual_ship_date).toLocaleDateString()}</span>}
+                        {' | '}Status: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{order.status.replace('_', ' ')}</span>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                      <button type="submit" className="vtr-btn">Save Changes</button>
-                      <button type="button" className="vtr-btn vtr-btn-secondary" onClick={() => setEditingOrder(null)}>Cancel</button>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {/* PM and Admin Lifecycle Actions */}
+                      <Authorize roles={['admin', 'pm', 'sales', 'supervisor']}>
+                        {order.status !== 'shipped' && order.status !== 'closed' && (
+                          <button 
+                            className="vtr-btn vtr-btn-secondary"
+                            style={{ color: 'var(--accent-green, #22c55e)', borderColor: 'var(--accent-green, #22c55e)' }}
+                            onClick={() => shipOrder(order.id)}
+                            title="Ship System"
+                          >
+                            🚀 Ship System
+                          </button>
+                        )}
+                        {order.status !== 'closed' && (
+                          <button 
+                            className="vtr-btn vtr-btn-secondary"
+                            onClick={() => closeOrder(order.id)}
+                            title="Close and archive project"
+                          >
+                            📁 Close Project
+                          </button>
+                        )}
+                        {order.status === 'closed' && (
+                          <button 
+                            className="vtr-btn vtr-btn-secondary"
+                            style={{ color: 'var(--vtr-theme-primary)', borderColor: 'var(--vtr-theme-primary)' }}
+                            onClick={() => reopenOrder(order.id)}
+                            title="Reopen archived project"
+                          >
+                            🔄 Reopen Project
+                          </button>
+                        )}
+                      </Authorize>
+
+                      <button className="vtr-btn vtr-btn-secondary" onClick={() => setEditingOrder(order)}>Edit</button>
+                      {order.status !== 'closed' && (
+                        <button className="vtr-btn vtr-btn-secondary" onClick={() => setSpawningOrderContext({ id: order.id, name: order.customer_name })}>+ Spawn</button>
+                      )}
+
+                      {/* Admin-only Project Delete */}
+                      <Authorize roles={['admin']}>
+                        <button 
+                          className="vtr-btn vtr-btn-secondary" 
+                          style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }} 
+                          onClick={() => deleteOrder(order.id)}
+                          title="Delete Project (Admin only)"
+                        >
+                          🗑️
+                        </button>
+                      </Authorize>
                     </div>
-                  </form>
+                  </div>
+
+                  {orderMachines.length > 0 && (
+                    <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      {orderMachines.map(m => (
+                        <Link key={m.id} href={`/machine?id=${m.id}`} style={{ textDecoration: 'none' }}>
+                          <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', paddingRight: '2.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '0.875rem', position: 'relative' }}>
+                            <strong style={{ color: 'var(--vtr-theme-primary)' }}>{m.order_number}</strong>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{m.model_type} • {m.status}</div>
+                            {/* Admin-only Machine Delete */}
+                            <Authorize roles={['admin']}>
+                              <button 
+                                onClick={(e) => deleteMachine(e, m.id)}
+                                style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'transparent', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '1rem' }}
+                                title="Delete Machine (Admin only)"
+                              >
+                                🗑️
+                              </button>
+                            </Authorize>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
-            }
-
-            return (
-              <div key={order.id} className={styles.orderCard}>
-                <div className={styles.orderHeader}>
-                  <div>
-                    <h3 className={styles.orderTitle}>{order.customer_name} {order.project_name ? `- ${order.project_name}` : ''} (PO: {order.po_number})</h3>
-                    <div className={styles.orderSubtitle}>
-                      {order.internal_project_number && <span style={{marginRight: '1rem'}}>Project #: {order.internal_project_number}</span>}
-                      {order.responsible_person && <span style={{marginRight: '1rem'}}>PM: {order.responsible_person}</span>}
-                      Target Ship: {order.target_ship_date ? new Date(order.target_ship_date).toLocaleDateString() : 'TBD'} | Status: {order.status}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="vtr-btn vtr-btn-secondary" onClick={() => setEditingOrder(order)}>Edit</button>
-                    <button className="vtr-btn vtr-btn-secondary" onClick={() => setSpawningOrderContext({ id: order.id, name: order.customer_name })}>+ Spawn</button>
-                    <button className="vtr-btn vtr-btn-secondary" style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }} onClick={() => deleteOrder(order.id)}>🗑️</button>
-                  </div>
-                </div>
-
-                {orderMachines.length > 0 && (
-                  <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    {orderMachines.map(m => (
-                      <Link key={m.id} href={`/machine?id=${m.id}`} style={{ textDecoration: 'none' }}>
-                        <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', paddingRight: '2.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '0.875rem', position: 'relative' }}>
-                          <strong style={{ color: 'var(--vtr-theme-primary)' }}>{m.order_number}</strong>
-                          <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{m.model_type} • {m.status}</div>
-                          <button 
-                            onClick={(e) => deleteMachine(e, m.id)}
-                            style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'transparent', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '1rem' }}
-                            title="Delete Part"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+            })}
+          </div>
+        )}
       </section>
     </main>
   );

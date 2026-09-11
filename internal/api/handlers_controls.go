@@ -52,7 +52,8 @@ func handleGetAllControls(w http.ResponseWriter, r *http.Request) {
 		SELECT c.id, c.machine_id, m.order_number, c.checkpoint_type, c.description, c.expected_value, c.actual_value, c.status, c.signed_off_by, c.signed_off_at
 		FROM controls_checkpoints c
 		JOIN machines m ON c.machine_id = m.id
-		WHERE m.status != 'shipped'
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE m.status != 'shipped' AND (so.status IS NULL OR so.status != 'closed')
 		ORDER BY c.status DESC, m.created_at DESC
 	`)
 

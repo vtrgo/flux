@@ -3,15 +3,52 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
+
+func createTestAdminCookie(t *testing.T) *http.Cookie {
+	t.Helper()
+	var adminID string
+	adminUsername := fmt.Sprintf("admin_test_%d", time.Now().UnixNano())
+	err := db.DB.QueryRow(`
+		INSERT INTO users (username, first_name, last_name, department, role, password_hash)
+		VALUES ($1, 'Admin', 'User', 'management', 'admin', 'hash')
+		RETURNING id
+	`, adminUsername).Scan(&adminID)
+	if err != nil {
+		t.Fatalf("failed to insert test admin user: %v", err)
+	}
+
+	expirationTime := time.Now().Add(24 * time.Hour)
+	claims := &Claims{
+		UserID: adminID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(GetJWTSecret())
+	if err != nil {
+		t.Fatalf("failed to sign admin token: %v", err)
+	}
+
+	return &http.Cookie{
+		Name:     "auth_token",
+		Value:    tokenString,
+		Expires:  expirationTime,
+		HttpOnly: true,
+		Path:     "/",
+	}
+}
 
 func setupTestDB(t *testing.T) {
 	connStr := os.Getenv("DATABASE_URL")
@@ -132,24 +169,98 @@ func TestSalesOrders(t *testing.T) {
 		}
 	})
 
-	t.Run("Delete Sales Order - Success", func(t *testing.T) {
-		// First create an order to delete
+	t.Run("Ship, Close, and Reopen Sales Order - Success", func(t *testing.T) {
 		var createdOrder models.SalesOrder
+		poLife := fmt.Sprintf("PO-LIFE-%d", time.Now().UnixNano())
 		err := db.DB.QueryRow(`
 			INSERT INTO sales_orders (customer_name, po_number, status) 
-			VALUES ('Delete Test', 'PO-DEL', 'open') 
+			VALUES ('Lifecycle Test', $1, 'open') 
 			RETURNING id
-		`).Scan(&createdOrder.ID)
+		`, poLife).Scan(&createdOrder.ID)
+		if err != nil {
+			t.Fatalf("failed to create test order: %v", err)
+		}
+		defer func() {
+			_, _ = db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", createdOrder.ID)
+		}()
+
+		// 1. Ship
+		reqShip := httptest.NewRequest(http.MethodPost, "/api/sales_orders/"+createdOrder.ID.String()+"/ship", nil)
+		rrShip := httptest.NewRecorder()
+		mux.ServeHTTP(rrShip, reqShip)
+		if rrShip.Code != http.StatusOK {
+			t.Fatalf("expected 200 on ship, got %d: %s", rrShip.Code, rrShip.Body.String())
+		}
+		var shipped models.SalesOrder
+		if err := json.NewDecoder(rrShip.Body).Decode(&shipped); err != nil {
+			t.Fatalf("failed to decode ship response: %v", err)
+		}
+		if shipped.Status != "shipped" || shipped.ActualShipDate == nil {
+			t.Errorf("expected status 'shipped' and non-nil actual_ship_date, got status=%s date=%v", shipped.Status, shipped.ActualShipDate)
+		}
+
+		// 2. Close
+		reqClose := httptest.NewRequest(http.MethodPost, "/api/sales_orders/"+createdOrder.ID.String()+"/close", nil)
+		rrClose := httptest.NewRecorder()
+		mux.ServeHTTP(rrClose, reqClose)
+		if rrClose.Code != http.StatusOK {
+			t.Fatalf("expected 200 on close, got %d: %s", rrClose.Code, rrClose.Body.String())
+		}
+		var closed models.SalesOrder
+		if err := json.NewDecoder(rrClose.Body).Decode(&closed); err != nil {
+			t.Fatalf("failed to decode close response: %v", err)
+		}
+		if closed.Status != "closed" {
+			t.Errorf("expected status 'closed', got %s", closed.Status)
+		}
+
+		// 3. Reopen
+		reqReopen := httptest.NewRequest(http.MethodPost, "/api/sales_orders/"+createdOrder.ID.String()+"/reopen", nil)
+		rrReopen := httptest.NewRecorder()
+		mux.ServeHTTP(rrReopen, reqReopen)
+		if rrReopen.Code != http.StatusOK {
+			t.Fatalf("expected 200 on reopen, got %d: %s", rrReopen.Code, rrReopen.Body.String())
+		}
+		var reopened models.SalesOrder
+		if err := json.NewDecoder(rrReopen.Body).Decode(&reopened); err != nil {
+			t.Fatalf("failed to decode reopen response: %v", err)
+		}
+		if reopened.Status != "open" {
+			t.Errorf("expected status 'open', got %s", reopened.Status)
+		}
+	})
+
+	t.Run("Delete Sales Order - Authorization Checks", func(t *testing.T) {
+		// First create an order to delete
+		var createdOrder models.SalesOrder
+		poDel := fmt.Sprintf("PO-DEL-%d", time.Now().UnixNano())
+		err := db.DB.QueryRow(`
+			INSERT INTO sales_orders (customer_name, po_number, status) 
+			VALUES ('Delete Test', $1, 'open') 
+			RETURNING id
+		`, poDel).Scan(&createdOrder.ID)
 		if err != nil {
 			t.Fatalf("failed to create test order for delete: %v", err)
 		}
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/sales_orders/"+createdOrder.ID.String(), nil)
-		rr := httptest.NewRecorder()
-		mux.ServeHTTP(rr, req)
+		// 1. Unauthenticated / Non-admin should get 403 Forbidden
+		reqUnauth := httptest.NewRequest(http.MethodDelete, "/api/sales_orders/"+createdOrder.ID.String(), nil)
+		rrUnauth := httptest.NewRecorder()
+		mux.ServeHTTP(rrUnauth, reqUnauth)
+		if rrUnauth.Code != http.StatusForbidden {
+			t.Errorf("expected 403 Forbidden for non-admin delete, got %d", rrUnauth.Code)
+		}
 
-		if status := rr.Code; status != http.StatusOK {
-			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		// 2. Create test admin user and generate auth cookie
+		adminCookie := createTestAdminCookie(t)
+
+		reqAuth := httptest.NewRequest(http.MethodDelete, "/api/sales_orders/"+createdOrder.ID.String(), nil)
+		reqAuth.AddCookie(adminCookie)
+		rrAuth := httptest.NewRecorder()
+		mux.ServeHTTP(rrAuth, reqAuth)
+
+		if status := rrAuth.Code; status != http.StatusOK {
+			t.Errorf("handler returned wrong status code for admin: got %v want %v: %s", status, http.StatusOK, rrAuth.Body.String())
 		}
 
 		// Verify deletion

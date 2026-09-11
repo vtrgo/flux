@@ -17,7 +17,7 @@ type SalesOrder struct {
 	SalesRep              *string    `json:"sales_rep,omitempty"`
 	TargetShipDate        *time.Time `json:"target_ship_date,omitempty"`
 	ActualShipDate        *time.Time `json:"actual_ship_date,omitempty"`
-	Status                string     `json:"status"` // open, partially_shipped, fulfilled
+	Status                string     `json:"status"` // open, partially_shipped, fulfilled, shipped, closed
 	CreatedAt             time.Time  `json:"created_at"`
 }
 

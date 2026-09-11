@@ -50,6 +50,9 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/sales_orders", getSalesOrders)
 	mux.HandleFunc("POST /api/sales_orders", createSalesOrder)
 	mux.HandleFunc("PUT /api/sales_orders/{id}", updateSalesOrder)
+	mux.HandleFunc("POST /api/sales_orders/{id}/ship", handleShipSalesOrder)
+	mux.HandleFunc("POST /api/sales_orders/{id}/close", handleCloseSalesOrder)
+	mux.HandleFunc("POST /api/sales_orders/{id}/reopen", handleReopenSalesOrder)
 	mux.HandleFunc("DELETE /api/sales_orders/{id}", deleteSalesOrder)
 
 	// Enclosures endpoints
@@ -263,6 +266,12 @@ func handleDeleteMachine(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
 		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
+		return
+	}
+
+	// Verify Admin Role
+	if _, err := requireAdmin(r); err != nil {
+		respondError(w, http.StatusForbidden, "Forbidden: Only administrators can delete machines", nil)
 		return
 	}
 

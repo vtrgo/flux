@@ -52,7 +52,8 @@ func handleGetAllAssembly(w http.ResponseWriter, r *http.Request) {
 		SELECT a.id, a.machine_id, m.order_number, a.task_name, a.status, a.started_at, a.completed_at, a.signed_off_by, a.notes
 		FROM assembly_tasks a
 		JOIN machines m ON a.machine_id = m.id
-		WHERE m.status != 'shipped'
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE m.status != 'shipped' AND (so.status IS NULL OR so.status != 'closed')
 		ORDER BY a.status DESC, m.created_at DESC
 	`)
 

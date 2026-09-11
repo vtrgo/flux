@@ -52,7 +52,8 @@ func handleGetAllKitting(w http.ResponseWriter, r *http.Request) {
 		SELECT k.id, k.machine_id, m.order_number, k.department, k.part_number, k.description, k.qty_required, k.qty_picked, k.status, k.fulfilled_at, k.fulfilled_by
 		FROM kitting_parts k
 		JOIN machines m ON k.machine_id = m.id
-		WHERE m.status != 'shipped'
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE m.status != 'shipped' AND (so.status IS NULL OR so.status != 'closed')
 		ORDER BY k.status DESC, m.created_at DESC
 	`)
 

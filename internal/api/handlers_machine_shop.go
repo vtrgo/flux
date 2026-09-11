@@ -11,9 +11,12 @@ import (
 // handleGetAllMachineShopTasks fetches all machine shop tasks
 func handleGetAllMachineShopTasks(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
-		SELECT id, machine_id, defect_id, part_name, material, status, machined_by, completed_at, created_at
-		FROM machine_shop_tasks
-		ORDER BY status DESC, created_at DESC
+		SELECT ms.id, ms.machine_id, ms.defect_id, ms.part_name, ms.material, ms.status, ms.machined_by, ms.completed_at, ms.created_at
+		FROM machine_shop_tasks ms
+		JOIN machines m ON ms.machine_id = m.id
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE (so.status IS NULL OR so.status != 'closed')
+		ORDER BY ms.status DESC, ms.created_at DESC
 	`)
 
 	if err != nil {

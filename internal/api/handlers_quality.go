@@ -177,15 +177,17 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
               d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at
 		FROM defects d
 		JOIN machines m ON d.machine_id = m.id
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
 		LEFT JOIN users u ON d.assigned_user_id = u.id
 		LEFT JOIN users c ON d.created_by_user_id = c.id
 		LEFT JOIN users f ON d.fixed_by_user_id = f.id
 		LEFT JOIN users v ON d.verified_by_user_id = v.id
+		WHERE (so.status IS NULL OR so.status != 'closed')
 	`
 	var args []interface{}
 
 	if department != "" {
-		query += " WHERE d.assigned_department = $1"
+		query += " AND d.assigned_department = $1"
 		args = append(args, department)
 	}
 
@@ -419,9 +421,12 @@ func handleGetMachineDefectsSummary(w http.ResponseWriter, r *http.Request) {
 // handleGetAllDefectsSummary aggregates defect counts by department for all machines
 func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
-		SELECT machine_id, assigned_department, status, severity, COUNT(*) 
-		FROM defects 
-		GROUP BY machine_id, assigned_department, status, severity
+		SELECT d.machine_id, d.assigned_department, d.status, d.severity, COUNT(*) 
+		FROM defects d
+		JOIN machines m ON d.machine_id = m.id
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE (so.status IS NULL OR so.status != 'closed')
+		GROUP BY d.machine_id, d.assigned_department, d.status, d.severity
 	`)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to query all defect summaries: ", err)

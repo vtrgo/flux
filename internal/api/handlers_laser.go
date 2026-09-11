@@ -11,9 +11,12 @@ import (
 // handleGetAllLaserTasks fetches all machine shop tasks
 func handleGetAllLaserTasks(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(`
-		SELECT id, machine_id, defect_id, part_name, material, status, cut_by, completed_at, created_at
-		FROM laser_tasks
-		ORDER BY status DESC, created_at DESC
+		SELECT l.id, l.machine_id, l.defect_id, l.part_name, l.material, l.status, l.cut_by, l.completed_at, l.created_at
+		FROM laser_tasks l
+		JOIN machines m ON l.machine_id = m.id
+		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
+		WHERE (so.status IS NULL OR so.status != 'closed')
+		ORDER BY l.status DESC, l.created_at DESC
 	`)
 
 	if err != nil {

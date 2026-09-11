@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Machine, DefectSummary } from '../types';
 import { ACTIVE_DEPARTMENTS } from '../lib/departments';
+import { Authorize } from './Authorize';
 import styles from './MachineCard.module.css';
 
 interface MachineCardProps {
@@ -21,13 +22,15 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
   return (
     <Link href={`/machine?id=${machine.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div className={styles.card}>
-        <button 
-          onClick={(e) => onDelete(e, machine.id)}
-          className={styles.deleteBtn}
-          title="Delete Machine"
-        >
-          🗑️
-        </button>
+        <Authorize roles={['admin']}>
+          <button 
+            onClick={(e) => onDelete(e, machine.id)}
+            className={styles.deleteBtn}
+            title="Delete Machine"
+          >
+            🗑️
+          </button>
+        </Authorize>
         
         <h3 className={styles.orderNumber}>{machine.order_number}</h3>
         <div className={styles.modelType}>{machine.model_type}</div>
