@@ -110,6 +110,7 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/laser/tasks/{task_id}", handleUpdateLaserTask)
 
 	mux.HandleFunc("GET /api/logs", handleGetLogs)
+	mux.HandleFunc("GET /api/system/version", handleGetSystemVersion)
 
 	mux.HandleFunc("/api/sse", SSEHandler)
 }

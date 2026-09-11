@@ -124,14 +124,19 @@ echo "== [3/5] Building Next.js Static Frontend Export =="
 # 5. Compile Embedded Go Executable
 echo "== [4/5] Compiling Single Go Executable =="
 mkdir -p "$FLUX_DIR/bin"
+GIT_VERSION="${RELEASE_TAG:-$(git -C "$FLUX_DIR" describe --tags --always 2>/dev/null || echo "prod")}"
+GIT_COMMIT="$(git -C "$FLUX_DIR" rev-parse --short HEAD 2>/dev/null || echo "none")"
+BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+LDFLAGS="-X github.com/vtrgo/flux/internal/version.Version=${GIT_VERSION} -X github.com/vtrgo/flux/internal/version.Commit=${GIT_COMMIT} -X github.com/vtrgo/flux/internal/version.BuildDate=${BUILD_DATE}"
+
 # Run go build under SERVICE_USER to leverage user's Go module and build cache
 if [ "$(id -u)" -eq 0 ] && [ "$SERVICE_USER" != "root" ]; then
   sudo -u "$SERVICE_USER" -H env "PATH=$PATH" "HOME=/home/$SERVICE_USER" "GOCACHE=/home/$SERVICE_USER/.cache/go-build" "GOPATH=/home/$SERVICE_USER/go" bash -c "
     cd '$FLUX_DIR'
-    go build -o '$FLUX_DIR/flux' cmd/flux/main.go
+    go build -ldflags '$LDFLAGS' -o '$FLUX_DIR/flux' cmd/flux/main.go
   "
 else
-  (cd "$FLUX_DIR" && go build -o "$FLUX_DIR/flux" cmd/flux/main.go)
+  (cd "$FLUX_DIR" && go build -ldflags "$LDFLAGS" -o "$FLUX_DIR/flux" cmd/flux/main.go)
 fi
 cp "$FLUX_DIR/flux" "$FLUX_DIR/bin/flux"
 chown "$SERVICE_USER:$SERVICE_GROUP" "$FLUX_DIR/flux" "$FLUX_DIR/bin/flux"

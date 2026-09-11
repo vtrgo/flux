@@ -29,6 +29,10 @@ rm -rf frontend/.next
 (cd frontend && npm run build)
 
 echo "== [3/3] Compiling Embedded Go Executable =="
-go build -o bin/flux cmd/flux/main.go
+GIT_VERSION=$(git describe --tags --always 2>/dev/null || echo "dev")
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
+BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+go build -ldflags "-X github.com/vtrgo/flux/internal/version.Version=${GIT_VERSION} -X github.com/vtrgo/flux/internal/version.Commit=${GIT_COMMIT} -X github.com/vtrgo/flux/internal/version.BuildDate=${BUILD_DATE}" -o bin/flux cmd/flux/main.go
 
 echo "== [Success] All tests passed. Single Executable compiled to 'bin/flux' =="
