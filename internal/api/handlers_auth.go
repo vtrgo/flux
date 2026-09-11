@@ -225,13 +225,13 @@ func getAuthenticatedUser(r *http.Request) *models.User {
 	return &user
 }
 
-// requireAdmin verifies if the request is from an authenticated user with an 'admin' role
-func requireAdmin(r *http.Request) (*models.User, error) {
+// requireAdminOrManager verifies if the request is from an authenticated user with an 'admin' or 'manager' role
+func requireAdminOrManager(r *http.Request) (*models.User, error) {
 	user := getAuthenticatedUser(r)
 	if user == nil {
 		return nil, errors.New("unauthorized")
 	}
-	if user.Role == nil || strings.ToLower(*user.Role) != "admin" {
+	if user.Role == nil || (strings.ToLower(*user.Role) != "admin" && strings.ToLower(*user.Role) != "manager") {
 		return user, errors.New("forbidden")
 	}
 	return user, nil

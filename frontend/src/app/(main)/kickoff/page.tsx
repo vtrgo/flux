@@ -255,7 +255,7 @@ function SalesDashboardContent() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       {/* PM and Admin Lifecycle Actions */}
-                      <Authorize roles={['admin', 'pm', 'sales', 'supervisor']}>
+                      <Authorize roles={['admin', 'manager', 'pm', 'sales', 'supervisor']}>
                         {order.status !== 'shipped' && order.status !== 'closed' && (
                           <button 
                             className="vtr-btn vtr-btn-secondary"
@@ -293,7 +293,7 @@ function SalesDashboardContent() {
                       )}
 
                       {/* Admin-only Project Delete */}
-                      <Authorize roles={['admin']}>
+                      <Authorize roles={['admin', 'manager']}>
                         <button 
                           className="vtr-btn vtr-btn-secondary" 
                           style={{ color: 'var(--accent-red)', borderColor: 'var(--accent-red)' }} 
@@ -314,7 +314,7 @@ function SalesDashboardContent() {
                             <strong style={{ color: 'var(--vtr-theme-primary)' }}>{m.order_number}</strong>
                             <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{m.model_type} • {m.status}</div>
                             {/* Admin-only Machine Delete */}
-                            <Authorize roles={['admin']}>
+                            <Authorize roles={['admin', 'manager']}>
                               <button 
                                 onClick={(e) => deleteMachine(e, m.id)}
                                 style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'transparent', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '1rem' }}

@@ -22,7 +22,7 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
   return (
     <Link href={`/machine?id=${machine.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div className={styles.card}>
-        <Authorize roles={['admin']}>
+        <Authorize roles={['admin', 'manager']}>
           <button 
             onClick={(e) => onDelete(e, machine.id)}
             className={styles.deleteBtn}

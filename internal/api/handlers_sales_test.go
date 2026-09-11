@@ -15,15 +15,15 @@ import (
 	"github.com/vtrgo/flux/internal/models"
 )
 
-func createTestAdminCookie(t *testing.T) *http.Cookie {
+func createTestRoleCookie(t *testing.T, role string) *http.Cookie {
 	t.Helper()
 	var adminID string
 	adminUsername := fmt.Sprintf("admin_test_%d", time.Now().UnixNano())
 	err := db.DB.QueryRow(`
 		INSERT INTO users (username, first_name, last_name, department, role, password_hash)
-		VALUES ($1, 'Admin', 'User', 'management', 'admin', 'hash')
+		VALUES ($1, 'Admin', 'User', 'management', $2, 'hash')
 		RETURNING id
-	`, adminUsername).Scan(&adminID)
+	`, adminUsername, role).Scan(&adminID)
 	if err != nil {
 		t.Fatalf("failed to insert test admin user: %v", err)
 	}
@@ -252,7 +252,7 @@ func TestSalesOrders(t *testing.T) {
 		}
 
 		// 2. Create test admin user and generate auth cookie
-		adminCookie := createTestAdminCookie(t)
+		adminCookie := createTestRoleCookie(t, "manager")
 
 		reqAuth := httptest.NewRequest(http.MethodDelete, "/api/sales_orders/"+createdOrder.ID.String(), nil)
 		reqAuth.AddCookie(adminCookie)

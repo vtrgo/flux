@@ -262,7 +262,7 @@ func deleteSalesOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify Admin Role
-	if _, err := requireAdmin(r); err != nil {
+	if _, err := requireAdminOrManager(r); err != nil {
 		respondError(w, http.StatusForbidden, "Forbidden: Only administrators can delete projects", nil)
 		return
 	}

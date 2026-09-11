@@ -101,7 +101,7 @@ func TestMachines(t *testing.T) {
 		}
 
 		// 2. Admin request should succeed with 200 OK
-		adminCookie := createTestAdminCookie(t)
+		adminCookie := createTestRoleCookie(t, "manager")
 		reqAuth := httptest.NewRequest(http.MethodDelete, "/api/machines/"+createdMachineID, nil)
 		reqAuth.AddCookie(adminCookie)
 		rrAuth := httptest.NewRecorder()
