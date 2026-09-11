@@ -10,6 +10,7 @@ import styles from './page.module.css';
 import { DefectModal } from '../../components/DefectModal';
 import { MachineCard } from '../../components/MachineCard';
 import { ProjectCard } from '../../components/ProjectCard';
+import { Authorize } from '../../components/Authorize';
 import { SalesOrder, Machine, DefectSummary } from "../../types";
 import { ACTIVE_DEPARTMENTS } from '../../lib/departments';
 
@@ -40,7 +41,9 @@ export default function Home() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)' }}>Active Pipeline</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <Link href="/kickoff" className="vtr-btn">Project Initialization</Link>
+          <Authorize roles={['admin', 'sales', 'supervisor']}>
+            <Link href="/kickoff" className="vtr-btn">Project Initialization</Link>
+          </Authorize>
         </div>
       </div>
 

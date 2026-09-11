@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '../contexts/AuthContext';
 import styles from './Navigation.module.css';
 
 const DEPARTMENTS = [
@@ -16,6 +17,7 @@ const DEPARTMENTS = [
 
 export function Navigation() {
   const pathname = usePathname();
+  const { isAdmin } = useAuth();
 
   const getClassName = (path: string) => {
     return pathname === path ? "vtr-btn vtr-btn-active" : "vtr-btn";
@@ -46,9 +48,11 @@ export function Navigation() {
         </div>
       </div>
 
-      <Link href="/admin" className={pathname === "/admin" ? "vtr-btn vtr-btn-secondary vtr-btn-active" : "vtr-btn vtr-btn-secondary"}>
-        System Admin
-      </Link>
+      {isAdmin && (
+        <Link href="/admin" className={pathname === "/admin" ? "vtr-btn vtr-btn-secondary vtr-btn-active" : "vtr-btn vtr-btn-secondary"}>
+          System Admin
+        </Link>
+      )}
     </div>
   );
 }

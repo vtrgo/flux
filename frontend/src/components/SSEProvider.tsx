@@ -105,7 +105,7 @@ export function useSSE(event: string, callback: (data: any) => void) {
 export function useSSEConnectionStatus() {
   const context = useContext(SSEContext);
   if (!context) {
-    throw new Error("useSSEConnectionStatus must be used within an SSEProvider");
+    return false;
   }
   return context.isConnected;
 }
