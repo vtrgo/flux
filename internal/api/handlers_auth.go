@@ -3,18 +3,16 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
-
-var jwtKey = []byte("my_super_secret_key_vtr_flux_2026") // In production this should be in an env var
 
 type Credentials struct {
 	Username string `json:"username"`
@@ -33,37 +31,17 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
-	var passwordHash sql.NullString
-	err := db.DB.QueryRow(`
-		SELECT id, username, first_name, last_name, department, role, created_at, password_hash
-		FROM users WHERE username = $1
-	`, creds.Username).Scan(
-		&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role, &user.CreatedAt, &passwordHash,
-	)
-
+	user, err := DefaultAuthenticator.Authenticate(r.Context(), creds.Username, creds.Password)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, ErrInvalidCredentials) || errors.Is(err, sql.ErrNoRows) {
 			respondError(w, http.StatusUnauthorized, "Invalid username or password", nil)
 			return
 		}
-		respondError(w, http.StatusInternalServerError, "Database error", err)
+		respondError(w, http.StatusInternalServerError, "Authentication error", err)
 		return
 	}
 
-	// Check password
-	if !passwordHash.Valid || passwordHash.String == "" {
-		// No password set for this user yet
-		respondError(w, http.StatusUnauthorized, "Invalid username or password", nil)
-		return
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash.String), []byte(creds.Password)); err != nil {
-		respondError(w, http.StatusUnauthorized, "Invalid username or password", nil)
-		return
-	}
-
-	// Password matched, create JWT
+	// Credentials valid, generate session token
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID: user.ID.String(),
@@ -73,7 +51,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(GetJWTSecret())
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Could not generate token", err)
 		return
@@ -89,7 +67,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	slog.Info("User logged in", "user_id", user.ID)
+	slog.Info("User logged in", "user_id", user.ID, "username", user.Username, "auth_provider", user.AuthProvider)
 	respondJSON(w, http.StatusOK, user)
 }
 
@@ -113,10 +91,11 @@ func handleGetMe(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	err := db.DB.QueryRow(`
-		SELECT id, username, first_name, last_name, department, role, created_at
+		SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
 		FROM users WHERE id = $1
 	`, userID).Scan(
-		&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role, &user.CreatedAt,
+		&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role,
+		&user.AuthProvider, &user.ExternalID, &user.CreatedAt,
 	)
 
 	if err != nil {
@@ -138,7 +117,7 @@ func getAuthenticatedUserID(r *http.Request) string {
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return GetJWTSecret(), nil
 	})
 
 	if err != nil || !token.Valid {

@@ -29,6 +29,8 @@ export interface User {
   last_name?: string;
   department?: string;
   role?: string;
+  auth_provider?: string;
+  external_id?: string;
 }
 
 export interface Defect {

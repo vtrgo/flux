@@ -107,6 +107,8 @@ type User struct {
 	LastName     *string    `json:"last_name,omitempty"`
 	Department   *string    `json:"department,omitempty"`
 	Role         *string    `json:"role,omitempty"`
+	AuthProvider string     `json:"auth_provider"`
+	ExternalID   *string    `json:"external_id,omitempty"`
 	PasswordHash string     `json:"-"`
 	CreatedAt    time.Time  `json:"created_at"`
 }
