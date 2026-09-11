@@ -58,10 +58,12 @@ func main() {
 		port = "8080"
 	}
 
-	// Chain middlewares: Logger -> PanicRecovery -> CORS -> Router
+	// Chain middlewares: Logger -> PanicRecovery -> Auth -> CORS -> Router
 	handler := api.RequestLoggerMiddleware(
 		api.PanicRecoveryMiddleware(
-			api.CorsMiddleware(mux),
+			api.AuthMiddleware(
+				api.CorsMiddleware(mux),
+			),
 		),
 	)
 

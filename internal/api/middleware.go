@@ -1,12 +1,68 @@
 package api
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/logger"
+	"github.com/vtrgo/flux/internal/models"
 )
+
+type contextKey string
+
+const (
+	UserContextKey contextKey = "user"
+)
+
+// AuthMiddleware validates the JWT token and extracts the user into the context
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Bypass auth for public API routes and all non-API routes (static files)
+		if r.URL.Path == "/api/auth/login" || r.URL.Path == "/api/auth/logout" || !strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		cookie, err := r.Cookie("auth_token")
+		if err != nil {
+			respondError(w, http.StatusUnauthorized, "Missing authentication token", nil)
+			return
+		}
+
+		tokenStr := cookie.Value
+		claims := &Claims{}
+
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+			return GetJWTSecret(), nil
+		})
+
+		if err != nil || !token.Valid {
+			respondError(w, http.StatusUnauthorized, "Invalid authentication token", nil)
+			return
+		}
+
+		var user models.User
+		err = db.DB.QueryRowContext(r.Context(), `
+			SELECT id, username, first_name, last_name, department, role
+			FROM users WHERE id = $1
+		`, claims.UserID).Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role)
+
+		if err != nil {
+			respondError(w, http.StatusUnauthorized, "User not found", nil)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), UserContextKey, &user)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 
 // RequestLoggerMiddleware logs the method, path, status, and duration of each HTTP request
 func RequestLoggerMiddleware(next http.Handler) http.Handler {
