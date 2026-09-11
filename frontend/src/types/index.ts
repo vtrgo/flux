@@ -10,6 +10,7 @@ export interface SalesOrder {
   actual_ship_date?: string;
   status: 'open' | 'partially_shipped' | 'fulfilled' | 'shipped' | 'closed';
   created_at: string;
+  created_by_user_name?: string;
 }
 
 export interface Machine {
