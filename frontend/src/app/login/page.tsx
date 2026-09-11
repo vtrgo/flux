@@ -66,13 +66,7 @@ export default function LoginPage() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <Logo width={64} height={64} />
-          <h1 className={styles.title}>vtrFlux</h1>
-          <p className={styles.subtitle}>Manufacturing Execution System</p>
-          <div className={styles.systemBadge}>
-            <span className={styles.systemIndicator}></span>
-            Core Systems Online
-          </div>
+          <Logo width={52} height={52} />
         </div>
 
         {errorMessage && (
