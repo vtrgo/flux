@@ -8,6 +8,23 @@ import { Logo } from '../../components/Logo';
 import { toast } from 'sonner';
 import styles from './login.module.css';
 
+const getDepartmentPath = (department?: string) => {
+  if (!department) return '/';
+  
+  const map: Record<string, string> = {
+    'machine_shop': '/machine-shop',
+    'electrical_controls': '/electrical-controls',
+    'controls': '/electrical-controls',
+  };
+  
+  if (map[department]) return map[department];
+  
+  const allowed = ['design', 'kitting', 'laser', 'assembly', 'enclosures', 'quality'];
+  if (allowed.includes(department)) return `/${department}`;
+  
+  return '/';
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading, login } = useAuth();
@@ -31,7 +48,11 @@ export default function LoginPage() {
   // If already logged in, redirect to intended target or dashboard
   useEffect(() => {
     if (!loading && user) {
-      router.replace(fromPath);
+      let targetPath = fromPath;
+      if (targetPath === '/' && user.department) {
+        targetPath = getDepartmentPath(user.department);
+      }
+      router.replace(targetPath);
     }
   }, [user, loading, router, fromPath]);
 
@@ -43,7 +64,13 @@ export default function LoginPage() {
     try {
       const loggedInUser = await login({ username, password });
       toast.success(`Welcome, ${loggedInUser.first_name || loggedInUser.username}`);
-      router.replace(fromPath);
+      
+      let targetPath = fromPath;
+      if (targetPath === '/' && loggedInUser.department) {
+        targetPath = getDepartmentPath(loggedInUser.department);
+      }
+      
+      router.replace(targetPath);
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid username or password');
       toast.error('Authentication failed');
