@@ -19,6 +19,9 @@ type SalesOrder struct {
 	ActualShipDate        *time.Time `json:"actual_ship_date,omitempty"`
 	Status                string     `json:"status"` // open, partially_shipped, fulfilled, shipped, closed
 	CreatedAt             time.Time  `json:"created_at"`
+	CreatedBy             *uuid.UUID `json:"created_by,omitempty"`
+	UpdatedBy             *uuid.UUID `json:"updated_by,omitempty"`
+	CreatedByUserName     *string    `json:"created_by_user_name,omitempty"`
 }
 
 // Machine represents the core order/machine being built
@@ -30,12 +33,15 @@ type Machine struct {
 	Status         string     `json:"status"` // engineering, kitting, assembly, controls, quality, shipped
 	ActualShipDate *time.Time `json:"actual_ship_date,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
+	CreatedBy      *uuid.UUID `json:"created_by,omitempty"`
+	UpdatedBy      *uuid.UUID `json:"updated_by,omitempty"`
 
 	// Relational roll-ups for the UI dashboard
 	KittingCount  int `json:"kitting_count"`
 	AssemblyCount int `json:"assembly_count"`
 	ControlsCount int `json:"controls_count"`
 	QualityCount  int `json:"quality_count"`
+	CreatedByUserName *string `json:"created_by_user_name,omitempty"`
 }
 
 // KittingPart represents an item in the Bill of Materials

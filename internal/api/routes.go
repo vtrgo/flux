@@ -156,28 +156,30 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 
 	query := `
 		SELECT 
-			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.actual_ship_date, m.created_at,
+			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.actual_ship_date, m.created_at, m.created_by,
 			COUNT(DISTINCT k.id) as kitting_count,
 			COUNT(DISTINCT a.id) as assembly_count,
 			COUNT(DISTINCT c.id) as controls_count,
-			COUNT(DISTINCT d.id) as quality_count
+			COUNT(DISTINCT d.id) as quality_count,
+			u.username as created_by_user_name
 		FROM machines m
 		LEFT JOIN kitting_parts k ON m.id = k.machine_id
 		LEFT JOIN assembly_tasks a ON m.id = a.machine_id
 		LEFT JOIN controls_checkpoints c ON m.id = c.machine_id
 		LEFT JOIN defects d ON m.id = d.machine_id
+		LEFT JOIN users u ON m.created_by = u.id
 	`
 	var args []interface{}
 	if soStatusNeq != "" {
 		query += `
 		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
-		WHERE so.status != $1 OR m.sales_order_id IS NULL
+		WHERE (so.status != $1 OR m.sales_order_id IS NULL)
 		`
 		args = append(args, soStatusNeq)
 	}
 
 	query += `
-		GROUP BY m.id
+		GROUP BY m.id, u.username
 		ORDER BY m.created_at DESC
 	`
 
@@ -192,8 +194,8 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m models.Machine
 		if err := rows.Scan(
-			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.ActualShipDate, &m.CreatedAt,
-			&m.KittingCount, &m.AssemblyCount, &m.ControlsCount, &m.QualityCount,
+			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.ActualShipDate, &m.CreatedAt, &m.CreatedBy,
+			&m.KittingCount, &m.AssemblyCount, &m.ControlsCount, &m.QualityCount, &m.CreatedByUserName,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
 			return
@@ -220,23 +222,29 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var userID *string
+	if user, ok := r.Context().Value(UserContextKey).(*models.User); ok && user != nil {
+		idStr := user.ID.String()
+		userID = &idStr
+	}
+
 	var newMachine models.Machine
 	var err error
 	if req.SalesOrderID != nil && *req.SalesOrderID != "" {
 		err = db.DB.QueryRow(`
-			INSERT INTO machines (sales_order_id, order_number, model_type, status) 
-			VALUES ($1, $2, $3, 'engineering') 
-			RETURNING id, sales_order_id, order_number, model_type, status, created_at
-		`, req.SalesOrderID, req.OrderNumber, req.ModelType).Scan(
-			&newMachine.ID, &newMachine.SalesOrderID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt,
+			INSERT INTO machines (sales_order_id, order_number, model_type, status, created_by) 
+			VALUES ($1, $2, $3, 'engineering', $4) 
+			RETURNING id, sales_order_id, order_number, model_type, status, created_at, created_by
+		`, req.SalesOrderID, req.OrderNumber, req.ModelType, userID).Scan(
+			&newMachine.ID, &newMachine.SalesOrderID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt, &newMachine.CreatedBy,
 		)
 	} else {
 		err = db.DB.QueryRow(`
-			INSERT INTO machines (order_number, model_type, status) 
-			VALUES ($1, $2, 'engineering') 
-			RETURNING id, order_number, model_type, status, created_at
-		`, req.OrderNumber, req.ModelType).Scan(
-			&newMachine.ID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt,
+			INSERT INTO machines (order_number, model_type, status, created_by) 
+			VALUES ($1, $2, 'engineering', $3) 
+			RETURNING id, order_number, model_type, status, created_at, created_by
+		`, req.OrderNumber, req.ModelType, userID).Scan(
+			&newMachine.ID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt, &newMachine.CreatedBy,
 		)
 	}
 

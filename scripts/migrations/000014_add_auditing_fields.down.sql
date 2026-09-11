@@ -1,0 +1,11 @@
+ALTER TABLE defects
+DROP COLUMN IF EXISTS reported_by,
+DROP COLUMN IF EXISTS resolved_by;
+
+ALTER TABLE machines
+DROP COLUMN IF EXISTS created_by,
+DROP COLUMN IF EXISTS updated_by;
+
+ALTER TABLE sales_orders
+DROP COLUMN IF EXISTS created_by,
+DROP COLUMN IF EXISTS updated_by;

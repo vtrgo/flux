@@ -37,6 +37,7 @@ export function ProjectCard({
             {order.internal_project_number && <span>Project #: {order.internal_project_number}</span>}
             {order.responsible_person && <span>PM: {order.responsible_person}</span>}
             <span>Status: {order.status}</span>
+            {order.created_by_user_name && <span>Created by: {order.created_by_user_name}</span>}
           </div>
         </div>
         

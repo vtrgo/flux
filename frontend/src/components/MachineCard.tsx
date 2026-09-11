@@ -35,6 +35,12 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
         <h3 className={styles.orderNumber}>{machine.order_number}</h3>
         <div className={styles.modelType}>{machine.model_type}</div>
         
+        {machine.created_by_user_name && (
+          <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '0.2rem' }}>
+            Created by: {machine.created_by_user_name}
+          </div>
+        )}
+        
         <div className={styles.summaryBadge}>
           <span style={{ color: totalOpen > 0 ? 'var(--accent-red)' : 'inherit' }}>Open: {totalOpen}</span>
           <span style={{ color: totalPending > 0 ? 'var(--accent-amber)' : 'inherit' }}>Pending: {totalPending}</span>

@@ -20,6 +20,7 @@ export interface Machine {
   status: string;
   actual_ship_date?: string;
   created_at: string;
+  created_by_user_name?: string;
 }
 
 export interface User {
