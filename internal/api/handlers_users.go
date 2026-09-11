@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -11,13 +12,28 @@ import (
 	"github.com/vtrgo/flux/internal/models"
 )
 
-// handleGetUsers fetches all active users
+// handleGetUsers fetches all active users, optionally filtered by department
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.DB.Query(`
-		SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
-		FROM users
-		ORDER BY username ASC
-	`)
+	deptFilter := r.URL.Query().Get("department")
+
+	var rows *sql.Rows
+	var err error
+
+	if deptFilter != "" {
+		rows, err = db.DB.Query(`
+			SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
+			FROM users
+			WHERE LOWER(department) = LOWER($1)
+			ORDER BY username ASC
+		`, deptFilter)
+	} else {
+		rows, err = db.DB.Query(`
+			SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
+			FROM users
+			ORDER BY username ASC
+		`)
+	}
+
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return

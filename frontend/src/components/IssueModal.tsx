@@ -174,10 +174,21 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ASSIGNED / ROUTING</label>
+              <label htmlFor="assigned_department" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ASSIGNED / ROUTING</label>
               <select 
+                id="assigned_department"
                 value={formData.assigned_department} 
-                onChange={e => setFormData({...formData, assigned_department: e.target.value})}
+                onChange={e => {
+                  const newDept = e.target.value;
+                  // If switching department, reset assignee if currently assigned user is not in the new department
+                  const currentUser = users.find(u => u.id === formData.assigned_user_id);
+                  const isUserInNewDept = currentUser && currentUser.department?.toLowerCase() === newDept.toLowerCase();
+                  setFormData({
+                    ...formData,
+                    assigned_department: newDept,
+                    assigned_user_id: isUserInNewDept ? formData.assigned_user_id : ''
+                  });
+                }}
                 required
                 className="vtr-input"
                 style={{ borderColor: 'var(--vtr-theme-primary)', color: 'var(--vtr-theme-primary)' }}
@@ -190,27 +201,25 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ASSIGNEE</label>
+              <label htmlFor="assigned_user_id" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ASSIGNEE</label>
               <select 
+                id="assigned_user_id"
                 value={formData.assigned_user_id} 
                 onChange={e => setFormData({...formData, assigned_user_id: e.target.value})}
                 className="vtr-input"
+                disabled={!formData.assigned_department}
               >
-                <option value="">Unassigned</option>
-                {[...users].sort((a, b) => {
-                  const aIsSource = a.department === formData.source_department ? 1 : 0;
-                  const bIsSource = b.department === formData.source_department ? 1 : 0;
-                  if (aIsSource !== bIsSource) {
-                    return bIsSource - aIsSource; // Put matching department first
-                  }
-                  // Secondary sort alphabetically by username
-                  return a.username.localeCompare(b.username);
-                }).map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u.username}
-                    {u.department === formData.source_department ? ' (Dept Match)' : ''}
-                  </option>
-                ))}
+                <option value="">
+                  {!formData.assigned_department ? 'Select routing department first' : 'Unassigned'}
+                </option>
+                {users
+                  .filter(u => !formData.assigned_department || u.department?.toLowerCase() === formData.assigned_department.toLowerCase())
+                  .sort((a, b) => a.username.localeCompare(b.username))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u.username}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
