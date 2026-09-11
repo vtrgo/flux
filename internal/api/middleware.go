@@ -118,3 +118,37 @@ func (rw *responseWriter) Flush() {
 		flusher.Flush()
 	}
 }
+
+// RequireRole returns a middleware that strictly requires the user to have one of the specified roles.
+func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := r.Context().Value(UserContextKey).(*models.User)
+			if !ok || user == nil {
+				respondError(w, http.StatusUnauthorized, "Unauthorized", nil)
+				return
+			}
+
+			if user.Role == nil {
+				respondError(w, http.StatusForbidden, "Forbidden: No role assigned", nil)
+				return
+			}
+
+			userRole := strings.ToLower(*user.Role)
+			authorized := false
+			for _, role := range allowedRoles {
+				if userRole == strings.ToLower(role) {
+					authorized = true
+					break
+				}
+			}
+
+			if !authorized {
+				respondError(w, http.StatusForbidden, "Forbidden: Insufficient privileges", nil)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
