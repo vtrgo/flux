@@ -13,6 +13,7 @@ import { IssueCard } from "../../../components/IssueCard";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
+import { calculateDaysLate, formatFatDate } from "../../../lib/dateUtils";
 
 function MachineDetailContent() {
   const searchParams = useSearchParams();
@@ -230,6 +231,18 @@ function MachineDetailContent() {
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Target Ship Date</div>
                 <div style={{ fontSize: '0.875rem', color: salesOrder.target_ship_date ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
                   {salesOrder.target_ship_date ? new Date(salesOrder.target_ship_date).toLocaleDateString() : 'TBD'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>F.A.T. Date</div>
+                <div style={{ fontSize: '0.875rem', color: machine.fat_date ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
+                  {formatFatDate(machine.fat_date, 'TBD')}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Days Late</div>
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: calculateDaysLate(machine.fat_date) > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' }}>
+                  {calculateDaysLate(machine.fat_date)}
                 </div>
               </div>
             </div>

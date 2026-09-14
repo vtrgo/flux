@@ -11,7 +11,9 @@ import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 import { SalesOrder, Machine } from "../../../types";
 import { SalesOrderModal } from "../../../components/SalesOrderModal";
 import { SpawnMachineModal } from "../../../components/SpawnMachineModal";
+import { EditMachineModal } from "../../../components/EditMachineModal";
 import { Authorize } from "../../../components/Authorize";
+import { calculateDaysLate, calculateProjectDaysLate, formatFatDate } from "../../../lib/dateUtils";
 
 function SalesDashboardContent() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
@@ -25,6 +27,7 @@ function SalesDashboardContent() {
   const [editingOrder, setEditingOrder] = useState<SalesOrder | null>(null);
   
   const [spawningOrderContext, setSpawningOrderContext] = useState<{ id: string, name: string } | null>(null);
+  const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
 
   useEffect(() => {
     if (searchParams.get("new") === "true") {
@@ -34,11 +37,11 @@ function SalesDashboardContent() {
   }, [searchParams, router]);
 
   useAppHotkeys('c', (e) => {
-    if (!isSalesOrderModalOpen && !spawningOrderContext && !editingOrder) {
+    if (!isSalesOrderModalOpen && !spawningOrderContext && !editingOrder && !editingMachine) {
       e.preventDefault();
       setIsSalesOrderModalOpen(true);
     }
-  }, { enableOnFormTags: false }, [isSalesOrderModalOpen, spawningOrderContext, editingOrder]);
+  }, { enableOnFormTags: false }, [isSalesOrderModalOpen, spawningOrderContext, editingOrder, editingMachine]);
 
   const fetchOrders = async () => {
     try {
@@ -62,6 +65,7 @@ function SalesDashboardContent() {
   useSSE('sales_order_updated', fetchOrders);
   useSSE('sales_order_deleted', fetchOrders);
   useSSE('machine_created', fetchMachines);
+  useSSE('machine_updated', fetchMachines);
   useSSE('machine_deleted', fetchMachines);
 
   useEffect(() => {
@@ -78,16 +82,6 @@ function SalesDashboardContent() {
     });
     setEditingOrder(null);
     fetchOrders();
-  };
-
-  const shipOrder = async (id: string) => {
-    if (!window.confirm("Are you sure you want to mark this project as Shipped?")) return;
-    try {
-      await fetchApi(`sales_orders/${id}/ship`, { method: "POST" });
-      fetchOrders();
-    } catch (err) {
-      console.error("Failed to ship project:", err);
-    }
   };
 
   const closeOrder = async (id: string) => {
@@ -156,6 +150,13 @@ function SalesDashboardContent() {
         onSuccess={fetchMachines}
       />
 
+      <EditMachineModal
+        isOpen={!!editingMachine}
+        onClose={() => setEditingMachine(null)}
+        machine={editingMachine}
+        onSuccess={fetchMachines}
+      />
+
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
         <button
@@ -205,6 +206,7 @@ function SalesDashboardContent() {
           <div className={styles.orderList}>
             {displayedOrders.map(order => {
               const orderMachines = machines.filter(m => m.sales_order_id === order.id);
+              const projectDaysLate = calculateProjectDaysLate(orderMachines);
               const isEditing = editingOrder?.id === order.id;
 
               if (isEditing) {
@@ -222,7 +224,6 @@ function SalesDashboardContent() {
                             <option value="open">Open</option>
                             <option value="partially_shipped">Partially Shipped</option>
                             <option value="fulfilled">Fulfilled</option>
-                            <option value="shipped">Shipped</option>
                             <option value="closed">Closed</option>
                           </select>
                         </div>
@@ -240,7 +241,7 @@ function SalesDashboardContent() {
                 <div 
                   key={order.id} 
                   className={styles.orderCard}
-                  style={order.status === 'closed' ? { opacity: 0.85, borderLeftColor: 'var(--text-secondary)' } : order.status === 'shipped' ? { borderLeftColor: 'var(--accent-green, #22c55e)' } : undefined}
+                  style={order.status === 'closed' ? { opacity: 0.85, borderLeftColor: 'var(--text-secondary)' } : undefined}
                 >
                   <div className={styles.orderHeader}>
                     <div>
@@ -249,23 +250,16 @@ function SalesDashboardContent() {
                         {order.internal_project_number && <span style={{marginRight: '1rem'}}>Project #: {order.internal_project_number}</span>}
                         {order.responsible_person && <span style={{marginRight: '1rem'}}>PM: {order.responsible_person}</span>}
                         Target Ship: {order.target_ship_date ? new Date(order.target_ship_date).toLocaleDateString() : 'TBD'}
-                        {order.actual_ship_date && <span style={{marginLeft: '1rem', color: 'var(--accent-green, #22c55e)'}}>Shipped: {new Date(order.actual_ship_date).toLocaleDateString()}</span>}
                         {' | '}Status: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{order.status.replace('_', ' ')}</span>
+                        {' | '}Days Late: <span style={{ 
+                          fontWeight: 700, 
+                          color: projectDaysLate > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' 
+                        }}>{projectDaysLate}</span>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       {/* PM and Admin Lifecycle Actions */}
                       <Authorize roles={['admin', 'manager', 'pm', 'sales', 'supervisor']}>
-                        {order.status !== 'shipped' && order.status !== 'closed' && (
-                          <button 
-                            className="vtr-btn vtr-btn-secondary"
-                            style={{ color: 'var(--accent-green, #22c55e)', borderColor: 'var(--accent-green, #22c55e)' }}
-                            onClick={() => shipOrder(order.id)}
-                            title="Ship System"
-                          >
-                            🚀 Ship System
-                          </button>
-                        )}
                         {order.status !== 'closed' && (
                           <button 
                             className="vtr-btn vtr-btn-secondary"
@@ -308,24 +302,59 @@ function SalesDashboardContent() {
 
                   {orderMachines.length > 0 && (
                     <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                      {orderMachines.map(m => (
-                        <Link key={m.id} href={`/machine?id=${m.id}`} style={{ textDecoration: 'none' }}>
-                          <div style={{ background: 'var(--bg-primary)', padding: '0.75rem', paddingRight: '2.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '0.875rem', position: 'relative' }}>
-                            <strong style={{ color: 'var(--vtr-theme-primary)' }}>{m.order_number}</strong>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem' }}>{m.model_type} • {m.status}</div>
-                            {/* Admin-only Machine Delete */}
-                            <Authorize roles={['admin', 'manager']}>
+                      {orderMachines.map(m => {
+                        const machineDaysLate = calculateDaysLate(m.fat_date);
+                        return (
+                          <div 
+                            key={m.id} 
+                            style={{ 
+                              background: 'var(--bg-primary)', 
+                              padding: '0.75rem', 
+                              paddingRight: '5rem', 
+                              borderRadius: '4px', 
+                              border: machineDaysLate > 0 ? '1px solid var(--accent-red)' : '1px solid var(--border-color)', 
+                              fontSize: '0.875rem', 
+                              position: 'relative' 
+                            }}
+                          >
+                            <Link href={`/machine?id=${m.id}`} style={{ textDecoration: 'none' }}>
+                              <strong style={{ color: 'var(--vtr-theme-primary)' }}>{m.order_number}</strong>
+                              <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                                {m.model_type} • {m.status}
+                              </div>
+                              <div style={{ fontSize: '0.75rem', marginTop: '0.35rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>F.A.T.: {formatFatDate(m.fat_date, 'TBD')}</span>
+                                <span>•</span>
+                                <span style={{ color: machineDaysLate > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)', fontWeight: machineDaysLate > 0 ? 600 : 400 }}>
+                                  Days Late: {machineDaysLate}
+                                </span>
+                              </div>
+                            </Link>
+                            <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                               <button 
-                                onClick={(e) => deleteMachine(e, m.id)}
-                                style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', background: 'transparent', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '1rem' }}
-                                title="Delete Machine (Admin only)"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingMachine(m);
+                                }}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.9rem', padding: '0.1rem' }}
+                                title="Configure / Edit Machine (F.A.T., S/N, Model)"
                               >
-                                🗑️
+                                ✏️
                               </button>
-                            </Authorize>
+                              {/* Admin-only Machine Delete */}
+                              <Authorize roles={['admin', 'manager']}>
+                                <button 
+                                  onClick={(e) => deleteMachine(e, m.id)}
+                                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-red)', cursor: 'pointer', fontSize: '1rem', padding: '0.1rem' }}
+                                  title="Delete Machine (Admin only)"
+                                >
+                                  🗑️
+                                </button>
+                              </Authorize>
+                            </div>
                           </div>
-                        </Link>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

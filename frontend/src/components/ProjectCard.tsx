@@ -1,6 +1,7 @@
 import React from 'react';
 import { SalesOrder, Machine, DefectSummary } from '../types';
 import { MachineCard } from './MachineCard';
+import { calculateProjectDaysLate } from '../lib/dateUtils';
 import styles from './ProjectCard.module.css';
 
 interface ProjectCardProps {
@@ -23,6 +24,7 @@ export function ProjectCard({
   const projectTotalOpen = projectSummary?.total_open || 0;
   const projectTotalPending = projectSummary?.total_pending || 0;
   const projectTotalClosed = projectSummary?.total_closed || 0;
+  const projectDaysLate = calculateProjectDaysLate(orderMachines);
 
   return (
     <div className={styles.card}>
@@ -37,6 +39,9 @@ export function ProjectCard({
             {order.internal_project_number && <span>Project #: {order.internal_project_number}</span>}
             {order.responsible_person && <span>PM: {order.responsible_person}</span>}
             <span>Status: {order.status}</span>
+            <span>
+              Days Late: <strong style={{ color: projectDaysLate > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' }}>{projectDaysLate}</strong>
+            </span>
             {order.created_by_user_name && <span>Created by: {order.created_by_user_name}</span>}
           </div>
         </div>

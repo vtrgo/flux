@@ -1,69 +1,82 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { fetchApi } from "../lib/api";
+import { Machine } from "../types";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import styles from "../app/(main)/kickoff/kickoff.module.css";
 
-interface SpawnMachineModalProps {
+interface EditMachineModalProps {
   isOpen: boolean;
   onClose: () => void;
-  orderId: string;
-  orderName: string;
+  machine: Machine | null;
   onSuccess?: () => void;
 }
 
-export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSuccess }: SpawnMachineModalProps) {
-  const [newMachineModel, setNewMachineModel] = useState("");
-  const [newMachineSN, setNewMachineSN] = useState("");
-  const [newMachineFatDate, setNewMachineFatDate] = useState("");
+export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMachineModalProps) {
+  const [modelType, setModelType] = useState("");
+  const [orderNumber, setOrderNumber] = useState("");
+  const [fatDate, setFatDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const resetForm = () => {
-    setNewMachineModel("");
-    setNewMachineSN("");
-    setNewMachineFatDate("");
-  };
+  useEffect(() => {
+    if (machine) {
+      setModelType(machine.model_type || "");
+      setOrderNumber(machine.order_number || "");
+      if (machine.fat_date) {
+        // Format as YYYY-MM-DD for date input
+        const d = new Date(machine.fat_date);
+        if (!isNaN(d.getTime())) {
+          setFatDate(d.toISOString().split("T")[0]);
+        } else {
+          setFatDate("");
+        }
+      } else {
+        setFatDate("");
+      }
+    }
+  }, [machine]);
 
   useAppHotkeys('escape', () => {
     if (isOpen) {
       onClose();
-      resetForm();
     }
   }, { enableOnFormTags: true }, [isOpen, onClose]);
 
-  const spawnMachine = async () => {
-    if (!newMachineModel || !newMachineSN) return;
+  const handleUpdate = async () => {
+    if (!machine || !modelType || !orderNumber) return;
+    setIsSubmitting(true);
     try {
-      await fetchApi("machines", {
-        method: "POST",
+      await fetchApi(`machines/${machine.id}`, {
+        method: "PUT",
         body: JSON.stringify({
-          sales_order_id: orderId,
-          order_number: newMachineSN,
-          model_type: newMachineModel,
-          fat_date: newMachineFatDate ? new Date(newMachineFatDate).toISOString() : undefined,
+          order_number: orderNumber,
+          model_type: modelType,
+          fat_date: fatDate ? new Date(fatDate).toISOString() : null,
         }),
       });
-      resetForm();
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      console.error("Failed to spawn machine", err);
+      console.error("Failed to update machine", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    spawnMachine();
+    handleUpdate();
   };
 
   useAppHotkeys('mod+enter', (e) => {
     if (isOpen) {
       e.preventDefault();
-      spawnMachine();
+      handleUpdate();
     }
-  }, { enableOnFormTags: true }, [isOpen, newMachineModel, newMachineSN, orderId]);
+  }, { enableOnFormTags: true }, [isOpen, machine, modelType, orderNumber, fatDate]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !machine) return null;
 
   return (
     <div 
@@ -79,7 +92,7 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
         justifyContent: 'center',
         zIndex: 9999
       }} 
-      onClick={() => { onClose(); resetForm(); }}
+      onClick={onClose}
     >
       <div 
         style={{
@@ -94,15 +107,17 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
         }}
         onClick={e => e.stopPropagation()}
       >
-        <h2 style={{ marginBottom: "1.5rem", color: "var(--vtr-theme-primary)", fontFamily: 'var(--font-mono)' }}>Spawn Machine - {orderName}</h2>
+        <h2 style={{ marginBottom: "1.5rem", color: "var(--vtr-theme-primary)", fontFamily: 'var(--font-mono)' }}>
+          Configure Machine - {machine.order_number}
+        </h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className={styles.formGroup}>
             <label className={styles.label}>Part / Model Type</label>
             <input 
               required 
               className={styles.input} 
-              value={newMachineModel} 
-              onChange={e => setNewMachineModel(e.target.value)} 
+              value={modelType} 
+              onChange={e => setModelType(e.target.value)} 
               placeholder="e.g. Housing Base" 
               autoFocus 
             />
@@ -112,8 +127,8 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
             <input 
               required 
               className={styles.input} 
-              value={newMachineSN} 
-              onChange={e => setNewMachineSN(e.target.value)} 
+              value={orderNumber} 
+              onChange={e => setOrderNumber(e.target.value)} 
               placeholder="e.g. SN-9982" 
             />
           </div>
@@ -122,13 +137,17 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
             <input 
               type="date" 
               className={styles.input} 
-              value={newMachineFatDate} 
-              onChange={e => setNewMachineFatDate(e.target.value)} 
+              value={fatDate} 
+              onChange={e => setFatDate(e.target.value)} 
             />
           </div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button type="submit" className="vtr-btn" style={{ flex: 1 }}>Spawn Machine</button>
-            <button type="button" className="vtr-btn vtr-btn-secondary" onClick={() => { onClose(); resetForm(); }}>Cancel</button>
+            <button type="submit" className="vtr-btn" style={{ flex: 1 }} disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Machine"}
+            </button>
+            <button type="button" className="vtr-btn vtr-btn-secondary" onClick={onClose} disabled={isSubmitting}>
+              Cancel
+            </button>
           </div>
         </form>
       </div>

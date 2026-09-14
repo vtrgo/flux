@@ -80,6 +80,10 @@ export function useDashboardData() {
     });
   });
 
+  useSSE('machine_updated', (updatedMachine: Machine) => {
+    setMachines(prev => prev.map(m => m.id === updatedMachine.id ? { ...m, ...updatedMachine } : m));
+  });
+
   useSSE('machine_deleted', (deleted: { id: string }) => {
     setMachines(prev => prev.filter(m => m.id !== deleted.id));
     refetchSummaries();

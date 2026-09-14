@@ -8,7 +8,7 @@ export interface SalesOrder {
   sales_rep?: string;
   target_ship_date?: string;
   actual_ship_date?: string;
-  status: 'open' | 'partially_shipped' | 'fulfilled' | 'shipped' | 'closed';
+  status: 'open' | 'partially_shipped' | 'fulfilled' | 'closed';
   created_at: string;
   created_by_user_name?: string;
 }
@@ -20,6 +20,7 @@ export interface Machine {
   model_type: string;
   status: string;
   actual_ship_date?: string;
+  fat_date?: string;
   created_at: string;
   created_by_user_name?: string;
 }

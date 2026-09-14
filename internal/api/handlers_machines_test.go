@@ -87,6 +87,59 @@ func TestMachines(t *testing.T) {
 		}
 	})
 
+	t.Run("Update Machine FAT Date - Success", func(t *testing.T) {
+		newFat := time.Now().AddDate(0, 0, 7).Truncate(time.Second)
+		payload := map[string]interface{}{
+			"model_type": "ModelUpdated",
+			"fat_date":   newFat.Format(time.RFC3339),
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, "/api/machines/"+createdMachineID, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", status, rr.Body.String())
+		}
+		var resp models.Machine
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp.FATDate == nil {
+			t.Errorf("expected FATDate to be non-nil")
+		}
+		if resp.ModelType != "ModelUpdated" {
+			t.Errorf("expected ModelType to be ModelUpdated, got %s", resp.ModelType)
+		}
+	})
+
+	t.Run("Update Machine - 404 Not Found", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"model_type": "GhostModel",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, "/api/machines/00000000-0000-0000-0000-000000000000", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusNotFound {
+			t.Errorf("expected 404, got %d", status)
+		}
+	})
+
+	t.Run("Update Machine - Invalid JSON", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, "/api/machines/"+createdMachineID, bytes.NewReader([]byte("invalid json")))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusBadRequest {
+			t.Errorf("expected 400, got %d", status)
+		}
+	})
+
 	t.Run("Delete Machine - Authorization Checks", func(t *testing.T) {
 		if createdMachineID == "" {
 			t.Skip("Skipping delete test because machine was not created")

@@ -1,10 +1,13 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/logger"
@@ -29,6 +32,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 
 func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/machines", handleMachines)
+	mux.HandleFunc("PUT /api/machines/{id}", handleUpdateMachine)
 	mux.Handle("DELETE /api/machines/{id}", RequireRole("admin", "manager")(http.HandlerFunc(handleDeleteMachine)))
 
 	// Sales endpoints
@@ -50,7 +54,6 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/sales_orders", getSalesOrders)
 	mux.HandleFunc("POST /api/sales_orders", createSalesOrder)
 	mux.HandleFunc("PUT /api/sales_orders/{id}", updateSalesOrder)
-	mux.HandleFunc("POST /api/sales_orders/{id}/ship", handleShipSalesOrder)
 	mux.HandleFunc("POST /api/sales_orders/{id}/close", handleCloseSalesOrder)
 	mux.HandleFunc("POST /api/sales_orders/{id}/reopen", handleReopenSalesOrder)
 	mux.Handle("DELETE /api/sales_orders/{id}", RequireRole("admin", "manager")(http.HandlerFunc(deleteSalesOrder)))
@@ -156,7 +159,7 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 
 	query := `
 		SELECT 
-			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.actual_ship_date, m.created_at, m.created_by,
+			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.actual_ship_date, m.fat_date, m.created_at, m.created_by,
 			COUNT(DISTINCT k.id) as kitting_count,
 			COUNT(DISTINCT a.id) as assembly_count,
 			COUNT(DISTINCT c.id) as controls_count,
@@ -194,7 +197,7 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var m models.Machine
 		if err := rows.Scan(
-			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.ActualShipDate, &m.CreatedAt, &m.CreatedBy,
+			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.ActualShipDate, &m.FATDate, &m.CreatedAt, &m.CreatedBy,
 			&m.KittingCount, &m.AssemblyCount, &m.ControlsCount, &m.QualityCount, &m.CreatedByUserName,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
@@ -208,9 +211,10 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 
 func createMachine(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		SalesOrderID *string `json:"sales_order_id"`
-		OrderNumber  string  `json:"order_number"`
-		ModelType    string  `json:"model_type"`
+		SalesOrderID *string    `json:"sales_order_id"`
+		OrderNumber  string     `json:"order_number"`
+		ModelType    string     `json:"model_type"`
+		FATDate      *time.Time `json:"fat_date"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
@@ -232,19 +236,19 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if req.SalesOrderID != nil && *req.SalesOrderID != "" {
 		err = db.DB.QueryRow(`
-			INSERT INTO machines (sales_order_id, order_number, model_type, status, created_by) 
-			VALUES ($1, $2, $3, 'engineering', $4) 
-			RETURNING id, sales_order_id, order_number, model_type, status, created_at, created_by
-		`, req.SalesOrderID, req.OrderNumber, req.ModelType, userID).Scan(
-			&newMachine.ID, &newMachine.SalesOrderID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt, &newMachine.CreatedBy,
+			INSERT INTO machines (sales_order_id, order_number, model_type, fat_date, status, created_by) 
+			VALUES ($1, $2, $3, $4, 'engineering', $5) 
+			RETURNING id, sales_order_id, order_number, model_type, status, actual_ship_date, fat_date, created_at, created_by
+		`, req.SalesOrderID, req.OrderNumber, req.ModelType, req.FATDate, userID).Scan(
+			&newMachine.ID, &newMachine.SalesOrderID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.ActualShipDate, &newMachine.FATDate, &newMachine.CreatedAt, &newMachine.CreatedBy,
 		)
 	} else {
 		err = db.DB.QueryRow(`
-			INSERT INTO machines (order_number, model_type, status, created_by) 
-			VALUES ($1, $2, 'engineering', $3) 
-			RETURNING id, order_number, model_type, status, created_at, created_by
-		`, req.OrderNumber, req.ModelType, userID).Scan(
-			&newMachine.ID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.CreatedAt, &newMachine.CreatedBy,
+			INSERT INTO machines (order_number, model_type, fat_date, status, created_by) 
+			VALUES ($1, $2, $3, 'engineering', $4) 
+			RETURNING id, order_number, model_type, status, actual_ship_date, fat_date, created_at, created_by
+		`, req.OrderNumber, req.ModelType, req.FATDate, userID).Scan(
+			&newMachine.ID, &newMachine.OrderNumber, &newMachine.ModelType, &newMachine.Status, &newMachine.ActualShipDate, &newMachine.FATDate, &newMachine.CreatedAt, &newMachine.CreatedBy,
 		)
 	}
 
@@ -268,6 +272,57 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("Machine created", "machine_id", newMachine.ID, "order_number", newMachine.OrderNumber)
 
 	respondJSON(w, http.StatusCreated, newMachine)
+}
+
+func handleUpdateMachine(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
+		return
+	}
+
+	var req struct {
+		OrderNumber *string    `json:"order_number"`
+		ModelType   *string    `json:"model_type"`
+		Status      *string    `json:"status"`
+		FATDate     *time.Time `json:"fat_date"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body", nil)
+		return
+	}
+
+	var userID *string
+	if user, ok := r.Context().Value(UserContextKey).(*models.User); ok && user != nil {
+		idStr := user.ID.String()
+		userID = &idStr
+	}
+
+	var m models.Machine
+	err := db.DB.QueryRow(`
+		UPDATE machines
+		SET order_number = COALESCE($1, order_number),
+		    model_type = COALESCE($2, model_type),
+		    status = COALESCE($3, status),
+		    fat_date = $4,
+		    updated_by = $5
+		WHERE id = $6
+		RETURNING id, sales_order_id, order_number, model_type, status, actual_ship_date, fat_date, created_at, created_by, updated_by
+	`, req.OrderNumber, req.ModelType, req.Status, req.FATDate, userID, id).Scan(
+		&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.ActualShipDate, &m.FATDate, &m.CreatedAt, &m.CreatedBy, &m.UpdatedBy,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondError(w, http.StatusNotFound, "Machine not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to update machine: ", err)
+		return
+	}
+
+	BroadcastEvent("machine_updated", m)
+	slog.Info("Machine updated", "machine_id", m.ID, "fat_date", m.FATDate)
+	respondJSON(w, http.StatusOK, m)
 }
 
 func handleDeleteMachine(w http.ResponseWriter, r *http.Request) {

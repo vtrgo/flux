@@ -169,7 +169,7 @@ func TestSalesOrders(t *testing.T) {
 		}
 	})
 
-	t.Run("Ship, Close, and Reopen Sales Order - Success", func(t *testing.T) {
+	t.Run("Close and Reopen Sales Order - Success", func(t *testing.T) {
 		var createdOrder models.SalesOrder
 		poLife := fmt.Sprintf("PO-LIFE-%d", time.Now().UnixNano())
 		err := db.DB.QueryRow(`
@@ -184,22 +184,7 @@ func TestSalesOrders(t *testing.T) {
 			_, _ = db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", createdOrder.ID)
 		}()
 
-		// 1. Ship
-		reqShip := httptest.NewRequest(http.MethodPost, "/api/sales_orders/"+createdOrder.ID.String()+"/ship", nil)
-		rrShip := httptest.NewRecorder()
-		mux.ServeHTTP(rrShip, reqShip)
-		if rrShip.Code != http.StatusOK {
-			t.Fatalf("expected 200 on ship, got %d: %s", rrShip.Code, rrShip.Body.String())
-		}
-		var shipped models.SalesOrder
-		if err := json.NewDecoder(rrShip.Body).Decode(&shipped); err != nil {
-			t.Fatalf("failed to decode ship response: %v", err)
-		}
-		if shipped.Status != "shipped" || shipped.ActualShipDate == nil {
-			t.Errorf("expected status 'shipped' and non-nil actual_ship_date, got status=%s date=%v", shipped.Status, shipped.ActualShipDate)
-		}
-
-		// 2. Close
+		// 1. Close
 		reqClose := httptest.NewRequest(http.MethodPost, "/api/sales_orders/"+createdOrder.ID.String()+"/close", nil)
 		rrClose := httptest.NewRecorder()
 		mux.ServeHTTP(rrClose, reqClose)
@@ -214,7 +199,7 @@ func TestSalesOrders(t *testing.T) {
 			t.Errorf("expected status 'closed', got %s", closed.Status)
 		}
 
-		// 3. Reopen
+		// 2. Reopen
 		reqReopen := httptest.NewRequest(http.MethodPost, "/api/sales_orders/"+createdOrder.ID.String()+"/reopen", nil)
 		rrReopen := httptest.NewRecorder()
 		mux.ServeHTTP(rrReopen, reqReopen)

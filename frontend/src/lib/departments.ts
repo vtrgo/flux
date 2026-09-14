@@ -19,7 +19,6 @@ export const ACTIVE_DEPARTMENTS = [
   { key: 'assembly', label: DEPARTMENT_LABELS['assembly'] },
   { key: 'electrical_controls', label: DEPARTMENT_LABELS['electrical_controls'] },
   { key: 'enclosures', label: DEPARTMENT_LABELS['enclosures'] },
-  { key: 'project_management', label: DEPARTMENT_LABELS['project_management'] },
 ];
 
 export function formatDepartmentName(key: string): string {

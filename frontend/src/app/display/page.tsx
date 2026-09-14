@@ -6,8 +6,6 @@ import { useState, useEffect } from 'react';
 import { usePublicDashboardData } from '../../hooks/usePublicDashboardData';
 import styles from './display.module.css';
 
-import { Logo } from '../../components/Logo';
-import { HeaderMetric } from '../../components/HeaderMetric';
 import { DisplayMachineRow } from '../../components/DisplayMachineRow';
 
 const CYCLE_DURATION_MS = 10000; // 10 seconds per slide
@@ -80,18 +78,15 @@ export default function DisplayDashboard() {
         
         {/* Header section */}
         <header style={{ 
-          padding: '1rem 2rem', 
+          padding: '2rem 2rem 1rem 2rem', 
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <div style={{ flex: '1', display: 'flex', justifyContent: 'flex-start' }}>
-            <Logo width={65} height={65} />
-          </div>
           
-          <div style={{ flex: '2', display: 'flex', justifyContent: 'center', textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <h1 style={{ 
-              fontSize: '4rem', 
+              fontSize: '4.5rem', 
               margin: 0, 
               fontWeight: 600
             }}>
@@ -101,12 +96,12 @@ export default function DisplayDashboard() {
             </h1>
           </div>
 
-          <div style={{ flex: '1', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <DigitalClock />
           </div>
         </header>
 
-        <hr style={{ width: '80%', border: 'none', borderTop: '2px solid var(--vtr-theme-border)', margin: '0 auto', opacity: 0.6 }} />
+        <hr style={{ width: '95%', border: 'none', borderTop: '2px solid var(--vtr-theme-border)', margin: '0 auto', opacity: 0.6 }} />
 
         {/* Main Content / Layout */}
         <main style={{ 

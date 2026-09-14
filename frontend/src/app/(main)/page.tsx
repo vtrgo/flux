@@ -42,7 +42,7 @@ export default function Home() {
         <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)' }}>Active Pipeline</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <Authorize roles={['admin', 'manager', 'sales', 'supervisor']}>
-            <Link href="/kickoff" className="vtr-btn">Project Initialization</Link>
+            <Link href="/kickoff" className="vtr-btn">Project Configuration</Link>
           </Authorize>
         </div>
       </div>

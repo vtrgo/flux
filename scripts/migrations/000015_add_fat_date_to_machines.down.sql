@@ -1,0 +1,2 @@
+ALTER TABLE machines
+DROP COLUMN IF EXISTS fat_date;

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Machine, DefectSummary } from '../types';
 import { ACTIVE_DEPARTMENTS } from '../lib/departments';
 import { Authorize } from './Authorize';
+import { calculateDaysLate, formatFatDate } from '../lib/dateUtils';
 import styles from './MachineCard.module.css';
 
 interface MachineCardProps {
@@ -14,6 +15,7 @@ interface MachineCardProps {
 
 const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDept }: MachineCardProps) => {
   const machineSummaries = defectSummaries.filter(s => s.machine_id === machine.id);
+  const machineDaysLate = calculateDaysLate(machine.fat_date);
   
   const totalOpen = machineSummaries.reduce((sum, s) => sum + (s.total_open || 0), 0);
   const totalPending = machineSummaries.reduce((sum, s) => sum + (s.total_pending || 0), 0);
@@ -34,6 +36,12 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
         
         <h3 className={styles.orderNumber}>{machine.order_number}</h3>
         <div className={styles.modelType}>{machine.model_type}</div>
+
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <span>F.A.T.: <strong style={{ color: 'var(--text-primary)' }}>{formatFatDate(machine.fat_date, 'TBD')}</strong></span>
+          <span>•</span>
+          <span>Days Late: <strong style={{ color: machineDaysLate > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' }}>{machineDaysLate}</strong></span>
+        </div>
         
         {machine.created_by_user_name && (
           <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '0.2rem' }}>

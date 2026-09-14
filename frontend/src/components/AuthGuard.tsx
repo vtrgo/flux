@@ -34,9 +34,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
         gap: '1.5rem',
         background: 'var(--bg-primary, #121212)'
       }}>
-        <div style={{ animation: 'spin 4s linear infinite' }}>
-          <Logo width={48} height={48} />
-        </div>
+        <Logo width={48} height={48} />
         <div style={{
           fontFamily: 'var(--font-mono)',
           fontSize: '0.85rem',

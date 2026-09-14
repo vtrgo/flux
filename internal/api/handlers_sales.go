@@ -148,9 +148,9 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Auto-fill actual_ship_date if transitioned to shipped and not already set
+	// Auto-fill actual_ship_date if transitioned to fulfilled and not already set
 	actualShipDate := req.ActualShipDate
-	if (req.Status == "shipped" || req.Status == "fulfilled") && actualShipDate == nil {
+	if req.Status == "fulfilled" && actualShipDate == nil {
 		now := time.Now()
 		actualShipDate = &now
 	}
@@ -169,37 +169,6 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 
 	BroadcastEvent("sales_order_updated", map[string]string{"id": id, "status": req.Status})
 	respondJSON(w, http.StatusOK, map[string]string{"status": "updated"})
-}
-
-// handleShipSalesOrder transitions a project to 'shipped' and marks actual_ship_date = NOW()
-func handleShipSalesOrder(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	if id == "" {
-		respondError(w, http.StatusBadRequest, "Missing ID", nil)
-		return
-	}
-
-	var o models.SalesOrder
-	now := time.Now()
-	err := db.DB.QueryRow(`
-		UPDATE sales_orders
-		SET status = 'shipped', actual_ship_date = COALESCE(actual_ship_date, $1)
-		WHERE id = $2
-		RETURNING id, customer_name, po_number, internal_project_number, project_name, responsible_person, sales_rep, target_ship_date, actual_ship_date, status, created_at
-	`, now, id).Scan(
-		&o.ID, &o.CustomerName, &o.PONumber, &o.InternalProjectNumber, &o.ProjectName, &o.ResponsiblePerson, &o.SalesRep, &o.TargetShipDate, &o.ActualShipDate, &o.Status, &o.CreatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			respondError(w, http.StatusNotFound, "Sales order not found", nil)
-			return
-		}
-		respondError(w, http.StatusInternalServerError, "Failed to ship sales order: ", err)
-		return
-	}
-
-	BroadcastEvent("sales_order_updated", o)
-	respondJSON(w, http.StatusOK, o)
 }
 
 // handleCloseSalesOrder transitions a project to 'closed' (archived)

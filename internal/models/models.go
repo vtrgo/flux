@@ -17,7 +17,7 @@ type SalesOrder struct {
 	SalesRep              *string    `json:"sales_rep,omitempty"`
 	TargetShipDate        *time.Time `json:"target_ship_date,omitempty"`
 	ActualShipDate        *time.Time `json:"actual_ship_date,omitempty"`
-	Status                string     `json:"status"` // open, partially_shipped, fulfilled, shipped, closed
+	Status                string     `json:"status"` // open, partially_shipped, fulfilled, closed
 	CreatedAt             time.Time  `json:"created_at"`
 	CreatedBy             *uuid.UUID `json:"created_by,omitempty"`
 	UpdatedBy             *uuid.UUID `json:"updated_by,omitempty"`
@@ -32,6 +32,7 @@ type Machine struct {
 	ModelType      string     `json:"model_type"`
 	Status         string     `json:"status"` // engineering, kitting, assembly, controls, quality, shipped
 	ActualShipDate *time.Time `json:"actual_ship_date,omitempty"`
+	FATDate        *time.Time `json:"fat_date,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 	CreatedBy      *uuid.UUID `json:"created_by,omitempty"`
 	UpdatedBy      *uuid.UUID `json:"updated_by,omitempty"`
