@@ -33,6 +33,7 @@ type Machine struct {
 	Status         string     `json:"status"` // engineering, kitting, assembly, controls, quality, shipped
 	ActualShipDate *time.Time `json:"actual_ship_date,omitempty"`
 	FATDate        *time.Time `json:"fat_date,omitempty"`
+	Lead           *string    `json:"lead,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 	CreatedBy      *uuid.UUID `json:"created_by,omitempty"`
 	UpdatedBy      *uuid.UUID `json:"updated_by,omitempty"`

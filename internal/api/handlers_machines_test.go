@@ -26,6 +26,7 @@ func TestMachines(t *testing.T) {
 		payload := map[string]interface{}{
 			"order_number": uniqueOrderNumber,
 			"model_type":   "ModelX",
+			"lead":         "John Lead",
 		}
 
 		body, _ := json.Marshal(payload)
@@ -46,6 +47,9 @@ func TestMachines(t *testing.T) {
 
 		if resp.OrderNumber != uniqueOrderNumber {
 			t.Errorf("expected machine order number %v, got %v", uniqueOrderNumber, resp.OrderNumber)
+		}
+		if resp.Lead == nil || *resp.Lead != "John Lead" {
+			t.Errorf("expected lead 'John Lead', got %v", resp.Lead)
 		}
 		
 		createdMachineID = resp.ID.String()
@@ -87,11 +91,12 @@ func TestMachines(t *testing.T) {
 		}
 	})
 
-	t.Run("Update Machine FAT Date - Success", func(t *testing.T) {
+	t.Run("Update Machine FAT Date and Lead - Success", func(t *testing.T) {
 		newFat := time.Now().AddDate(0, 0, 7).Truncate(time.Second)
 		payload := map[string]interface{}{
 			"model_type": "ModelUpdated",
 			"fat_date":   newFat.Format(time.RFC3339),
+			"lead":       "Jane Lead",
 		}
 		body, _ := json.Marshal(payload)
 		req := httptest.NewRequest(http.MethodPut, "/api/machines/"+createdMachineID, bytes.NewReader(body))
@@ -111,6 +116,9 @@ func TestMachines(t *testing.T) {
 		}
 		if resp.ModelType != "ModelUpdated" {
 			t.Errorf("expected ModelType to be ModelUpdated, got %s", resp.ModelType)
+		}
+		if resp.Lead == nil || *resp.Lead != "Jane Lead" {
+			t.Errorf("expected Lead to be 'Jane Lead', got %v", resp.Lead)
 		}
 	})
 

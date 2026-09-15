@@ -17,12 +17,14 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
   const [modelType, setModelType] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
   const [fatDate, setFatDate] = useState("");
+  const [lead, setLead] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (machine) {
       setModelType(machine.model_type || "");
       setOrderNumber(machine.order_number || "");
+      setLead(machine.lead || "");
       if (machine.fat_date) {
         // Format as YYYY-MM-DD for date input
         const d = new Date(machine.fat_date);
@@ -53,6 +55,7 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
           order_number: orderNumber,
           model_type: modelType,
           fat_date: fatDate ? new Date(fatDate).toISOString() : null,
+          lead: lead || null,
         }),
       });
       if (onSuccess) onSuccess();
@@ -74,7 +77,7 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
       e.preventDefault();
       handleUpdate();
     }
-  }, { enableOnFormTags: true }, [isOpen, machine, modelType, orderNumber, fatDate]);
+  }, { enableOnFormTags: true }, [isOpen, machine, modelType, orderNumber, fatDate, lead]);
 
   if (!isOpen || !machine) return null;
 
@@ -139,6 +142,15 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
               className={styles.input} 
               value={fatDate} 
               onChange={e => setFatDate(e.target.value)} 
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Lead (Project Lead)</label>
+            <input 
+              className={styles.input} 
+              value={lead} 
+              onChange={e => setLead(e.target.value)} 
+              placeholder="e.g. Jane Doe" 
             />
           </div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>

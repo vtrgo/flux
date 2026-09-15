@@ -228,6 +228,12 @@ function MachineDetailContent() {
                 </div>
               )}
               <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Project Lead</div>
+                <div style={{ fontSize: '0.875rem', color: machine.lead ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                  {machine.lead || 'Unassigned'}
+                </div>
+              </div>
+              <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Target Ship Date</div>
                 <div style={{ fontSize: '0.875rem', color: salesOrder.target_ship_date ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
                   {salesOrder.target_ship_date ? new Date(salesOrder.target_ship_date).toLocaleDateString() : 'TBD'}

@@ -322,7 +322,9 @@ function SalesDashboardContent() {
                               <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
                                 {m.model_type} • {m.status}
                               </div>
-                              <div style={{ fontSize: '0.75rem', marginTop: '0.35rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <div style={{ fontSize: '0.75rem', marginTop: '0.35rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                {m.lead && <span style={{ color: 'var(--text-primary)' }}>Lead: <strong>{m.lead}</strong></span>}
+                                {m.lead && <span>•</span>}
                                 <span style={{ color: 'var(--text-secondary)' }}>F.A.T.: {formatFatDate(m.fat_date, 'TBD')}</span>
                                 <span>•</span>
                                 <span style={{ color: machineDaysLate > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)', fontWeight: machineDaysLate > 0 ? 600 : 400 }}>

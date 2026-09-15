@@ -17,11 +17,13 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
   const [newMachineModel, setNewMachineModel] = useState("");
   const [newMachineSN, setNewMachineSN] = useState("");
   const [newMachineFatDate, setNewMachineFatDate] = useState("");
+  const [newMachineLead, setNewMachineLead] = useState("");
 
   const resetForm = () => {
     setNewMachineModel("");
     setNewMachineSN("");
     setNewMachineFatDate("");
+    setNewMachineLead("");
   };
 
   useAppHotkeys('escape', () => {
@@ -41,6 +43,7 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
           order_number: newMachineSN,
           model_type: newMachineModel,
           fat_date: newMachineFatDate ? new Date(newMachineFatDate).toISOString() : undefined,
+          lead: newMachineLead || undefined,
         }),
       });
       resetForm();
@@ -124,6 +127,15 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
               className={styles.input} 
               value={newMachineFatDate} 
               onChange={e => setNewMachineFatDate(e.target.value)} 
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Lead (Project Lead)</label>
+            <input 
+              className={styles.input} 
+              value={newMachineLead} 
+              onChange={e => setNewMachineLead(e.target.value)} 
+              placeholder="e.g. Jane Doe" 
             />
           </div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>

@@ -21,6 +21,7 @@ export interface Machine {
   status: string;
   actual_ship_date?: string;
   fat_date?: string;
+  lead?: string;
   created_at: string;
   created_by_user_name?: string;
 }

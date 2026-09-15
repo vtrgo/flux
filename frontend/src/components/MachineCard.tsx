@@ -37,7 +37,9 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
         <h3 className={styles.orderNumber}>{machine.order_number}</h3>
         <div className={styles.modelType}>{machine.model_type}</div>
 
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {machine.lead && <span>Lead: <strong style={{ color: 'var(--text-primary)' }}>{machine.lead}</strong></span>}
+          {machine.lead && <span>•</span>}
           <span>F.A.T.: <strong style={{ color: 'var(--text-primary)' }}>{formatFatDate(machine.fat_date, 'TBD')}</strong></span>
           <span>•</span>
           <span>Days Late: <strong style={{ color: machineDaysLate > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' }}>{machineDaysLate}</strong></span>
