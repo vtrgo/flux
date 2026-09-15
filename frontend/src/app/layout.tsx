@@ -17,6 +17,7 @@ import { CommandPalette } from "../components/CommandPalette";
 import { Toaster } from 'sonner';
 import { GlobalSystemToasts } from "../components/GlobalSystemToasts";
 import { AuthProvider } from "../contexts/AuthContext";
+import { DateTimeProvider } from "../contexts/DateTimeContext";
 
 export default function RootLayout({
   children,
@@ -29,11 +30,13 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <SSEProvider>
-              <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>
-              {children}
-              <CommandPalette />
-              <Toaster theme="dark" position="bottom-right" />
-              <GlobalSystemToasts />
+              <DateTimeProvider>
+                <div id="vtr-global-focus-sink" tabIndex={-1} style={{ outline: 'none' }}></div>
+                {children}
+                <CommandPalette />
+                <Toaster theme="dark" position="bottom-right" />
+                <GlobalSystemToasts />
+              </DateTimeProvider>
             </SSEProvider>
           </AuthProvider>
         </ThemeProvider>

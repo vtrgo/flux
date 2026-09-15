@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { fetchApi } from "../lib/api";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
+import { calendarDateToUtcNoon } from "../lib/dateUtils";
 import styles from "../app/(main)/kickoff/kickoff.module.css";
 
 interface SalesOrderModalProps {
@@ -49,7 +50,7 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess }: SalesOrderModalP
           project_name: projectName,
           responsible_person: responsiblePerson,
           sales_rep: salesRep,
-          target_ship_date: targetDate ? new Date(targetDate).toISOString() : undefined,
+          target_ship_date: calendarDateToUtcNoon(targetDate),
         }),
       });
       resetForm();

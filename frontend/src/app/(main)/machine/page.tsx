@@ -14,8 +14,10 @@ import { AttachmentViewer } from "../../../components/AttachmentViewer";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
 import { calculateDaysLate, formatFatDate } from "../../../lib/dateUtils";
+import { useDateTime } from "../../../contexts/DateTimeContext";
 
 function MachineDetailContent() {
+  const { timezone } = useDateTime();
   const searchParams = useSearchParams();
   const id = searchParams.get("id") as string;
 
@@ -236,19 +238,19 @@ function MachineDetailContent() {
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Target Ship Date</div>
                 <div style={{ fontSize: '0.875rem', color: salesOrder.target_ship_date ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
-                  {salesOrder.target_ship_date ? new Date(salesOrder.target_ship_date).toLocaleDateString() : 'TBD'}
+                  {salesOrder.target_ship_date ? formatFatDate(salesOrder.target_ship_date, 'TBD', timezone) : 'TBD'}
                 </div>
               </div>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>F.A.T. Date</div>
                 <div style={{ fontSize: '0.875rem', color: machine.fat_date ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
-                  {formatFatDate(machine.fat_date, 'TBD')}
+                  {formatFatDate(machine.fat_date, 'TBD', timezone)}
                 </div>
               </div>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Days Late</div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: calculateDaysLate(machine.fat_date) > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' }}>
-                  {calculateDaysLate(machine.fat_date)}
+                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: calculateDaysLate(machine.fat_date, timezone) > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' }}>
+                  {calculateDaysLate(machine.fat_date, timezone)}
                 </div>
               </div>
             </div>

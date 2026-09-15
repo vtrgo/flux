@@ -4,6 +4,8 @@ import { DigitalClock } from '../../components/DigitalClock';
 
 import { useState, useEffect } from 'react';
 import { usePublicDashboardData } from '../../hooks/usePublicDashboardData';
+import { useDateTime } from '../../contexts/DateTimeContext';
+import { formatFatDate } from '../../lib/dateUtils';
 import styles from './display.module.css';
 
 import { DisplayMachineRow } from '../../components/DisplayMachineRow';
@@ -11,6 +13,7 @@ import { DisplayMachineRow } from '../../components/DisplayMachineRow';
 const CYCLE_DURATION_MS = 10000; // 10 seconds per slide
 
 export default function DisplayDashboard() {
+  const { timezone } = useDateTime();
   const { projects, loading, error } = usePublicDashboardData();
   const [activeIndex, setActiveIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -60,7 +63,7 @@ export default function DisplayDashboard() {
   }
 
   const currentProject = projects[activeIndex];
-  const targetDate = currentProject.target_ship_date ? new Date(currentProject.target_ship_date).toLocaleDateString() : 'TBD';
+  const targetDate = currentProject.target_ship_date ? formatFatDate(currentProject.target_ship_date, 'TBD', timezone) : 'TBD';
 
   return (
     <div style={{ 

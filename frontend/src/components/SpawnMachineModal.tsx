@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { fetchApi } from "../lib/api";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
+import { calendarDateToUtcNoon } from "../lib/dateUtils";
 import styles from "../app/(main)/kickoff/kickoff.module.css";
 
 interface SpawnMachineModalProps {
@@ -42,7 +43,7 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
           sales_order_id: orderId,
           order_number: newMachineSN,
           model_type: newMachineModel,
-          fat_date: newMachineFatDate ? new Date(newMachineFatDate).toISOString() : undefined,
+          fat_date: calendarDateToUtcNoon(newMachineFatDate),
           lead: newMachineLead || undefined,
         }),
       });

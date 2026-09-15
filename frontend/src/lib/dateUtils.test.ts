@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { calculateDaysLate, calculateProjectDaysLate, formatFatDate } from './dateUtils';
+import {
+  calculateDaysLate,
+  calculateProjectDaysLate,
+  formatFatDate,
+  calendarDateToUtcNoon,
+  toCalendarDateInput,
+  formatTimestamp,
+} from './dateUtils';
 
 describe('dateUtils - F.A.T. and Days Late', () => {
   it('returns 0 when fat_date is not set', () => {
@@ -55,7 +62,28 @@ describe('dateUtils - F.A.T. and Days Late', () => {
   it('formats fat date correctly', () => {
     expect(formatFatDate(null)).toBe('None');
     expect(formatFatDate(undefined, 'TBD')).toBe('TBD');
-    const d = new Date('2026-10-15T00:00:00Z');
-    expect(formatFatDate(d.toISOString())).toBe(d.toLocaleDateString());
+    expect(formatFatDate('2026-10-15T12:00:00.000Z')).toContain('10/15/2026');
+    // Legacy midnight UTC date format should not shift to 10/14
+    expect(formatFatDate('2026-10-15T00:00:00.000Z')).toContain('10/15/2026');
+  });
+
+  it('normalizes calendar dates to UTC noon without offset shifts', () => {
+    expect(calendarDateToUtcNoon('2026-09-20')).toBe('2026-09-20T12:00:00.000Z');
+    expect(calendarDateToUtcNoon(null)).toBeUndefined();
+    expect(calendarDateToUtcNoon('')).toBeUndefined();
+  });
+
+  it('converts stored dates cleanly to YYYY-MM-DD for date inputs', () => {
+    expect(toCalendarDateInput('2026-09-20')).toBe('2026-09-20');
+    expect(toCalendarDateInput('2026-09-20T12:00:00.000Z')).toBe('2026-09-20');
+    expect(toCalendarDateInput('2026-09-20T00:00:00.000Z')).toBe('2026-09-20');
+    expect(toCalendarDateInput(null)).toBe('');
+  });
+
+  it('formats timestamp in specified timezone', () => {
+    const ts = '2026-09-15T16:00:00.000Z'; // 12:00 PM EDT (-04:00)
+    const formatted = formatTimestamp(ts, 'America/Toronto');
+    expect(formatted).toContain('Sep 15, 2026');
+    expect(formatted).toContain('12:00 PM');
   });
 });

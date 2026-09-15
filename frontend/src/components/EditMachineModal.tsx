@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { fetchApi } from "../lib/api";
 import { Machine } from "../types";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
+import { toCalendarDateInput, calendarDateToUtcNoon } from "../lib/dateUtils";
 import styles from "../app/(main)/kickoff/kickoff.module.css";
 
 interface EditMachineModalProps {
@@ -25,17 +26,7 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
       setModelType(machine.model_type || "");
       setOrderNumber(machine.order_number || "");
       setLead(machine.lead || "");
-      if (machine.fat_date) {
-        // Format as YYYY-MM-DD for date input
-        const d = new Date(machine.fat_date);
-        if (!isNaN(d.getTime())) {
-          setFatDate(d.toISOString().split("T")[0]);
-        } else {
-          setFatDate("");
-        }
-      } else {
-        setFatDate("");
-      }
+      setFatDate(toCalendarDateInput(machine.fat_date));
     }
   }, [machine]);
 
@@ -54,7 +45,7 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
         body: JSON.stringify({
           order_number: orderNumber,
           model_type: modelType,
-          fat_date: fatDate ? new Date(fatDate).toISOString() : null,
+          fat_date: calendarDateToUtcNoon(fatDate) || null,
           lead: lead || null,
         }),
       });

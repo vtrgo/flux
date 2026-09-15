@@ -1,20 +1,32 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useDateTime } from '../contexts/DateTimeContext';
 
 export function DigitalClock() {
+  const { timezone } = useDateTime();
   const [time, setTime] = useState<string>('');
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      setTime(now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }));
+      try {
+        setTime(now.toLocaleTimeString('en-US', { 
+          timeZone: timezone, 
+          hour12: true, 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          second: '2-digit' 
+        }));
+      } catch {
+        setTime(now.toLocaleTimeString('en-US', { hour12: true, hour: 'numeric', minute: '2-digit', second: '2-digit' }));
+      }
     };
 
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [timezone]);
 
   return (
     <div style={{

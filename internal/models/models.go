@@ -234,3 +234,28 @@ type DesignFeedback struct {
 	ResolutionNotes  *string    `json:"resolution_notes,omitempty"`
 	CreatedAt        time.Time  `json:"created_at"`
 }
+
+// SystemSetting represents a key-value configuration setting stored in the database
+type SystemSetting struct {
+	Key       string    `json:"key"`
+	Value     string    `json:"value"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TimezoneResponse represents the response containing the current site timezone
+type TimezoneResponse struct {
+	Timezone string `json:"timezone"`
+}
+
+// UpdateTimezoneRequest represents the payload to update the site timezone
+type UpdateTimezoneRequest struct {
+	Timezone string `json:"timezone"`
+}
+
+// TimezoneOption represents a selectable timezone in the predefined list
+type TimezoneOption struct {
+	ID     string `json:"id"`     // IANA Timezone identifier, e.g. "America/Toronto"
+	Name   string `json:"name"`   // Friendly display label, e.g. "Eastern Time (Toronto, New York)"
+	Region string `json:"region"` // Geographic region, e.g. "North America"
+	Offset string `json:"offset"` // Current offset label, e.g. "UTC-04:00"
+}

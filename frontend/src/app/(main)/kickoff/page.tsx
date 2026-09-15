@@ -14,8 +14,10 @@ import { SpawnMachineModal } from "../../../components/SpawnMachineModal";
 import { EditMachineModal } from "../../../components/EditMachineModal";
 import { Authorize } from "../../../components/Authorize";
 import { calculateDaysLate, calculateProjectDaysLate, formatFatDate } from "../../../lib/dateUtils";
+import { useDateTime } from "../../../contexts/DateTimeContext";
 
 function SalesDashboardContent() {
+  const { timezone } = useDateTime();
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
@@ -206,7 +208,7 @@ function SalesDashboardContent() {
           <div className={styles.orderList}>
             {displayedOrders.map(order => {
               const orderMachines = machines.filter(m => m.sales_order_id === order.id);
-              const projectDaysLate = calculateProjectDaysLate(orderMachines);
+              const projectDaysLate = calculateProjectDaysLate(orderMachines, timezone);
               const isEditing = editingOrder?.id === order.id;
 
               if (isEditing) {
@@ -249,7 +251,7 @@ function SalesDashboardContent() {
                       <div className={styles.orderSubtitle}>
                         {order.internal_project_number && <span style={{marginRight: '1rem'}}>Project #: {order.internal_project_number}</span>}
                         {order.responsible_person && <span style={{marginRight: '1rem'}}>PM: {order.responsible_person}</span>}
-                        Target Ship: {order.target_ship_date ? new Date(order.target_ship_date).toLocaleDateString() : 'TBD'}
+                        Target Ship: {order.target_ship_date ? formatFatDate(order.target_ship_date, 'TBD', timezone) : 'TBD'}
                         {' | '}Status: <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{order.status.replace('_', ' ')}</span>
                         {' | '}Days Late: <span style={{ 
                           fontWeight: 700, 
@@ -303,7 +305,7 @@ function SalesDashboardContent() {
                   {orderMachines.length > 0 && (
                     <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                       {orderMachines.map(m => {
-                        const machineDaysLate = calculateDaysLate(m.fat_date);
+                        const machineDaysLate = calculateDaysLate(m.fat_date, timezone);
                         return (
                           <div 
                             key={m.id} 
@@ -325,7 +327,7 @@ function SalesDashboardContent() {
                               <div style={{ fontSize: '0.75rem', marginTop: '0.35rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 {m.lead && <span style={{ color: 'var(--text-primary)' }}>Lead: <strong>{m.lead}</strong></span>}
                                 {m.lead && <span>•</span>}
-                                <span style={{ color: 'var(--text-secondary)' }}>F.A.T.: {formatFatDate(m.fat_date, 'TBD')}</span>
+                                <span style={{ color: 'var(--text-secondary)' }}>F.A.T.: {formatFatDate(m.fat_date, 'TBD', timezone)}</span>
                                 <span>•</span>
                                 <span style={{ color: machineDaysLate > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)', fontWeight: machineDaysLate > 0 ? 600 : 400 }}>
                                   Days Late: {machineDaysLate}

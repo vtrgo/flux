@@ -4,6 +4,7 @@ import { Machine, DefectSummary } from '../types';
 import { ACTIVE_DEPARTMENTS } from '../lib/departments';
 import { Authorize } from './Authorize';
 import { calculateDaysLate, formatFatDate } from '../lib/dateUtils';
+import { useDateTime } from '../contexts/DateTimeContext';
 import styles from './MachineCard.module.css';
 
 interface MachineCardProps {
@@ -14,8 +15,9 @@ interface MachineCardProps {
 }
 
 const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDept }: MachineCardProps) => {
+  const { timezone } = useDateTime();
   const machineSummaries = defectSummaries.filter(s => s.machine_id === machine.id);
-  const machineDaysLate = calculateDaysLate(machine.fat_date);
+  const machineDaysLate = calculateDaysLate(machine.fat_date, timezone);
   
   const totalOpen = machineSummaries.reduce((sum, s) => sum + (s.total_open || 0), 0);
   const totalPending = machineSummaries.reduce((sum, s) => sum + (s.total_pending || 0), 0);
@@ -40,7 +42,7 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {machine.lead && <span>Lead: <strong style={{ color: 'var(--text-primary)' }}>{machine.lead}</strong></span>}
           {machine.lead && <span>•</span>}
-          <span>F.A.T.: <strong style={{ color: 'var(--text-primary)' }}>{formatFatDate(machine.fat_date, 'TBD')}</strong></span>
+          <span>F.A.T.: <strong style={{ color: 'var(--text-primary)' }}>{formatFatDate(machine.fat_date, 'TBD', timezone)}</strong></span>
           <span>•</span>
           <span>Days Late: <strong style={{ color: machineDaysLate > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' }}>{machineDaysLate}</strong></span>
         </div>

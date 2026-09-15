@@ -117,6 +117,9 @@ func RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /api/logs", handleGetLogs)
 	mux.HandleFunc("GET /api/system/version", handleGetSystemVersion)
+	mux.HandleFunc("GET /api/system/timezone", handleGetTimezone)
+	mux.HandleFunc("GET /api/system/timezones", handleGetAvailableTimezones)
+	mux.Handle("PUT /api/system/timezone", RequireRole("admin")(http.HandlerFunc(handleUpdateTimezone)))
 
 	mux.HandleFunc("/api/sse", SSEHandler)
 }

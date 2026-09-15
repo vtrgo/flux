@@ -2,6 +2,8 @@ import React from 'react';
 import styles from './IssueCard.module.css';
 import { Defect } from '../types';
 import { AttachmentViewer } from './AttachmentViewer';
+import { useDateTime } from '../contexts/DateTimeContext';
+import { formatTimestamp } from '../lib/dateUtils';
 
 interface IssueCardProps {
   issue: Defect;
@@ -10,21 +12,8 @@ interface IssueCardProps {
   actions: React.ReactNode;
 }
 
-function formatTimestamp(dateString?: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '';
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
-
 export const IssueCard = React.memo(function IssueCard({ issue, onClick, cardStyle, actions }: IssueCardProps) {
+  const { timezone } = useDateTime();
   const isClosed = issue.status === 'fixed' || issue.status === 'verified';
 
   return (
@@ -60,13 +49,13 @@ export const IssueCard = React.memo(function IssueCard({ issue, onClick, cardSty
           {issue.created_at && (
             <div className={styles.timestampItem}>
               <span className={styles.timestampLabel}>Opened{issue.created_by_user_name ? ` by ${issue.created_by_user_name}` : ''}:</span>
-              <span className={styles.timestampValue}>{formatTimestamp(issue.created_at)}</span>
+              <span className={styles.timestampValue}>{formatTimestamp(issue.created_at, timezone)}</span>
             </div>
           )}
           {issue.resolved_at && isClosed && (
             <div className={styles.timestampItem}>
               <span className={styles.timestampLabel}>{issue.status === 'verified' ? 'Verified' : 'Fixed'}{issue.verified_by_user_name ? ` by ${issue.verified_by_user_name}` : issue.fixed_by_user_name ? ` by ${issue.fixed_by_user_name}` : ''}:</span>
-              <span className={styles.timestampValue}>{formatTimestamp(issue.resolved_at)}</span>
+              <span className={styles.timestampValue}>{formatTimestamp(issue.resolved_at, timezone)}</span>
             </div>
           )}
         </div>

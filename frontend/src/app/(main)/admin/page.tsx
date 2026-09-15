@@ -1,4 +1,5 @@
 import { ThemeSelector } from "../../../components/ThemeSelector";
+import { TimezoneSelector } from "../../../components/TimezoneSelector";
 import Link from 'next/link';
 
 export default function AdminPage() {
@@ -34,6 +35,25 @@ export default function AdminPage() {
         </p>
         <div style={{ display: 'inline-block', padding: '1rem', border: '1px solid var(--vtr-card-border, var(--border-color))', borderRadius: '8px', background: 'rgba(0,0,0,0.2)' }}>
           <ThemeSelector />
+        </div>
+      </section>
+
+      <section style={{ 
+        backgroundColor: 'var(--vtr-card-bg, var(--bg-secondary))',
+        border: '1px solid var(--vtr-card-border, var(--border-color))',
+        borderRadius: '12px',
+        padding: '2rem',
+        backdropFilter: 'blur(8px)',
+        marginBottom: '2rem'
+      }}>
+        <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', color: 'var(--vtr-theme-primary, var(--text-primary))', marginBottom: '1.5rem' }}>
+          Site Time & Date Configuration
+        </h2>
+        <p style={{ color: 'var(--vtr-theme-neutral, var(--text-secondary))', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+          Configure the primary site-wide timezone for the factory floor. This setting governs calendar date calculations, F.A.T. schedule lateness, shop floor display clocks, and audit timestamps across all devices.
+        </p>
+        <div style={{ padding: '1.25rem', border: '1px solid var(--vtr-card-border, var(--border-color))', borderRadius: '8px', background: 'rgba(0,0,0,0.2)' }}>
+          <TimezoneSelector />
         </div>
       </section>
 

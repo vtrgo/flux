@@ -2,6 +2,7 @@ import React from 'react';
 import { SalesOrder, Machine, DefectSummary } from '../types';
 import { MachineCard } from './MachineCard';
 import { calculateProjectDaysLate } from '../lib/dateUtils';
+import { useDateTime } from '../contexts/DateTimeContext';
 import styles from './ProjectCard.module.css';
 
 interface ProjectCardProps {
@@ -24,7 +25,8 @@ export function ProjectCard({
   const projectTotalOpen = projectSummary?.total_open || 0;
   const projectTotalPending = projectSummary?.total_pending || 0;
   const projectTotalClosed = projectSummary?.total_closed || 0;
-  const projectDaysLate = calculateProjectDaysLate(orderMachines);
+  const { timezone } = useDateTime();
+  const projectDaysLate = calculateProjectDaysLate(orderMachines, timezone);
 
   return (
     <div className={styles.card}>

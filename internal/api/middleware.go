@@ -38,6 +38,8 @@ func isPublicRoute(r *http.Request) bool {
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
 		switch path {
 		case "/api/system/version",
+			"/api/system/timezone",
+			"/api/system/timezones",
 			"/api/sse",
 			"/api/sales_orders",
 			"/api/machines",

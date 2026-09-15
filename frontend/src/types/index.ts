@@ -119,3 +119,10 @@ export interface DisplayProject {
     machine_totals: { total_open: number; total_pending: number };
   })[];
 }
+
+export interface TimezoneOption {
+  id: string;
+  name: string;
+  region: string;
+  offset: string;
+}
