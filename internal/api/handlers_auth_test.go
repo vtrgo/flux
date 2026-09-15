@@ -170,3 +170,83 @@ func TestAuthHandlers(t *testing.T) {
 		}
 	})
 }
+
+func TestAuthMiddleware(t *testing.T) {
+	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	wrapped := AuthMiddleware(dummyHandler)
+
+	t.Run("Public routes pass without auth token", func(t *testing.T) {
+		publicPaths := []string{
+			"/api/system/version",
+			"/api/sse",
+			"/api/sales_orders",
+			"/api/machines",
+			"/api/defects/project_summary",
+			"/api/defects/summary",
+			"/api/defects/machine_summary",
+			"/api/defects/project_department_summary",
+			"/display",
+			"/index.html",
+		}
+
+		for _, p := range publicPaths {
+			req := httptest.NewRequest(http.MethodGet, p, nil)
+			rr := httptest.NewRecorder()
+			wrapped.ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusOK {
+				t.Errorf("Path %s expected 200 OK, got %d", p, rr.Code)
+			}
+		}
+	})
+
+	t.Run("Protected routes require auth token", func(t *testing.T) {
+		protectedCases := []struct {
+			method string
+			path   string
+		}{
+			{http.MethodGet, "/api/users"},
+			{http.MethodGet, "/api/logs"},
+			{http.MethodPost, "/api/sales_orders"},
+			{http.MethodPost, "/api/machines"},
+			{http.MethodPut, "/api/machines/123"},
+			{http.MethodPost, "/api/machines/123/defects"},
+		}
+
+		for _, tc := range protectedCases {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			rr := httptest.NewRecorder()
+			wrapped.ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusUnauthorized {
+				t.Errorf("%s %s expected 401 Unauthorized, got %d", tc.method, tc.path, rr.Code)
+			}
+		}
+	})
+
+	t.Run("Public route with invalid token still passes", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/machines", nil)
+		req.AddCookie(&http.Cookie{Name: "auth_token", Value: "invalid-garbage-token"})
+		rr := httptest.NewRecorder()
+		wrapped.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected public route with invalid cookie to pass with 200, got %d", rr.Code)
+		}
+	})
+
+	t.Run("Protected route with invalid token fails with 401", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/users", nil)
+		req.AddCookie(&http.Cookie{Name: "auth_token", Value: "invalid-garbage-token"})
+		rr := httptest.NewRecorder()
+		wrapped.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusUnauthorized {
+			t.Errorf("Expected protected route with invalid cookie to return 401, got %d", rr.Code)
+		}
+	})
+}

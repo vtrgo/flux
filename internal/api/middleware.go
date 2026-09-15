@@ -20,17 +20,52 @@ const (
 	UserContextKey contextKey = "user"
 )
 
-// AuthMiddleware validates the JWT token and extracts the user into the context
+// isPublicRoute determines if an incoming HTTP request is permitted without authentication.
+func isPublicRoute(r *http.Request) bool {
+	path := r.URL.Path
+
+	// Bypass auth for all non-API routes (static files, Next.js assets)
+	if !strings.HasPrefix(path, "/api/") {
+		return true
+	}
+
+	// Always public: auth login and logout
+	if path == "/api/auth/login" || path == "/api/auth/logout" {
+		return true
+	}
+
+	// Safe read-only endpoints (GET / HEAD) for public displays (/display kiosk), health checks, and SSE
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		switch path {
+		case "/api/system/version",
+			"/api/sse",
+			"/api/sales_orders",
+			"/api/machines",
+			"/api/defects/project_summary",
+			"/api/defects/summary",
+			"/api/defects/machine_summary",
+			"/api/defects/project_department_summary":
+			return true
+		}
+	}
+
+	return false
+}
+
+// AuthMiddleware validates the JWT token and extracts the user into the context.
+// For public routes, authentication is optional: if a valid auth token is present,
+// the user context is populated; otherwise the request continues unauthenticated.
+// For private routes, a valid auth token is strictly required.
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Bypass auth for public API routes and all non-API routes (static files)
-		if r.URL.Path == "/api/auth/login" || r.URL.Path == "/api/auth/logout" || !strings.HasPrefix(r.URL.Path, "/api/") {
-			next.ServeHTTP(w, r)
-			return
-		}
+		isPublic := isPublicRoute(r)
 
 		cookie, err := r.Cookie("auth_token")
 		if err != nil {
+			if isPublic {
+				next.ServeHTTP(w, r)
+				return
+			}
 			respondError(w, http.StatusUnauthorized, "Missing authentication token", nil)
 			return
 		}
@@ -43,6 +78,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		})
 
 		if err != nil || !token.Valid {
+			if isPublic {
+				next.ServeHTTP(w, r)
+				return
+			}
 			respondError(w, http.StatusUnauthorized, "Invalid authentication token", nil)
 			return
 		}
@@ -54,6 +93,10 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		`, claims.UserID).Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role)
 
 		if err != nil {
+			if isPublic {
+				next.ServeHTTP(w, r)
+				return
+			}
 			respondError(w, http.StatusUnauthorized, "User not found", nil)
 			return
 		}
