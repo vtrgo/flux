@@ -12,7 +12,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [formData, setFormData] = useState({ username: '', first_name: '', last_name: '', department: '', role: '', password: '' });
+  const [formData, setFormData] = useState({ username: '', email: '', first_name: '', last_name: '', department: '', role: '', password: '' });
 
   const loadUsers = async () => {
     setLoading(true);
@@ -31,7 +31,7 @@ export default function AdminUsersPage() {
   }, []);
 
   const startCreate = () => {
-    setFormData({ username: '', first_name: '', last_name: '', department: '', role: '', password: '' });
+    setFormData({ username: '', email: '', first_name: '', last_name: '', department: '', role: '', password: '' });
     setEditingUser(null);
     setIsCreating(true);
   };
@@ -39,6 +39,7 @@ export default function AdminUsersPage() {
   const startEdit = (user: User) => {
     setFormData({
       username: user.username,
+      email: user.email || '',
       first_name: user.first_name || '',
       last_name: user.last_name || '',
       department: user.department || '',
@@ -126,6 +127,7 @@ export default function AdminUsersPage() {
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--vtr-card-border, var(--border-color))', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
                   <th style={{ padding: '1rem 0' }}>Username</th>
+                  <th style={{ padding: '1rem 0' }}>Email</th>
                   <th style={{ padding: '1rem 0' }}>Name</th>
                   <th style={{ padding: '1rem 0' }}>Department</th>
                   <th style={{ padding: '1rem 0' }}>Role</th>
@@ -136,6 +138,9 @@ export default function AdminUsersPage() {
                 {users.map(u => (
                   <tr key={u.id} style={{ borderBottom: '1px solid var(--vtr-card-border, var(--border-color))' }}>
                     <td style={{ padding: '1rem 0' }}>{u.username}</td>
+                    <td style={{ padding: '1rem 0', fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: u.email ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
+                      {u.email || '—'}
+                    </td>
                     <td style={{ padding: '1rem 0' }}>{u.first_name} {u.last_name}</td>
                     <td style={{ padding: '1rem 0' }}>
                       {ACTIVE_DEPARTMENTS.find(d => d.key === u.department)?.label || u.department || 'None'}
@@ -149,7 +154,7 @@ export default function AdminUsersPage() {
                 ))}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: '2rem 0', textAlign: 'center', color: 'var(--text-secondary)' }}>No users found.</td>
+                    <td colSpan={6} style={{ padding: '2rem 0', textAlign: 'center', color: 'var(--text-secondary)' }}>No users found.</td>
                   </tr>
                 )}
               </tbody>
@@ -180,6 +185,16 @@ export default function AdminUsersPage() {
                   onChange={e => setFormData({...formData, username: e.target.value})} 
                   className="vtr-input" 
                   required 
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>EMAIL ADDRESS</label>
+                <input 
+                  type="email" 
+                  value={formData.email} 
+                  onChange={e => setFormData({...formData, email: e.target.value})} 
+                  className="vtr-input" 
+                  placeholder="e.g. user@vtrfeedersolutions.com"
                 />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>

@@ -90,9 +90,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		var user models.User
 		err = db.DB.QueryRowContext(r.Context(), `
-			SELECT id, username, first_name, last_name, department, role
+			SELECT id, username, email, first_name, last_name, department, role
 			FROM users WHERE id = $1
-		`, claims.UserID).Scan(&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role)
+		`, claims.UserID).Scan(&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Department, &user.Role)
 
 		if err != nil {
 			if isPublic {

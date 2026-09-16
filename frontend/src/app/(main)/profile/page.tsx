@@ -127,6 +127,15 @@ export default function ProfilePage() {
 
             <div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                Email Address
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+                {user.email || '—'}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
                 Full Name
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', color: 'var(--text-primary)', marginTop: '0.25rem' }}>

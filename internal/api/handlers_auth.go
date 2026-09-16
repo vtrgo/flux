@@ -97,10 +97,10 @@ func handleGetMe(w http.ResponseWriter, r *http.Request) {
 
 	var user models.User
 	err := db.DB.QueryRow(`
-		SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
+		SELECT id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
 		FROM users WHERE id = $1
 	`, userID).Scan(
-		&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role,
+		&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Department, &user.Role,
 		&user.AuthProvider, &user.ExternalID, &user.CreatedAt,
 	)
 

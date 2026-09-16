@@ -32,10 +32,10 @@ func (a *LocalDBAuthenticator) Authenticate(ctx context.Context, username, passw
 	var passwordHash sql.NullString
 
 	err := db.DB.QueryRowContext(ctx, `
-		SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at, password_hash
+		SELECT id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at, password_hash
 		FROM users WHERE username = $1
 	`, username).Scan(
-		&user.ID, &user.Username, &user.FirstName, &user.LastName, &user.Department, &user.Role,
+		&user.ID, &user.Username, &user.Email, &user.FirstName, &user.LastName, &user.Department, &user.Role,
 		&user.AuthProvider, &user.ExternalID, &user.CreatedAt, &passwordHash,
 	)
 

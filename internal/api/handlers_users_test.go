@@ -89,4 +89,67 @@ func TestUsersEndpoints(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("Create and Update User with Email - Success", func(t *testing.T) {
+		email := fmt.Sprintf("tech_%d@vtrfeedersolutions.com", uniqueSuffix)
+		userPayload := map[string]interface{}{
+			"username":   fmt.Sprintf("user_email_%d", uniqueSuffix),
+			"email":      email,
+			"first_name": "Justin",
+			"last_name":  "VTR",
+			"department": "quality",
+			"role":       "admin",
+			"password":   "secret123",
+		}
+
+		body, _ := json.Marshal(userPayload)
+		req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(body))
+		rr := httptest.NewRecorder()
+		req.AddCookie(createTestRoleCookie(t, "admin"))
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("Expected 201 Created, got %d (body: %s)", rr.Code, rr.Body.String())
+		}
+
+		var created models.User
+		if err := json.NewDecoder(rr.Body).Decode(&created); err != nil {
+			t.Fatalf("Failed to decode created user: %v", err)
+		}
+
+		if created.Email == nil || *created.Email != email {
+			t.Errorf("Expected email %s, got %v", email, created.Email)
+		}
+
+		// Update user email
+		updatedEmail := fmt.Sprintf("updated_%d@vtrfeedersolutions.com", uniqueSuffix)
+		updatePayload := map[string]interface{}{
+			"username":   created.Username,
+			"email":      updatedEmail,
+			"first_name": "Justin",
+			"last_name":  "Updated",
+			"department": "quality",
+			"role":       "admin",
+		}
+
+		upBody, _ := json.Marshal(updatePayload)
+		upReq := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/users/%s", created.ID), bytes.NewReader(upBody))
+		upRr := httptest.NewRecorder()
+		upReq.AddCookie(createTestRoleCookie(t, "admin"))
+		AuthMiddleware(mux).ServeHTTP(upRr, upReq)
+
+		if upRr.Code != http.StatusOK {
+			t.Fatalf("Expected 200 OK on update, got %d (body: %s)", upRr.Code, upRr.Body.String())
+		}
+
+		var updated models.User
+		if err := json.NewDecoder(upRr.Body).Decode(&updated); err != nil {
+			t.Fatalf("Failed to decode updated user: %v", err)
+		}
+
+		if updated.Email == nil || *updated.Email != updatedEmail {
+			t.Errorf("Expected email %s, got %v", updatedEmail, updated.Email)
+		}
+	})
 }
+

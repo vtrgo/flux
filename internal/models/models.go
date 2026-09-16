@@ -111,6 +111,7 @@ type QualityInspection struct {
 type User struct {
 	ID           uuid.UUID  `json:"id"`
 	Username     string     `json:"username"`
+	Email        *string    `json:"email,omitempty"`
 	FirstName    *string    `json:"first_name,omitempty"`
 	LastName     *string    `json:"last_name,omitempty"`
 	Department   *string    `json:"department,omitempty"`

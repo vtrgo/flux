@@ -42,6 +42,9 @@ export function UserMenu() {
 
   const roleLabel = user.role ? user.role.toUpperCase() : 'USER';
   const deptLabel = user.department ? user.department.toUpperCase() : null;
+  const userDisplayName = user.first_name
+    ? (user.email ? `${user.first_name} (${user.email})` : `${user.first_name} (${user.username})`)
+    : (user.email || user.username);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -64,7 +67,7 @@ export function UserMenu() {
           }}
           title="Manage profile and change password"
         >
-          {user.first_name ? `${user.first_name} (${user.username})` : user.username}
+          {userDisplayName}
           <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>⚙️</span>
         </button>
         <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>

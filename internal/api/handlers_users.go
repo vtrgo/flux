@@ -21,14 +21,14 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 
 	if deptFilter != "" {
 		rows, err = db.DB.Query(`
-			SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
+			SELECT id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
 			FROM users
 			WHERE LOWER(department) = LOWER($1)
 			ORDER BY username ASC
 		`, deptFilter)
 	} else {
 		rows, err = db.DB.Query(`
-			SELECT id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
+			SELECT id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
 			FROM users
 			ORDER BY username ASC
 		`)
@@ -44,7 +44,7 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var u models.User
 		if err := rows.Scan(
-			&u.ID, &u.Username, &u.FirstName, &u.LastName, &u.Department, &u.Role, &u.AuthProvider, &u.ExternalID, &u.CreatedAt,
+			&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Department, &u.Role, &u.AuthProvider, &u.ExternalID, &u.CreatedAt,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning user: ", err)
 			return
@@ -60,6 +60,7 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Username     string  `json:"username"`
+		Email        *string `json:"email"`
 		FirstName    string  `json:"first_name"`
 		LastName     string  `json:"last_name"`
 		Department   string  `json:"department"`
@@ -92,11 +93,11 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	var newUser models.User
 	err := db.DB.QueryRow(`
-		INSERT INTO users (username, first_name, last_name, department, role, auth_provider, external_id, password_hash)
-		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6, NULLIF($7, ''), $8)
-		RETURNING id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
-	`, req.Username, req.FirstName, req.LastName, req.Department, req.Role, authProvider, req.ExternalID, passwordHash).Scan(
-		&newUser.ID, &newUser.Username, &newUser.FirstName, &newUser.LastName, &newUser.Department, &newUser.Role, &newUser.AuthProvider, &newUser.ExternalID, &newUser.CreatedAt,
+		INSERT INTO users (username, email, first_name, last_name, department, role, auth_provider, external_id, password_hash)
+		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), $7, NULLIF($8, ''), $9)
+		RETURNING id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
+	`, req.Username, req.Email, req.FirstName, req.LastName, req.Department, req.Role, authProvider, req.ExternalID, passwordHash).Scan(
+		&newUser.ID, &newUser.Username, &newUser.Email, &newUser.FirstName, &newUser.LastName, &newUser.Department, &newUser.Role, &newUser.AuthProvider, &newUser.ExternalID, &newUser.CreatedAt,
 	)
 
 	if err != nil {
@@ -120,6 +121,7 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Username     string  `json:"username"`
+		Email        *string `json:"email"`
 		FirstName    string  `json:"first_name"`
 		LastName     string  `json:"last_name"`
 		Department   string  `json:"department"`
@@ -154,16 +156,17 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	err = db.DB.QueryRow(`
 		UPDATE users
 		SET username = NULLIF($2, ''), 
-		    first_name = NULLIF($3, ''), 
-		    last_name = NULLIF($4, ''), 
-		    department = NULLIF($5, ''), 
-		    role = NULLIF($6, ''),
-		    auth_provider = COALESCE(NULLIF($7, ''), auth_provider),
-		    external_id = COALESCE(NULLIF($8, ''), external_id)
+		    email = NULLIF($3, ''),
+		    first_name = NULLIF($4, ''), 
+		    last_name = NULLIF($5, ''), 
+		    department = NULLIF($6, ''), 
+		    role = NULLIF($7, ''),
+		    auth_provider = COALESCE(NULLIF($8, ''), auth_provider),
+		    external_id = COALESCE(NULLIF($9, ''), external_id)
 		WHERE id = $1
-		RETURNING id, username, first_name, last_name, department, role, auth_provider, external_id, created_at
-	`, userID, req.Username, req.FirstName, req.LastName, req.Department, req.Role, req.AuthProvider, req.ExternalID).Scan(
-		&updatedUser.ID, &updatedUser.Username, &updatedUser.FirstName, &updatedUser.LastName, &updatedUser.Department, &updatedUser.Role, &updatedUser.AuthProvider, &updatedUser.ExternalID, &updatedUser.CreatedAt,
+		RETURNING id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
+	`, userID, req.Username, req.Email, req.FirstName, req.LastName, req.Department, req.Role, req.AuthProvider, req.ExternalID).Scan(
+		&updatedUser.ID, &updatedUser.Username, &updatedUser.Email, &updatedUser.FirstName, &updatedUser.LastName, &updatedUser.Department, &updatedUser.Role, &updatedUser.AuthProvider, &updatedUser.ExternalID, &updatedUser.CreatedAt,
 	)
 
 	if err != nil {
