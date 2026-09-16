@@ -3,7 +3,7 @@ import styles from './IssueCard.module.css';
 import { Defect } from '../types';
 import { AttachmentViewer } from './AttachmentViewer';
 import { useDateTime } from '../contexts/DateTimeContext';
-import { formatTimestamp } from '../lib/dateUtils';
+import { formatTimestamp, formatFatDate } from '../lib/dateUtils';
 
 interface IssueCardProps {
   issue: Defect;
@@ -35,6 +35,12 @@ export const IssueCard = React.memo(function IssueCard({ issue, onClick, cardSty
       {issue.assigned_user_name && (
         <div className={styles.assignee}>
           <strong>Assigned to:</strong> {issue.assigned_user_name}
+        </div>
+      )}
+      {issue.due_date && (
+        <div className={styles.dueDate}>
+          <span className={styles.dueDateLabel}>Target Resolution:</span>
+          <span className={styles.dueDateValue}>{formatFatDate(issue.due_date, 'None', timezone)}</span>
         </div>
       )}
       {issue.notes && (

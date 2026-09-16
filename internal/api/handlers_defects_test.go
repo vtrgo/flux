@@ -208,4 +208,99 @@ func TestDefects(t *testing.T) {
 			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 		}
 	})
+
+	t.Run("Create Defect with DueDate - Success", func(t *testing.T) {
+		dueDateStr := "2026-09-30T12:00:00Z"
+		expectedDate, _ := time.Parse(time.RFC3339, dueDateStr)
+		payload := map[string]interface{}{
+			"source_department":   "quality",
+			"assigned_department": "machine_shop",
+			"severity":            "critical",
+			"description":         "Milling error on track alignment",
+			"notes":               "Detailed rework notes: machine down by 1.5mm",
+			"due_date":            dueDateStr,
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/defects", createdMachine.ID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusCreated {
+			t.Fatalf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
+		}
+
+		var defect models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&defect); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if defect.DueDate == nil {
+			t.Fatal("expected non-nil DueDate on created defect")
+		}
+		if !defect.DueDate.Equal(expectedDate) {
+			t.Errorf("expected DueDate %s, got %s", expectedDate, *defect.DueDate)
+		}
+	})
+
+	t.Run("Create Defect - Description Exceeds 255 Characters (Failure)", func(t *testing.T) {
+		longDescription := string(make([]byte, 256))
+		for i := range longDescription {
+			longDescription = longDescription[:i] + "a" + longDescription[i+1:]
+		}
+		payload := map[string]interface{}{
+			"source_department":   "quality",
+			"assigned_department": "assembly",
+			"severity":            "minor",
+			"description":         longDescription,
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/defects", createdMachine.ID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request for description > 255 chars, got %v", status)
+		}
+	})
+
+	t.Run("Edit Defect - Updates DueDate and Notes", func(t *testing.T) {
+		newDueDate := "2026-10-15T12:00:00Z"
+		expectedDate, _ := time.Parse(time.RFC3339, newDueDate)
+		newNotes := "Expanded rework instructions for tooling department"
+		payload := map[string]interface{}{
+			"source_department":   "quality",
+			"assigned_department": "design",
+			"severity":            "moderate",
+			"description":         "Updated brief description",
+			"notes":               newNotes,
+			"due_date":            newDueDate,
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/defects/%s/edit", defectID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusOK, rr.Body.String())
+		}
+
+		var updated models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&updated); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if updated.DueDate == nil || !updated.DueDate.Equal(expectedDate) {
+			t.Errorf("expected DueDate %s, got %v", expectedDate, updated.DueDate)
+		}
+		if updated.Notes == nil || *updated.Notes != newNotes {
+			t.Errorf("expected Notes %s, got %v", newNotes, updated.Notes)
+		}
+	})
 }
+

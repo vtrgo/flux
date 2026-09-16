@@ -84,4 +84,25 @@ describe('IssueCard Component', () => {
     expect(screen.getByText('Opened:')).toBeDefined();
     expect(screen.queryByText('Closed:')).toBeNull();
   });
+
+  it('renders target resolution date when due_date is provided', async () => {
+    const issueWithDueDate: Defect = {
+      ...baseIssue,
+      due_date: '2026-09-30T12:00:00Z',
+    };
+
+    await act(async () => {
+      render(
+        <IssueCard
+          issue={issueWithDueDate}
+          onClick={() => {}}
+          actions={<button>Action</button>}
+        />
+      );
+    });
+
+    expect(screen.getByText('Target Resolution:')).toBeDefined();
+    expect(screen.getByText('9/30/2026')).toBeDefined();
+  });
 });
+

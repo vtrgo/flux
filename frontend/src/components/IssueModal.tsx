@@ -8,6 +8,7 @@ import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { toast } from "sonner";
 
 import { Machine, Defect } from "../types";
+import { toCalendarDateInput, calendarDateToUtcNoon } from "../lib/dateUtils";
 
 interface IssueModalProps {
   isOpen: boolean;
@@ -36,7 +37,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     assigned_user_id: '',
     severity: 'moderate',
     description: '',
-    notes: ''
+    notes: '',
+    due_date: ''
   });
 
   useAppHotkeys('escape', () => {
@@ -64,7 +66,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           assigned_user_id: editingDefect.assigned_user_id || '',
           severity: editingDefect.severity,
           description: editingDefect.description,
-          notes: editingDefect.notes || ''
+          notes: editingDefect.notes || '',
+          due_date: toCalendarDateInput(editingDefect.due_date)
         });
       } else {
         setFormData({
@@ -74,7 +77,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           assigned_user_id: '',
           severity: 'moderate',
           description: '',
-          notes: ''
+          notes: '',
+          due_date: ''
         });
       }
     }
@@ -83,17 +87,21 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const payload = {
+      ...formData,
+      due_date: formData.due_date ? calendarDateToUtcNoon(formData.due_date) : undefined
+    };
     try {
       if (editingDefect) {
         await fetchApi(`defects/${editingDefect.id}/edit`, {
           method: 'PUT',
-          body: JSON.stringify(formData)
+          body: JSON.stringify(payload)
         });
         toast.success('Changes saved successfully!');
       } else {
         const newDefect = await fetchApi<Defect>(`machines/${formData.machine_id}/defects`, {
           method: 'POST',
-          body: JSON.stringify(formData)
+          body: JSON.stringify(payload)
         });
         
         if (newDefect && pendingFiles.length > 0) {
@@ -224,38 +232,62 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SEVERITY</label>
-            <select 
-              value={formData.severity} 
-              onChange={e => setFormData({...formData, severity: e.target.value})}
-              className="vtr-input"
-            >
-              <option value="critical">Critical</option>
-              <option value="moderate">Moderate</option>
-              <option value="minor">Minor</option>
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SEVERITY</label>
+              <select 
+                value={formData.severity} 
+                onChange={e => setFormData({...formData, severity: e.target.value})}
+                className="vtr-input"
+              >
+                <option value="critical">Critical</option>
+                <option value="moderate">Moderate</option>
+                <option value="minor">Minor</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TARGET RESOLUTION DATE (OPTIONAL)</label>
+              <input 
+                type="date"
+                value={formData.due_date}
+                onChange={e => setFormData({...formData, due_date: e.target.value})}
+                className="vtr-input"
+              />
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>DESCRIPTION</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                BRIEF DESCRIPTION
+              </label>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: formData.description.length >= 240 ? 'var(--accent-red, #ff3366)' : 'var(--text-secondary)' }}>
+                {formData.description.length}/255
+              </span>
+            </div>
             <textarea 
               value={formData.description} 
               onChange={e => setFormData({...formData, description: e.target.value})}
               required
+              maxLength={255}
               autoFocus
-              rows={4}
+              rows={2}
+              placeholder="Brief summary of the issue (e.g. Bolt loose on station 3)"
               className="vtr-input"
               style={{ resize: 'vertical' }}
             />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>NOTES (OPTIONAL)</label>
+            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              DETAILED NOTES & CONTEXT (OPTIONAL)
+            </label>
             <textarea 
               value={formData.notes} 
               onChange={e => setFormData({...formData, notes: e.target.value})}
-              rows={3}
+              rows={5}
+              placeholder="Add detailed troubleshooting steps, root cause context, rework instructions, or specifications as needed..."
               className="vtr-input"
               style={{ resize: 'vertical' }}
             />

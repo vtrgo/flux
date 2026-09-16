@@ -129,3 +129,26 @@
   color: var(--vtr-theme-text-muted);
   margin-top: 4px;
 }
+
+.dueDate {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dueDateLabel {
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary, #888);
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+}
+
+.dueDateValue {
+  color: var(--vtr-theme-primary, #00e5ff);
+  font-weight: 600;
+}
+

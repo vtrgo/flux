@@ -58,6 +58,7 @@ export interface Defect {
   notes?: string;
   resolved_by?: string;
   resolved_at?: string;
+  due_date?: string;
   created_at: string;
 }
 

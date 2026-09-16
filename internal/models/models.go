@@ -142,6 +142,7 @@ type Defect struct {
 	Notes              *string    `json:"notes,omitempty"`
 	ResolvedBy         *string    `json:"resolved_by,omitempty"`
 	ResolvedAt         *time.Time `json:"resolved_at,omitempty"`
+	DueDate            *time.Time `json:"due_date,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
 }
 

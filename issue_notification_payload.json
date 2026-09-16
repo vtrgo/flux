@@ -34,6 +34,10 @@
           "value": "Open"
         },
         {
+          "title": "Target Resolution:",
+          "value": "2026-09-30 (Due in 5 days)"
+        },
+        {
           "title": "Machine Order #:",
           "value": "VTR-2026-004 (VF-500 Feeder)"
         },
@@ -70,13 +74,13 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "Issue Description",
+          "text": "Brief Description (Max 255 Chars)",
           "weight": "Bolder",
           "size": "Small"
         },
         {
           "type": "TextBlock",
-          "text": "Bowl feeder discharge track clearance measured at 1.8mm instead of 3.2mm specified in drawing D-4401. Flange parts jam at orientation gate during pre-FAT runoff.",
+          "text": "Bowl feeder discharge track clearance is 1.8mm instead of 3.2mm specified in drawing D-4401. Flange parts jam at orientation gate.",
           "wrap": true,
           "spacing": "Small"
         }
@@ -88,13 +92,13 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "Technician Notes & Context",
+          "text": "Detailed Notes & Context",
           "weight": "Bolder",
           "size": "Small"
         },
         {
           "type": "TextBlock",
-          "text": "Rework required on CNC mill or manual adjustment of mounting bracket prior to customer FAT scheduled for Friday.",
+          "text": "Rework required on CNC mill or manual adjustment of mounting bracket prior to customer FAT scheduled for Friday. Station 2 technician has verified air purge is functional, but parts jam at gate due to insufficient clearance. See attached photo for CAD comparison.",
           "wrap": true,
           "isSubtle": true,
           "spacing": "Small"
@@ -121,6 +125,7 @@
     "sales_order_id": "18c2f109-7d8b-4b2e-a590-f94de368140a",
     "severity": "critical",
     "status": "open",
+    "due_date": "2026-09-30T12:00:00Z",
     "timestamp": "2026-09-16T11:20:00Z"
   }
 }
