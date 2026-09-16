@@ -1,0 +1,126 @@
+{
+  "recipient_email": "user@vtrfeedersolutions.com",
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.2",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "vtrFlux Issue Notification",
+      "weight": "Bolder",
+      "size": "Medium",
+      "color": "Attention"
+    },
+    {
+      "type": "TextBlock",
+      "text": "A new quality defect has been logged and assigned to your department for resolution.",
+      "wrap": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "FactSet",
+      "spacing": "Medium",
+      "facts": [
+        {
+          "title": "Issue ID:",
+          "value": "DEF-4f7b2c91"
+        },
+        {
+          "title": "Severity:",
+          "value": "CRITICAL"
+        },
+        {
+          "title": "Status:",
+          "value": "Open"
+        },
+        {
+          "title": "Machine Order #:",
+          "value": "VTR-2026-004 (VF-500 Feeder)"
+        },
+        {
+          "title": "Project / PO:",
+          "value": "PO-88321 - Apex Automation"
+        },
+        {
+          "title": "Source Dept:",
+          "value": "Quality (FAT Inspection)"
+        },
+        {
+          "title": "Assigned Dept:",
+          "value": "Machine Shop"
+        },
+        {
+          "title": "Assigned To:",
+          "value": "John Doe (jdoe@vtrfeedersolutions.com)"
+        },
+        {
+          "title": "Reported By:",
+          "value": "Sarah Jenkins (Quality Lead)"
+        },
+        {
+          "title": "Date Reported:",
+          "value": "2026-09-16 11:20 AM EDT"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "spacing": "Medium",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Issue Description",
+          "weight": "Bolder",
+          "size": "Small"
+        },
+        {
+          "type": "TextBlock",
+          "text": "Bowl feeder discharge track clearance measured at 1.8mm instead of 3.2mm specified in drawing D-4401. Flange parts jam at orientation gate during pre-FAT runoff.",
+          "wrap": true,
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "spacing": "Small",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Technician Notes & Context",
+          "weight": "Bolder",
+          "size": "Small"
+        },
+        {
+          "type": "TextBlock",
+          "text": "Rework required on CNC mill or manual adjustment of mounting bracket prior to customer FAT scheduled for Friday.",
+          "wrap": true,
+          "isSubtle": true,
+          "spacing": "Small"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "View Machine in vtrFlux",
+      "url": "http://flux.vtrfeedersolutions.com/machines/7a1b8c3d-e4f5-4a6b-9c8d-0e1f2a3b4c5d"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "Open Quality Inspection Hub",
+      "url": "http://flux.vtrfeedersolutions.com/quality"
+    }
+  ],
+  "metadata": {
+    "event_type": "defect_assigned",
+    "issue_id": "4f7b2c91-9e2a-4b7d-8152-32a89f928e41",
+    "machine_id": "7a1b8c3d-e4f5-4a6b-9c8d-0e1f2a3b4c5d",
+    "sales_order_id": "18c2f109-7d8b-4b2e-a590-f94de368140a",
+    "severity": "critical",
+    "status": "open",
+    "timestamp": "2026-09-16T11:20:00Z"
+  }
+}
