@@ -54,3 +54,5 @@ backend/data/
 bin/
 data/
 logs/
+
+*.json
