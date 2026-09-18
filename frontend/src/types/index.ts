@@ -139,3 +139,18 @@ export interface CreateDefectRequest {
   due_date?: string;
   send_notification?: boolean;
 }
+
+export interface InAppAlert {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  severity: string;
+  department?: string;
+  machine_id?: string;
+  machine_number?: string;
+  recipient_email?: string;
+  opened_by?: string;
+  created_at: string;
+  read: boolean;
+}

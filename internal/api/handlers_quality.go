@@ -243,6 +243,20 @@ func dispatchDefectNotification(ctx context.Context, defect models.Defect, assig
 	}
 
 	notifications.Dispatch(notif)
+
+	BroadcastEvent("notification_alert", map[string]interface{}{
+		"id":              notif.DefectID.String(),
+		"type":            "defect",
+		"machine_id":      notif.MachineID.String(),
+		"machine_number":  notif.MachineNumber,
+		"title":           fmt.Sprintf("Issue Logged: %s", notif.MachineNumber),
+		"description":     notif.Description,
+		"severity":        notif.Severity,
+		"department":      notif.AssignedDept,
+		"recipient_email": notif.RecipientEmail,
+		"opened_by":       notif.OpenedByName,
+		"created_at":      notif.DateOpened.Format(time.RFC3339),
+	})
 }
 
 // handleGetAllDefects fetches all defects across all machines for the Quality Resolution Hub
