@@ -20,6 +20,8 @@ describe('IssueModal Assignee Department Filtering', () => {
     { id: 'u2', username: 'bob_asm', first_name: 'Bob', last_name: 'Jones', department: 'assembly' },
     { id: 'u3', username: 'charlie_ctrl', first_name: 'Charlie', last_name: 'Brown', department: 'electrical_controls' },
     { id: 'u4', username: 'diana_des', first_name: 'Diana', last_name: 'Prince', department: 'design' },
+    { id: 'u5', username: 'quinn_qa', first_name: 'Quinn', last_name: 'Adams', department: 'quality', email: 'quinn@vtrfeedersolutions.com' },
+    { id: 'u6', username: 'pam_pm', first_name: 'Pam', last_name: 'Beesly', department: 'project_management', email: 'pam@vtrfeedersolutions.com' },
   ];
 
   beforeEach(() => {
@@ -221,5 +223,38 @@ describe('IssueModal Assignee Department Filtering', () => {
     });
 
     expect(screen.queryByLabelText(/ROUTE TO NOTIFICATIONS/i)).toBeNull();
+  });
+
+  it('allows routing to Quality / PM and includes both quality and project management users as assignees', async () => {
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={() => {}}
+          editingDefect={null}
+        />
+      );
+    });
+
+    const routingSelect = screen.getByLabelText(/ASSIGNED \/ ROUTING/i) as HTMLSelectElement;
+
+    // Check that Quality / PM option exists in routing dropdown
+    const qualityOption = Array.from(routingSelect.options).find(opt => opt.value === 'quality');
+    expect(qualityOption).toBeDefined();
+    expect(qualityOption?.text).toBe('Quality / PM');
+
+    // Select Quality / PM
+    await act(async () => {
+      fireEvent.change(routingSelect, { target: { value: 'quality' } });
+    });
+
+    // Verify both Quinn (quality) and Pam (project_management) are present
+    expect(screen.getByText('Quinn Adams')).toBeDefined();
+    expect(screen.getByText('Pam Beesly')).toBeDefined();
+
+    // Verify users from other departments are not shown
+    expect(screen.queryByText('Alice Smith')).toBeNull();
+    expect(screen.queryByText('Charlie Brown')).toBeNull();
+    expect(screen.queryByText('Diana Prince')).toBeNull();
   });
 });

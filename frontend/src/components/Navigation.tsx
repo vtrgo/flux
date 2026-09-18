@@ -32,7 +32,7 @@ export function Navigation() {
         href="/quality" 
         className={getClassName("/quality")}
       >
-        Quality Hub
+        Quality / PM Hub
       </Link>
 
       <div className={styles.dropdownContainer}>

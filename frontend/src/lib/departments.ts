@@ -7,8 +7,10 @@ export const DEPARTMENT_LABELS: Record<string, string> = {
   electrical_controls: 'Controls',
   controls: 'Controls', // alias
   enclosures: 'Enclosures',
-  quality: 'Quality',
-  project_management: 'Project Management',
+  quality: 'Quality / PM',
+  project_management: 'Quality / PM',
+  quality_pm: 'Quality / PM',
+  pm: 'Quality / PM',
 };
 
 export const ACTIVE_DEPARTMENTS = [
@@ -19,6 +21,7 @@ export const ACTIVE_DEPARTMENTS = [
   { key: 'assembly', label: DEPARTMENT_LABELS['assembly'] },
   { key: 'electrical_controls', label: DEPARTMENT_LABELS['electrical_controls'] },
   { key: 'enclosures', label: DEPARTMENT_LABELS['enclosures'] },
+  { key: 'quality', label: DEPARTMENT_LABELS['quality'] },
 ];
 
 export function formatDepartmentName(key: string): string {

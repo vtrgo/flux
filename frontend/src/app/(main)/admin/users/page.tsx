@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '../../../../lib/api';
 import { User } from '../../../../types';
-import { ACTIVE_DEPARTMENTS } from '../../../../lib/departments';
+import { ACTIVE_DEPARTMENTS, formatDepartmentName } from '../../../../lib/departments';
 import { toast } from 'sonner';
 
 export default function AdminUsersPage() {
@@ -143,7 +143,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td style={{ padding: '1rem 0' }}>{u.first_name} {u.last_name}</td>
                     <td style={{ padding: '1rem 0' }}>
-                      {ACTIVE_DEPARTMENTS.find(d => d.key === u.department)?.label || u.department || 'None'}
+                      {u.department ? formatDepartmentName(u.department) : 'None'}
                     </td>
                     <td style={{ padding: '1rem 0' }}>{u.role || 'None'}</td>
                     <td style={{ padding: '1rem 0', textAlign: 'right' }}>
@@ -223,10 +223,10 @@ export default function AdminUsersPage() {
                   className="vtr-input"
                 >
                   <option value="">None</option>
-                  <option value="quality">Quality</option>
                   {ACTIVE_DEPARTMENTS.map(d => (
                     <option key={d.key} value={d.key}>{d.label}</option>
                   ))}
+                  <option value="project_management">Project Management</option>
                 </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
