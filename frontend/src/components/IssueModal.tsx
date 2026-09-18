@@ -181,7 +181,6 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                 onChange={e => setFormData({...formData, source_department: e.target.value})}
                 className="vtr-input"
               >
-                <option value="quality">Quality</option>
                 {ACTIVE_DEPARTMENTS.map(d => (
                   <option key={d.key} value={d.key}>{d.label}</option>
                 ))}
@@ -197,7 +196,10 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                   const newDept = e.target.value;
                   // If switching department, reset assignee if currently assigned user is not in the new department
                   const currentUser = users.find(u => u.id === formData.assigned_user_id);
-                  const isUserInNewDept = currentUser && currentUser.department?.toLowerCase() === newDept.toLowerCase();
+                  const userDept = (currentUser?.department || '').toLowerCase();
+                  const isQualityMatch = (newDept.toLowerCase() === 'quality' || newDept.toLowerCase() === 'quality_pm') && 
+                    (userDept === 'quality' || userDept === 'project_management' || userDept === 'pm' || userDept === 'quality_pm');
+                  const isUserInNewDept = currentUser && (userDept === newDept.toLowerCase() || isQualityMatch);
                   setFormData({
                     ...formData,
                     assigned_department: newDept,
@@ -228,7 +230,15 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                   {!formData.assigned_department ? 'Select routing department first' : 'Unassigned'}
                 </option>
                 {users
-                  .filter(u => !formData.assigned_department || u.department?.toLowerCase() === formData.assigned_department.toLowerCase())
+                  .filter(u => {
+                    if (!formData.assigned_department) return false;
+                    const userDept = (u.department || '').toLowerCase();
+                    const assignedDept = formData.assigned_department.toLowerCase();
+                    if (assignedDept === 'quality' || assignedDept === 'quality_pm') {
+                      return userDept === 'quality' || userDept === 'project_management' || userDept === 'pm' || userDept === 'quality_pm';
+                    }
+                    return userDept === assignedDept;
+                  })
                   .sort((a, b) => a.username.localeCompare(b.username))
                   .map(u => (
                     <option key={u.id} value={u.id}>

@@ -152,10 +152,6 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.AssignedDepartment == "quality" {
-		respondError(w, http.StatusBadRequest, "Defects cannot be assigned to the quality department", nil)
-		return
-	}
 
 	parsedDueDate, err := parseDueDate(req.DueDate)
 	if err != nil {

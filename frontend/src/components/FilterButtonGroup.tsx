@@ -8,9 +8,10 @@ interface FilterButtonGroupProps {
   activeOption: string;
   onChange: (option: string) => void;
   label?: string;
+  formatOption?: (option: string) => string;
 }
 
-export const FilterButtonGroup: React.FC<FilterButtonGroupProps> = ({ options, activeOption, onChange, label }) => {
+export const FilterButtonGroup: React.FC<FilterButtonGroupProps> = ({ options, activeOption, onChange, label, formatOption }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const toggleOption = (option: string) => {
@@ -50,7 +51,7 @@ export const FilterButtonGroup: React.FC<FilterButtonGroupProps> = ({ options, a
               onKeyDown={(e) => handleKeyDown(e, index, option)}
               aria-checked={isActive}
             >
-              {option}
+              {formatOption ? formatOption(option) : option}
             </button>
           );
         })}

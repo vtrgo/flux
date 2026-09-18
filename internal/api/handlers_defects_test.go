@@ -335,5 +335,35 @@ func TestDefects(t *testing.T) {
 			t.Errorf("expected description 'Defect routed to notifications', got '%s'", defect.Description)
 		}
 	})
+
+	t.Run("Create Defect - Assigned to Quality / PM (Success)", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"source_department":   "assembly",
+			"assigned_department": "quality",
+			"severity":            "moderate",
+			"description":         "Documentation and FAT signoff pending by Quality / PM",
+			"notes":               "Customer FAT checklist needs PM review",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/defects", createdMachine.ID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusCreated {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusCreated, rr.Body.String())
+		}
+
+		var defect models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&defect); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if defect.AssignedDepartment != "quality" {
+			t.Errorf("expected assigned_department 'quality', got '%s'", defect.AssignedDepartment)
+		}
+	})
 }
+
 

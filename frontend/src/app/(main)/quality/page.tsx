@@ -12,6 +12,7 @@ import { IssueCard } from "../../../components/IssueCard";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
+import { formatDepartmentName } from "../../../lib/departments";
 
 export default function QualityResolutionHub() {
   const [defects, setDefects] = useState<Defect[]>([]);
@@ -131,7 +132,7 @@ export default function QualityResolutionHub() {
   return (
     <main className={styles.container}>
       <header className={styles.header}>
-        <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>Quality & Resolution Hub</h1>
+        <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>Quality / PM Hub</h1>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button className="vtr-btn" onClick={openNewModal} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
             <span>+ ADD ISSUE</span>
@@ -160,6 +161,7 @@ export default function QualityResolutionHub() {
             activeOption={activeDepartment} 
             onChange={setActiveDepartment} 
             label="Assigned" 
+            formatOption={opt => opt === "All" ? "All" : formatDepartmentName(opt)}
           />
         )}
         
