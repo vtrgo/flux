@@ -141,7 +141,8 @@ func (c *PowerAutomateChannel) BuildAdaptiveCard(notif IssueNotification) Adapti
 	}
 }
 
-// SendIssueNotification sends the Adaptive Card to the Power Automate endpoint via HTTP POST.
+// SendIssueNotification sends the Adaptive Card to the Power Automate endpoint via HTTP POST,
+// automatically retrying on transient HTTP or connection failures.
 func (c *PowerAutomateChannel) SendIssueNotification(ctx context.Context, notif IssueNotification) error {
 	if !c.IsEnabled() {
 		slog.Debug("PowerAutomateChannel is disabled; skipping notification", "defect_id", notif.DefectID)
@@ -154,41 +155,65 @@ func (c *PowerAutomateChannel) SendIssueNotification(ctx context.Context, notif 
 		return fmt.Errorf("failed to marshal AdaptiveCard payload: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.webhookURL, bytes.NewReader(payloadBytes))
-	if err != nil {
-		return fmt.Errorf("failed to create Power Automate HTTP request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
 	slog.Info("Sending issue notification to Power Automate",
 		"defect_id", notif.DefectID,
 		"machine_number", notif.MachineNumber,
 		"recipient_email", card.RecipientEmail,
 	)
 
-	resp, err := c.client.Do(req)
-	if err != nil {
-		slog.Error("Power Automate HTTP request failed",
-			"defect_id", notif.DefectID,
-			"error", err,
-		)
-		return fmt.Errorf("power automate request failed: %w", err)
-	}
-	defer resp.Body.Close()
+	const maxRetries = 2
+	var lastErr error
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := time.Duration(attempt*500) * time.Millisecond
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(backoff):
+			}
+			slog.Info("Retrying Power Automate request", "attempt", attempt, "defect_id", notif.DefectID)
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.webhookURL, bytes.NewReader(payloadBytes))
+		if err != nil {
+			return fmt.Errorf("failed to create Power Automate HTTP request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("power automate request failed: %w", err)
+			continue
+		}
+
 		body, _ := io.ReadAll(resp.Body)
-		slog.Error("Power Automate returned non-2xx status code",
+		resp.Body.Close()
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			slog.Info("Successfully delivered issue notification to Power Automate",
+				"defect_id", notif.DefectID,
+				"status_code", resp.StatusCode,
+			)
+			return nil
+		}
+
+		lastErr = fmt.Errorf("power automate returned status %d: %s", resp.StatusCode, string(body))
+		slog.Warn("Power Automate call returned non-2xx status code",
 			"status_code", resp.StatusCode,
 			"response_body", string(body),
 			"defect_id", notif.DefectID,
+			"attempt", attempt,
 		)
-		return fmt.Errorf("power automate returned status %d: %s", resp.StatusCode, string(body))
+
+		// Only retry transient status codes (rate limits or server errors)
+		if resp.StatusCode != http.StatusTooManyRequests &&
+			resp.StatusCode != http.StatusBadGateway &&
+			resp.StatusCode != http.StatusServiceUnavailable &&
+			resp.StatusCode != http.StatusGatewayTimeout {
+			break
+		}
 	}
 
-	slog.Info("Successfully delivered issue notification to Power Automate",
-		"defect_id", notif.DefectID,
-		"status_code", resp.StatusCode,
-	)
-	return nil
+	return lastErr
 }

@@ -186,6 +186,47 @@ func TestPowerAutomateChannel_SendIssueNotification_Error(t *testing.T) {
 	}
 }
 
+func TestPowerAutomateChannel_SendIssueNotification_RetrySuccess(t *testing.T) {
+	attempts := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts == 1 {
+			// First attempt fails with transient 503
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"error": "temporarily unavailable"}`))
+			return
+		}
+		// Second attempt succeeds
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer server.Close()
+
+	cfg := Config{
+		Enabled:               true,
+		PowerAutomateURL:      server.URL,
+		DefaultRecipientEmail: "justin@vtrfeedersolutions.com",
+	}
+	channel := NewPowerAutomateChannel(cfg, server.Client())
+
+	notif := IssueNotification{
+		DefectID:       uuid.New(),
+		MachineNumber:  "25-115G",
+		Description:    "Defect test retry",
+		RecipientEmail: "lucas@vtrfeedersolutions.com",
+		DateOpened:     time.Now(),
+		Timezone:       "America/Toronto",
+	}
+
+	err := channel.SendIssueNotification(context.Background(), notif)
+	if err != nil {
+		t.Fatalf("expected retry to succeed, got: %v", err)
+	}
+
+	if attempts != 2 {
+		t.Errorf("expected 2 attempts, got %d", attempts)
+	}
+}
+
 func TestDispatcher_Dispatch(t *testing.T) {
 	received := make(chan IssueNotification, 1)
 	mockChan := &mockChannel{

@@ -21,6 +21,7 @@ interface IssueModalProps {
 import { ImageUploader } from "./ImageUploader";
 import { AttachmentViewer } from "./AttachmentViewer";
 import { useUsers } from "../hooks/useUsers";
+import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
 
 export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality', preselectedMachineId }: IssueModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -264,31 +265,11 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           </div>
 
           {!editingDefect && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', padding: '0.6rem 0.75rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', borderRadius: '4px' }}>
-              <label htmlFor="send_notification_checkbox" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-primary)', margin: 0 }}>
-                <input 
-                  type="checkbox" 
-                  id="send_notification_checkbox"
-                  checked={sendNotification} 
-                  onChange={e => setSendNotification(e.target.checked)}
-                  style={{ width: '1rem', height: '1rem', accentColor: 'var(--vtr-theme-primary)', cursor: 'pointer' }}
-                />
-                <span>ROUTE TO NOTIFICATIONS (TEAMS / POWER AUTOMATE)</span>
-              </label>
-              {sendNotification && (
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', paddingLeft: '1.6rem' }}>
-                  {assignedUser ? (
-                    assignedUser.email ? (
-                      <span>Target Recipient: <strong style={{ color: 'var(--vtr-theme-primary)' }}>{assignedUser.first_name && assignedUser.last_name ? `${assignedUser.first_name} ${assignedUser.last_name}` : assignedUser.username} ({assignedUser.email})</strong></span>
-                    ) : (
-                      <span>Target Recipient: <strong style={{ color: '#eab308' }}>{assignedUser.username} has no email configured</strong> (falls back to default: justin@vtrfeedersolutions.com)</span>
-                    )
-                  ) : (
-                    <span>Target Recipient: <span style={{ color: 'var(--text-secondary)' }}>No assignee selected (falls back to default: justin@vtrfeedersolutions.com)</span></span>
-                  )}
-                </div>
-              )}
-            </div>
+            <NotificationRoutingCheckbox
+              checked={sendNotification}
+              onChange={setSendNotification}
+              assignedUser={assignedUser}
+            />
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>

@@ -4,17 +4,19 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 // Dispatcher coordinates fan-out of issue notifications across active channels.
 type Dispatcher struct {
-	mu       sync.RWMutex
-	channels []Channel
-	queue    chan IssueNotification
-	wg       sync.WaitGroup
-	ctx      context.Context
-	cancel   context.CancelFunc
+	mu        sync.RWMutex
+	channels  []Channel
+	queue     chan IssueNotification
+	wg        sync.WaitGroup
+	ctx       context.Context
+	cancel    context.CancelFunc
+	isStopped atomic.Bool
 }
 
 var (
@@ -49,14 +51,23 @@ func (d *Dispatcher) RegisterChannel(ch Channel) {
 }
 
 // Dispatch enqueues an issue notification for asynchronous delivery.
-// If the buffer is full, it initiates an unbuffered fallback goroutine so the API response is never delayed.
+// If the buffer is full, it initiates a tracked fallback goroutine so the API response is never delayed.
 func (d *Dispatcher) Dispatch(notif IssueNotification) {
+	if d.isStopped.Load() {
+		slog.Warn("Dispatcher is stopped; dropping notification", "defect_id", notif.DefectID)
+		return
+	}
+
 	select {
 	case d.queue <- notif:
 		// Successfully queued
 	default:
 		slog.Warn("Notification queue is full; processing in transient goroutine", "defect_id", notif.DefectID)
-		go d.processNotification(notif)
+		d.wg.Add(1)
+		go func() {
+			defer d.wg.Done()
+			d.processNotification(notif)
+		}()
 	}
 }
 
@@ -76,37 +87,52 @@ func (d *Dispatcher) worker(id int) {
 					return
 				}
 			}
-		case notif := <-d.queue:
+		case notif, ok := <-d.queue:
+			if !ok {
+				return
+			}
 			d.processNotification(notif)
 		}
 	}
 }
 
+// processNotification fans out the notification to all active channels concurrently.
 func (d *Dispatcher) processNotification(notif IssueNotification) {
 	d.mu.RLock()
 	channels := make([]Channel, len(d.channels))
 	copy(channels, d.channels)
 	d.mu.RUnlock()
 
+	var channelWg sync.WaitGroup
 	for _, ch := range channels {
 		if !ch.IsEnabled() {
 			continue
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		if err := ch.SendIssueNotification(ctx, notif); err != nil {
-			slog.Error("Failed to deliver notification via channel",
-				"channel", ch.Name(),
-				"defect_id", notif.DefectID,
-				"error", err,
-			)
-		}
-		cancel()
+		channelWg.Add(1)
+		go func(channel Channel) {
+			defer channelWg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+
+			if err := channel.SendIssueNotification(ctx, notif); err != nil {
+				slog.Error("Failed to deliver notification via channel",
+					"channel", channel.Name(),
+					"defect_id", notif.DefectID,
+					"error", err,
+				)
+			}
+		}(ch)
 	}
+
+	channelWg.Wait()
 }
 
 // Stop gracefully shuts down workers and waits for in-flight tasks to complete.
 func (d *Dispatcher) Stop() {
+	if d.isStopped.Swap(true) {
+		return // Already stopped
+	}
 	d.cancel()
 	d.wg.Wait()
 	slog.Info("Notification dispatcher stopped successfully")

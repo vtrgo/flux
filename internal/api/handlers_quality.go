@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -207,36 +208,41 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 	slog.Debug("Defect logged", "defect_id", newDefect.ID, "machine_id", machineID)
 
 	if req.SendNotification {
-		recipientEmail := ""
-		if assignedUserEmail != nil {
-			recipientEmail = *assignedUserEmail
-		}
-
-		siteTz := DefaultFallbackTimezone
-		var dbTz string
-		if tzErr := db.DB.QueryRowContext(r.Context(), "SELECT value FROM system_settings WHERE key = 'timezone'").Scan(&dbTz); tzErr == nil && dbTz != "" {
-			siteTz = dbTz
-		}
-
-		notif := notifications.IssueNotification{
-			DefectID:       newDefect.ID,
-			MachineID:      newDefect.MachineID,
-			MachineNumber:  machineOrderNumber,
-			Description:    newDefect.Description,
-			Severity:       newDefect.Severity,
-			AssignedDept:   newDefect.AssignedDepartment,
-			RecipientEmail: recipientEmail,
-			OpenedByName:   openedByName,
-			DateOpened:     newDefect.CreatedAt,
-			DueDate:        newDefect.DueDate,
-			Timezone:       siteTz,
-		}
-
-		notifications.Dispatch(notif)
+		dispatchDefectNotification(r.Context(), newDefect, assignedUserEmail, machineOrderNumber, openedByName)
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newDefect)
+}
+
+// dispatchDefectNotification resolves site settings and enqueues the notification asynchronously.
+func dispatchDefectNotification(ctx context.Context, defect models.Defect, assignedUserEmail *string, machineOrderNumber, openedByName string) {
+	recipientEmail := ""
+	if assignedUserEmail != nil {
+		recipientEmail = *assignedUserEmail
+	}
+
+	siteTz := DefaultFallbackTimezone
+	var dbTz string
+	if tzErr := db.DB.QueryRowContext(ctx, "SELECT value FROM system_settings WHERE key = 'timezone'").Scan(&dbTz); tzErr == nil && dbTz != "" {
+		siteTz = dbTz
+	}
+
+	notif := notifications.IssueNotification{
+		DefectID:       defect.ID,
+		MachineID:      defect.MachineID,
+		MachineNumber:  machineOrderNumber,
+		Description:    defect.Description,
+		Severity:       defect.Severity,
+		AssignedDept:   defect.AssignedDepartment,
+		RecipientEmail: recipientEmail,
+		OpenedByName:   openedByName,
+		DateOpened:     defect.CreatedAt,
+		DueDate:        defect.DueDate,
+		Timezone:       siteTz,
+	}
+
+	notifications.Dispatch(notif)
 }
 
 // handleGetAllDefects fetches all defects across all machines for the Quality Resolution Hub
