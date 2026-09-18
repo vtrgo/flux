@@ -12,6 +12,7 @@ import (
 
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
+	"github.com/vtrgo/flux/internal/notifications"
 )
 
 func parseDueDate(dateStr *string) (*time.Time, error) {
@@ -137,6 +138,7 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		Severity           string  `json:"severity"`
 		Notes              string  `json:"notes"`
 		DueDate            *string `json:"due_date"`
+		SendNotification   bool    `json:"send_notification"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -166,21 +168,34 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		assignedUserID = *req.AssignedUserID
 	}
 
+	var assignedUserEmail *string
+	var machineOrderNumber string
+	var openedByName string
 	var newDefect models.Defect
+
 	err = db.DB.QueryRow(`
 		WITH inserted AS (
 			INSERT INTO defects (machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, description, severity, status, notes, due_date)
 			VALUES ($1, $2, $3, $4, NULLIF($8, '')::uuid, $5, $6, 'open', $7, $9)
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date
 		)
-		SELECT i.*, u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name
+		SELECT i.*, 
+		       u.username as assigned_user_name, 
+		       c.username as created_by_user_name, 
+		       f.username as fixed_by_user_name, 
+		       v.username as verified_by_user_name,
+		       u.email as assigned_user_email,
+		       COALESCE(m.order_number, '') as machine_order_number,
+		       COALESCE(NULLIF(TRIM(CONCAT(c.first_name, ' ', c.last_name)), ''), c.username, 'System') as opened_by_name
 		FROM inserted i 
 		LEFT JOIN users u ON i.assigned_user_id = u.id
 		LEFT JOIN users c ON i.created_by_user_id = c.id
 		LEFT JOIN users f ON i.fixed_by_user_id = f.id
 		LEFT JOIN users v ON i.verified_by_user_id = v.id
+		LEFT JOIN machines m ON i.machine_id = m.id
 	`, machineID, req.SourceDepartment, req.AssignedDepartment, assignedUserID, req.Description, req.Severity, req.Notes, authUserID, parsedDueDate).Scan(
 		&newDefect.ID, &newDefect.MachineID, &newDefect.SourceDepartment, &newDefect.AssignedDepartment, &newDefect.AssignedUserID, &newDefect.CreatedByUserID, &newDefect.FixedByUserID, &newDefect.VerifiedByUserID, &newDefect.Description, &newDefect.Severity, &newDefect.Status, &newDefect.Notes, &newDefect.ResolvedBy, &newDefect.ResolvedAt, &newDefect.CreatedAt, &newDefect.DueDate, &newDefect.AssignedUserName, &newDefect.CreatedByUserName, &newDefect.FixedByUserName, &newDefect.VerifiedByUserName,
+		&assignedUserEmail, &machineOrderNumber, &openedByName,
 	)
 
 	if err != nil {
@@ -190,6 +205,35 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 
 	BroadcastEvent("defect_added", newDefect)
 	slog.Debug("Defect logged", "defect_id", newDefect.ID, "machine_id", machineID)
+
+	if req.SendNotification {
+		recipientEmail := ""
+		if assignedUserEmail != nil {
+			recipientEmail = *assignedUserEmail
+		}
+
+		siteTz := DefaultFallbackTimezone
+		var dbTz string
+		if tzErr := db.DB.QueryRowContext(r.Context(), "SELECT value FROM system_settings WHERE key = 'timezone'").Scan(&dbTz); tzErr == nil && dbTz != "" {
+			siteTz = dbTz
+		}
+
+		notif := notifications.IssueNotification{
+			DefectID:       newDefect.ID,
+			MachineID:      newDefect.MachineID,
+			MachineNumber:  machineOrderNumber,
+			Description:    newDefect.Description,
+			Severity:       newDefect.Severity,
+			AssignedDept:   newDefect.AssignedDepartment,
+			RecipientEmail: recipientEmail,
+			OpenedByName:   openedByName,
+			DateOpened:     newDefect.CreatedAt,
+			DueDate:        newDefect.DueDate,
+			Timezone:       siteTz,
+		}
+
+		notifications.Dispatch(notif)
+	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newDefect)

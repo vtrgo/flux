@@ -29,6 +29,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   const [isSubmitting, setIsSubmitting] = useState(false);
   const defaultRoutedDept = defaultAssignedDept === 'quality' ? '' : defaultAssignedDept;
   const { users } = useUsers();
+  const [sendNotification, setSendNotification] = useState(false);
 
   const [formData, setFormData] = useState({
     machine_id: '',
@@ -59,6 +60,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         .catch(err => console.error("Failed to fetch machines", err));
 
       if (editingDefect) {
+        setSendNotification(false);
         setFormData({
           machine_id: editingDefect.machine_id,
           source_department: editingDefect.source_department,
@@ -70,6 +72,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           due_date: toCalendarDateInput(editingDefect.due_date)
         });
       } else {
+        setSendNotification(false);
         setFormData({
           machine_id: preselectedMachineId || '',
           source_department: defaultAssignedDept,
@@ -89,7 +92,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     setIsSubmitting(true);
     const payload = {
       ...formData,
-      due_date: formData.due_date ? calendarDateToUtcNoon(formData.due_date) : undefined
+      due_date: formData.due_date ? calendarDateToUtcNoon(formData.due_date) : undefined,
+      send_notification: !editingDefect ? sendNotification : undefined
     };
     try {
       if (editingDefect) {
@@ -142,6 +146,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
       handleFormSubmit(submitEvent);
     }
   }, { enableOnFormTags: true }, [isOpen, formData, editingDefect]);
+
+  const assignedUser = users.find(u => u.id === formData.assigned_user_id);
 
   if (!isOpen) return null;
 
@@ -256,6 +262,34 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               />
             </div>
           </div>
+
+          {!editingDefect && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', padding: '0.6rem 0.75rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', borderRadius: '4px' }}>
+              <label htmlFor="send_notification_checkbox" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-primary)', margin: 0 }}>
+                <input 
+                  type="checkbox" 
+                  id="send_notification_checkbox"
+                  checked={sendNotification} 
+                  onChange={e => setSendNotification(e.target.checked)}
+                  style={{ width: '1rem', height: '1rem', accentColor: 'var(--vtr-theme-primary)', cursor: 'pointer' }}
+                />
+                <span>ROUTE TO NOTIFICATIONS (TEAMS / POWER AUTOMATE)</span>
+              </label>
+              {sendNotification && (
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', paddingLeft: '1.6rem' }}>
+                  {assignedUser ? (
+                    assignedUser.email ? (
+                      <span>Target Recipient: <strong style={{ color: 'var(--vtr-theme-primary)' }}>{assignedUser.first_name && assignedUser.last_name ? `${assignedUser.first_name} ${assignedUser.last_name}` : assignedUser.username} ({assignedUser.email})</strong></span>
+                    ) : (
+                      <span>Target Recipient: <strong style={{ color: '#eab308' }}>{assignedUser.username} has no email configured</strong> (falls back to default: justin@vtrfeedersolutions.com)</span>
+                    )
+                  ) : (
+                    <span>Target Recipient: <span style={{ color: 'var(--text-secondary)' }}>No assignee selected (falls back to default: justin@vtrfeedersolutions.com)</span></span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

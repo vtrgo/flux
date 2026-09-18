@@ -302,5 +302,38 @@ func TestDefects(t *testing.T) {
 			t.Errorf("expected Notes %s, got %v", newNotes, updated.Notes)
 		}
 	})
+
+	t.Run("Create Defect with SendNotification - Success", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"source_department":   "quality",
+			"assigned_department": "assembly",
+			"severity":            "critical",
+			"description":         "Defect routed to notifications",
+			"notes":               "Notification flow test",
+			"send_notification":   true,
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/defects", createdMachine.ID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusCreated {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusCreated, rr.Body.String())
+		}
+
+		var defect models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&defect); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if defect.ID.String() == "" {
+			t.Error("expected non-empty defect ID")
+		}
+		if defect.Description != "Defect routed to notifications" {
+			t.Errorf("expected description 'Defect routed to notifications', got '%s'", defect.Description)
+		}
+	})
 }
 
