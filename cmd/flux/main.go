@@ -14,6 +14,7 @@ import (
 	"github.com/vtrgo/flux/internal/api"
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/logger"
+	"github.com/vtrgo/flux/internal/notifications"
 )
 
 func main() {
@@ -100,5 +101,6 @@ func main() {
 		os.Exit(1)
 	}
 
+	notifications.GetDispatcher().Stop()
 	slog.Info("Server exiting")
 }

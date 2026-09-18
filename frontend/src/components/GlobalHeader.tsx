@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Logo } from "./Logo";
 import { Navigation } from "./Navigation";
 import { UserMenu } from "./UserMenu";
+import { NotificationBell } from "./NotificationBell";
 
 export function GlobalHeader() {
   return (
@@ -22,8 +23,9 @@ export function GlobalHeader() {
       <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
         <Logo width={45} height={45} />
       </Link>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <Navigation />
+        <NotificationBell />
         <UserMenu />
       </div>
     </header>

@@ -21,6 +21,7 @@ interface IssueModalProps {
 import { ImageUploader } from "./ImageUploader";
 import { AttachmentViewer } from "./AttachmentViewer";
 import { useUsers } from "../hooks/useUsers";
+import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
 
 export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality', preselectedMachineId }: IssueModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -29,6 +30,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   const [isSubmitting, setIsSubmitting] = useState(false);
   const defaultRoutedDept = defaultAssignedDept === 'quality' ? '' : defaultAssignedDept;
   const { users } = useUsers();
+  const [sendNotification, setSendNotification] = useState(false);
 
   const [formData, setFormData] = useState({
     machine_id: '',
@@ -59,6 +61,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         .catch(err => console.error("Failed to fetch machines", err));
 
       if (editingDefect) {
+        setSendNotification(false);
         setFormData({
           machine_id: editingDefect.machine_id,
           source_department: editingDefect.source_department,
@@ -70,6 +73,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           due_date: toCalendarDateInput(editingDefect.due_date)
         });
       } else {
+        setSendNotification(false);
         setFormData({
           machine_id: preselectedMachineId || '',
           source_department: defaultAssignedDept,
@@ -89,7 +93,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     setIsSubmitting(true);
     const payload = {
       ...formData,
-      due_date: formData.due_date ? calendarDateToUtcNoon(formData.due_date) : undefined
+      due_date: formData.due_date ? calendarDateToUtcNoon(formData.due_date) : undefined,
+      send_notification: !editingDefect ? sendNotification : undefined
     };
     try {
       if (editingDefect) {
@@ -142,6 +147,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
       handleFormSubmit(submitEvent);
     }
   }, { enableOnFormTags: true }, [isOpen, formData, editingDefect]);
+
+  const assignedUser = users.find(u => u.id === formData.assigned_user_id);
 
   if (!isOpen) return null;
 
@@ -256,6 +263,14 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               />
             </div>
           </div>
+
+          {!editingDefect && (
+            <NotificationRoutingCheckbox
+              checked={sendNotification}
+              onChange={setSendNotification}
+              assignedUser={assignedUser}
+            />
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

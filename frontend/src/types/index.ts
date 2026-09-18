@@ -128,3 +128,29 @@ export interface TimezoneOption {
   region: string;
   offset: string;
 }
+
+export interface CreateDefectRequest {
+  source_department: string;
+  assigned_department: string;
+  assigned_user_id?: string;
+  description: string;
+  severity: string;
+  notes?: string;
+  due_date?: string;
+  send_notification?: boolean;
+}
+
+export interface InAppAlert {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  severity: string;
+  department?: string;
+  machine_id?: string;
+  machine_number?: string;
+  recipient_email?: string;
+  opened_by?: string;
+  created_at: string;
+  read: boolean;
+}

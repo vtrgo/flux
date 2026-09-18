@@ -16,7 +16,7 @@ vi.mock('./AttachmentViewer', () => ({
 
 describe('IssueModal Assignee Department Filtering', () => {
   const mockUsers = [
-    { id: 'u1', username: 'alice_asm', first_name: 'Alice', last_name: 'Smith', department: 'assembly' },
+    { id: 'u1', username: 'alice_asm', first_name: 'Alice', last_name: 'Smith', department: 'assembly', email: 'alice@vtrfeedersolutions.com' },
     { id: 'u2', username: 'bob_asm', first_name: 'Bob', last_name: 'Jones', department: 'assembly' },
     { id: 'u3', username: 'charlie_ctrl', first_name: 'Charlie', last_name: 'Brown', department: 'electrical_controls' },
     { id: 'u4', username: 'diana_des', first_name: 'Diana', last_name: 'Prince', department: 'design' },
@@ -110,5 +110,116 @@ describe('IssueModal Assignee Department Filtering', () => {
       fireEvent.change(routingSelect, { target: { value: 'electrical_controls' } });
     });
     expect(assigneeSelect.value).toBe('');
+  });
+
+  it('renders notification routing checkbox and displays target recipient preview', async () => {
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={() => {}}
+          editingDefect={null}
+          defaultAssignedDept="assembly"
+        />
+      );
+    });
+
+    const checkbox = screen.getByLabelText(/ROUTE TO NOTIFICATIONS/i) as HTMLInputElement;
+    expect(checkbox).toBeDefined();
+    expect(checkbox.checked).toBe(false);
+
+    // Toggle checkbox on
+    await act(async () => {
+      fireEvent.click(checkbox);
+    });
+    expect(checkbox.checked).toBe(true);
+
+    // Without assignee selected, shows fallback to justin@vtrfeedersolutions.com
+    expect(screen.getByText(/falls back to default: justin@vtrfeedersolutions.com/i)).toBeDefined();
+
+    // Select routing department and assignee with email
+    const routingSelect = screen.getByLabelText(/ASSIGNED \/ ROUTING/i) as HTMLSelectElement;
+    const assigneeSelect = screen.getByLabelText(/ASSIGNEE/i) as HTMLSelectElement;
+
+    await act(async () => {
+      fireEvent.change(routingSelect, { target: { value: 'assembly' } });
+    });
+    await act(async () => {
+      fireEvent.change(assigneeSelect, { target: { value: 'u1' } });
+    });
+
+    // Should now preview Alice Smith (alice@vtrfeedersolutions.com)
+    expect(screen.getByText(/Alice Smith \(alice@vtrfeedersolutions.com\)/i)).toBeDefined();
+  });
+
+  it('submits send_notification: true in payload when checkbox is checked', async () => {
+    (fetchApi as any).mockImplementation((url: string) => {
+      if (url === 'machines') {
+        return Promise.resolve([
+          { id: 'mach-1', order_number: 'ORD-100', model_type: 'ModelA' }
+        ]);
+      }
+      return Promise.resolve({ id: 'def-123' });
+    });
+
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={() => {}}
+          editingDefect={null}
+          defaultAssignedDept="assembly"
+        />
+      );
+    });
+
+    const routingSelect = screen.getByLabelText(/ASSIGNED \/ ROUTING/i) as HTMLSelectElement;
+    const descInput = screen.getByPlaceholderText(/Brief summary of the issue/i);
+    const checkbox = screen.getByLabelText(/ROUTE TO NOTIFICATIONS/i) as HTMLInputElement;
+
+    await act(async () => {
+      fireEvent.change(routingSelect, { target: { value: 'assembly' } });
+      fireEvent.change(descInput, { target: { value: 'Critical defect notification test' } });
+      fireEvent.click(checkbox);
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /CREATE ISSUE/i });
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(fetchApi).toHaveBeenCalledWith(
+      expect.stringContaining('machines/'),
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"send_notification":true')
+      })
+    );
+  });
+
+  it('does not display notification checkbox when editing an existing defect', async () => {
+    const mockDefect = {
+      id: 'def-1',
+      machine_id: 'mach-1',
+      order_number: 'ORD-100',
+      source_department: 'assembly',
+      assigned_department: 'assembly',
+      severity: 'moderate',
+      status: 'open',
+      description: 'Existing defect',
+      created_at: new Date().toISOString()
+    };
+
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={() => {}}
+          editingDefect={mockDefect as any}
+        />
+      );
+    });
+
+    expect(screen.queryByLabelText(/ROUTE TO NOTIFICATIONS/i)).toBeNull();
   });
 });

@@ -8,15 +8,23 @@ import Link from 'next/link';
 import styles from './page.module.css';
 
 import { DefectModal } from '../../components/DefectModal';
+import { IssueModal } from '../../components/IssueModal';
 import { MachineCard } from '../../components/MachineCard';
 import { ProjectCard } from '../../components/ProjectCard';
 import { Authorize } from '../../components/Authorize';
 import { SalesOrder, Machine, DefectSummary } from "../../types";
 import { ACTIVE_DEPARTMENTS } from '../../lib/departments';
+import { useAppHotkeys } from '../../hooks/useAppHotkeys';
 
 export default function Home() {
   const { orders, machines, defectSummaries, projectSummaries, loading } = useDashboardData();
   const [selectedMachineDept, setSelectedMachineDept] = useState<{ machineId: string, dept: string } | null>(null);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+
+  useAppHotkeys('c', (e) => {
+    e.preventDefault();
+    setIsIssueModalOpen(true);
+  });
 
 
   const handleDeleteMachine = useCallback(async (e: React.MouseEvent, id: string) => {
@@ -44,6 +52,14 @@ export default function Home() {
           <Authorize roles={['admin', 'manager', 'sales', 'supervisor']}>
             <Link href="/kickoff" className="vtr-btn">Project Configuration</Link>
           </Authorize>
+          <button 
+            className="vtr-btn" 
+            onClick={() => setIsIssueModalOpen(true)} 
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}
+          >
+            <span>+ ADD ISSUE</span>
+            <span style={{ fontSize: '0.65rem', opacity: 0.7, textTransform: 'none' }}>(Press &apos;C&apos;)</span>
+          </button>
         </div>
       </div>
 
@@ -89,6 +105,12 @@ export default function Home() {
           onClose={() => setSelectedMachineDept(null)}
         />
       )}
+
+      <IssueModal
+        isOpen={isIssueModalOpen}
+        onClose={() => setIsIssueModalOpen(false)}
+        editingDefect={null}
+      />
     </main>
   );
 }
