@@ -21,6 +21,14 @@ type IssueNotification struct {
 	DateOpened     time.Time
 	DueDate        *time.Time
 	Timezone       string
+	IsNCR          bool
+	NCRNumber      string
+	Assembler      string
+	Location       string
+	RootCause      string
+	CorrectiveAction string
+	TeamLeadSignature string
+	Status         string
 }
 
 // Channel defines the standard contract for any notification transport method.

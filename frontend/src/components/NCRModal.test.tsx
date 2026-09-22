@@ -104,12 +104,12 @@ describe('NCRModal Component', () => {
     expect(screen.getByLabelText(/Assembler/i)).toBeDefined();
     expect(screen.getByLabelText(/Root Cause of NCR/i)).toBeDefined();
     expect(screen.getByLabelText(/Correction Taken \/ Action Items/i)).toBeDefined();
-    expect(screen.getByLabelText(/NCR Lifecycle Status/i)).toBeDefined();
     expect(screen.getByLabelText(/Assigned Responsible Person/i)).toBeDefined();
 
-    // Verify Severity and Routing Department are completely removed from the form
+    // Verify Severity, Routing Department, and Lifecycle Status selector are completely removed from the form
     expect(screen.queryByLabelText(/^Severity$/i)).toBeNull();
     expect(screen.queryByLabelText(/Routing Department/i)).toBeNull();
+    expect(screen.queryByLabelText(/NCR Lifecycle Status/i)).toBeNull();
 
     const ncrInput = screen.getByLabelText(/NCR Identification #/i) as HTMLInputElement;
     expect(ncrInput.value).toBe('NCR-2026-042');
@@ -214,9 +214,6 @@ describe('NCRModal Component', () => {
       );
     });
 
-    const statusSelect = screen.getByLabelText(/NCR Lifecycle Status/i) as HTMLSelectElement;
-    expect(statusSelect.value).toBe('open');
-
     // Quick action: Mark Fixed / Closed
     const markClosedBtn = screen.getByRole('button', { name: /Mark Fixed \/ Closed/i });
     expect(markClosedBtn).toBeDefined();
@@ -224,7 +221,6 @@ describe('NCRModal Component', () => {
     await act(async () => {
       fireEvent.click(markClosedBtn);
     });
-    expect(statusSelect.value).toBe('fixed');
 
     // Quick action: Verify & Sign Off
     const verifyBtn = screen.getByRole('button', { name: /Verify & Sign Off/i });
@@ -233,7 +229,6 @@ describe('NCRModal Component', () => {
     await act(async () => {
       fireEvent.click(verifyBtn);
     });
-    expect(statusSelect.value).toBe('verified');
 
     // Quick action: Re-Open
     const reopenBtn = screen.getByRole('button', { name: /Re-Open NCR/i });
@@ -242,7 +237,17 @@ describe('NCRModal Component', () => {
     await act(async () => {
       fireEvent.click(reopenBtn);
     });
-    expect(statusSelect.value).toBe('open');
+
+    // Save changes
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    await act(async () => {
+      fireEvent.click(saveBtn);
+    });
+
+    expect(fetchApi).toHaveBeenCalledWith('ncrs/ncr-99', expect.objectContaining({
+      method: 'PUT',
+      body: expect.stringContaining('"status":"open"'),
+    }));
   });
 
   it('renders attached images in printable gallery', async () => {

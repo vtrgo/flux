@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -97,6 +98,99 @@ func (c *PowerAutomateChannel) BuildAdaptiveCard(notif IssueNotification) Adapti
 	openedBy := notif.OpenedByName
 	if openedBy == "" {
 		openedBy = "System"
+	}
+
+	if notif.IsNCR {
+		headerText := fmt.Sprintf("⚠️ NON-CONFORMANCE REPORT (NCR) - %s", machineLabel)
+		if notif.NCRNumber != "" {
+			headerText = fmt.Sprintf("⚠️ NON-CONFORMANCE REPORT: %s (Machine: %s)", notif.NCRNumber, machineLabel)
+		}
+
+		facts := []AdaptiveCardFact{
+			{
+				Title: "Notification Type:",
+				Value: "Non-Conformance Report (NCR)",
+			},
+		}
+		if notif.NCRNumber != "" {
+			facts = append(facts, AdaptiveCardFact{
+				Title: "NCR Identification #:",
+				Value: notif.NCRNumber,
+			})
+		}
+		facts = append(facts,
+			AdaptiveCardFact{Title: "Machine ID:", Value: machineLabel},
+			AdaptiveCardFact{Title: "Opened By:", Value: openedBy},
+			AdaptiveCardFact{Title: "Date Opened:", Value: dateOpenedStr},
+		)
+		if notif.Status != "" {
+			facts = append(facts, AdaptiveCardFact{
+				Title: "NCR Status:",
+				Value: strings.ToUpper(notif.Status),
+			})
+		}
+		if notif.Location != "" {
+			facts = append(facts, AdaptiveCardFact{
+				Title: "Location of NC:",
+				Value: notif.Location,
+			})
+		}
+		if notif.Assembler != "" {
+			facts = append(facts, AdaptiveCardFact{
+				Title: "Assembler:",
+				Value: notif.Assembler,
+			})
+		}
+		if notif.TeamLeadSignature != "" {
+			facts = append(facts, AdaptiveCardFact{
+				Title: "Assigned Responsible:",
+				Value: notif.TeamLeadSignature,
+			})
+		}
+		if dueDateStr != "None" {
+			facts = append(facts, AdaptiveCardFact{
+				Title: "Target Due Date:",
+				Value: dueDateStr,
+			})
+		}
+		if notif.RootCause != "" {
+			facts = append(facts, AdaptiveCardFact{
+				Title: "Root Cause:",
+				Value: notif.RootCause,
+			})
+		}
+		if notif.CorrectiveAction != "" {
+			facts = append(facts, AdaptiveCardFact{
+				Title: "Corrective Action:",
+				Value: notif.CorrectiveAction,
+			})
+		}
+
+		body := []AdaptiveCardItem{
+			{
+				Type:   "TextBlock",
+				Text:   headerText,
+				Weight: "Bolder",
+				Size:   "Medium",
+			},
+			{
+				Type: "TextBlock",
+				Text: fmt.Sprintf("**NCR Non-Conformance Details:**\n%s", notif.Description),
+				Wrap: true,
+			},
+			{
+				Type:  "FactSet",
+				Facts: facts,
+			},
+		}
+
+		return AdaptiveCardPayload{
+			RecipientEmail: recipient,
+			Type:           "AdaptiveCard",
+			Schema:         "http://adaptivecards.io/schemas/adaptive-card.json",
+			Version:        "1.2",
+			Body:           body,
+		}
 	}
 
 	return AdaptiveCardPayload{

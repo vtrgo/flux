@@ -644,37 +644,6 @@ export function NCRModal({
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="ncr_status" className={styles.label}>
-                NCR Lifecycle Status
-              </label>
-              <select
-                id="ncr_status"
-                value={formData.status}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    status: e.target.value as "open" | "fixed" | "verified",
-                  })
-                }
-                className={`${styles.selectField} ${styles.screenOnlyField}`}
-              >
-                <option value="open">Open (Defect Active)</option>
-                <option value="fixed">Fixed / Pending Verification</option>
-                <option value="verified">Verified &amp; Closed</option>
-              </select>
-              <div
-                className={styles.printOnlyField}
-                style={{ fontWeight: 600, textTransform: "uppercase" }}
-              >
-                {formData.status === "verified"
-                  ? "VERIFIED & CLOSED"
-                  : formData.status === "fixed"
-                  ? "FIXED / PENDING VERIFICATION"
-                  : "OPEN"}
-              </div>
-            </div>
-
-            <div className={styles.formGroup}>
               <label htmlFor="closeout_date" className={styles.label}>
                 Date for Completion / Verification
               </label>
@@ -692,7 +661,7 @@ export function NCRModal({
               </div>
             </div>
 
-            <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+            <div className={styles.formGroup}>
               <label htmlFor="signature" className={styles.label}>
                 Assigned Responsible Person (Manager Sign-off)
               </label>

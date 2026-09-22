@@ -297,34 +297,80 @@ func dispatchDefectNotification(ctx context.Context, defect models.Defect, assig
 		siteTz = dbTz
 	}
 
+	ncrNumber := ""
+	if defect.NCRNumber != nil {
+		ncrNumber = *defect.NCRNumber
+	}
+	assembler := ""
+	if defect.Assembler != nil {
+		assembler = *defect.Assembler
+	}
+	location := ""
+	if defect.Location != nil {
+		location = *defect.Location
+	}
+	rootCause := ""
+	if defect.RootCause != nil {
+		rootCause = *defect.RootCause
+	}
+	correctiveAction := ""
+	if defect.CorrectiveAction != nil {
+		correctiveAction = *defect.CorrectiveAction
+	}
+	teamLeadSignature := ""
+	if defect.TeamLeadSignature != nil {
+		teamLeadSignature = *defect.TeamLeadSignature
+	}
+
 	notif := notifications.IssueNotification{
-		DefectID:       defect.ID,
-		MachineID:      defect.MachineID,
-		MachineNumber:  machineOrderNumber,
-		Description:    defect.Description,
-		Severity:       defect.Severity,
-		AssignedDept:   defect.AssignedDepartment,
-		RecipientEmail: recipientEmail,
-		OpenedByName:   openedByName,
-		DateOpened:     defect.CreatedAt,
-		DueDate:        defect.DueDate,
-		Timezone:       siteTz,
+		DefectID:          defect.ID,
+		MachineID:         defect.MachineID,
+		MachineNumber:     machineOrderNumber,
+		Description:       defect.Description,
+		Severity:          defect.Severity,
+		AssignedDept:      defect.AssignedDepartment,
+		RecipientEmail:    recipientEmail,
+		OpenedByName:      openedByName,
+		DateOpened:        defect.CreatedAt,
+		DueDate:           defect.DueDate,
+		Timezone:          siteTz,
+		IsNCR:             defect.IsNCR,
+		NCRNumber:         ncrNumber,
+		Assembler:         assembler,
+		Location:          location,
+		RootCause:         rootCause,
+		CorrectiveAction:  correctiveAction,
+		TeamLeadSignature: teamLeadSignature,
+		Status:            defect.Status,
 	}
 
 	notifications.Dispatch(notif)
 
+	alertType := "defect"
+	title := fmt.Sprintf("Issue Logged: %s", notif.MachineNumber)
+	if notif.IsNCR {
+		alertType = "ncr"
+		if notif.NCRNumber != "" {
+			title = fmt.Sprintf("NCR %s Logged: %s", notif.NCRNumber, notif.MachineNumber)
+		} else {
+			title = fmt.Sprintf("NCR Logged: %s", notif.MachineNumber)
+		}
+	}
+
 	BroadcastEvent("notification_alert", map[string]interface{}{
 		"id":              notif.DefectID.String(),
-		"type":            "defect",
+		"type":            alertType,
 		"machine_id":      notif.MachineID.String(),
 		"machine_number":  notif.MachineNumber,
-		"title":           fmt.Sprintf("Issue Logged: %s", notif.MachineNumber),
+		"title":           title,
 		"description":     notif.Description,
 		"severity":        notif.Severity,
 		"department":      notif.AssignedDept,
 		"recipient_email": notif.RecipientEmail,
 		"opened_by":       notif.OpenedByName,
 		"created_at":      notif.DateOpened.Format(time.RFC3339),
+		"is_ncr":          notif.IsNCR,
+		"ncr_number":      notif.NCRNumber,
 	})
 }
 
