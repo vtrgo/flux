@@ -84,6 +84,12 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/defects/{defect_id}/edit", handleEditDefect)
 	mux.Handle("DELETE /api/defects/{defect_id}", RequireRole("admin", "manager")(http.HandlerFunc(handleDeleteDefect)))
 
+	// NCR endpoints
+	mux.HandleFunc("GET /api/ncrs", handleGetNCRs)
+	mux.HandleFunc("POST /api/ncrs", handleCreateNCR)
+	mux.HandleFunc("GET /api/ncrs/next-number", handleGetNextNCRNumber)
+	mux.HandleFunc("PUT /api/ncrs/{id}", handleUpdateNCR)
+
 	// Auth endpoints
 	mux.HandleFunc("POST /api/auth/login", handleLogin)
 	mux.HandleFunc("POST /api/auth/logout", handleLogout)

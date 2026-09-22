@@ -145,6 +145,30 @@ type Defect struct {
 	ResolvedAt         *time.Time `json:"resolved_at,omitempty"`
 	DueDate            *time.Time `json:"due_date,omitempty"`
 	CreatedAt          time.Time  `json:"created_at"`
+
+	// Non-Conformance Report (NCR) fields
+	IsNCR             bool       `json:"is_ncr"`
+	NCRNumber         *string    `json:"ncr_number,omitempty"`
+	Assembler         *string    `json:"assembler,omitempty"`
+	Location          *string    `json:"location,omitempty"`
+	RootCause         *string    `json:"root_cause,omitempty"`
+	CorrectiveAction  *string    `json:"corrective_action,omitempty"`
+	CloseoutDate      *time.Time `json:"closeout_date,omitempty"`
+	TeamLeadSignature *string    `json:"team_lead_signature,omitempty"`
+}
+
+// NCRDetail represents a rich Non-Conformance Report with machine and sales order context
+type NCRDetail struct {
+	Defect
+	OrderNumber           string  `json:"order_number"`
+	InternalProjectNumber *string `json:"internal_project_number,omitempty"`
+	ProjectName           *string `json:"project_name,omitempty"`
+	CustomerName          *string `json:"customer_name,omitempty"`
+}
+
+// NextNCRNumberResponse represents the next available sequential NCR number
+type NextNCRNumberResponse struct {
+	NextNumber string `json:"next_number"`
 }
 
 // DefectSummary represents aggregated backend counts for defects per department

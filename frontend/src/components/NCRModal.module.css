@@ -1,0 +1,227 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.modal {
+  background: var(--bg-surface, #1e1e1e);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 860px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.formContainer {
+  padding: 2rem;
+  background: var(--bg-surface, #1e1e1e);
+  color: var(--text-primary, #fff);
+}
+
+.formHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border-color, #333);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.logoArea {
+  display: flex;
+  align-items: center;
+}
+
+.logoImage {
+  max-width: 220px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.headerText {
+  text-align: right;
+}
+
+.headerTitle {
+  color: var(--vtr-theme-primary, #00e5ff);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.headerSubtitle {
+  color: var(--text-secondary, #aaa);
+  margin: 4px 0 0 0;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.sectionTitle {
+  background-color: rgba(0, 102, 128, 0.15);
+  color: var(--vtr-theme-primary, #00e5ff);
+  padding: 8px 12px;
+  font-weight: bold;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid var(--vtr-theme-primary, #00e5ff);
+  border-radius: 0 4px 4px 0;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup.fullWidth {
+  grid-column: span 2;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #bbb);
+  margin-bottom: 0.35rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inputField,
+.selectField,
+.textareaField {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background-color: var(--bg-input, #2a2a2a);
+  color: var(--text-primary, #fff);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.inputField:focus,
+.selectField:focus,
+.textareaField:focus {
+  outline: none;
+  border-color: var(--vtr-theme-primary, #00e5ff);
+  box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.2);
+}
+
+.textareaField {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border-color, #333);
+  padding-top: 1.25rem;
+}
+
+.printPreview {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #888);
+}
+
+/* Print layout adhering to NCR_FORM.HTML specification */
+@media print {
+  :global(body) {
+    background: white !important;
+    color: #333 !important;
+    padding: 0 !important;
+  }
+
+  :global(header),
+  :global(nav),
+  :global(.vtr-header),
+  :global(.no-print) {
+    display: none !important;
+  }
+
+  .overlay {
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  .modal {
+    max-width: 100% !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: white !important;
+  }
+
+  .formContainer {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px !important;
+    background: white !important;
+    color: #333 !important;
+  }
+
+  .formHeader {
+    border-bottom: 2px solid #e2e8f0 !important;
+  }
+
+  .headerTitle {
+    color: #006680 !important;
+  }
+
+  .headerSubtitle {
+    color: #4a5568 !important;
+  }
+
+  .sectionTitle {
+    background-color: #e6f4f8 !important;
+    color: #00556c !important;
+    border-left: 4px solid #006680 !important;
+  }
+
+  .label {
+    color: #4a5568 !important;
+  }
+
+  .inputField,
+  .selectField,
+  .textareaField {
+    border: 1px solid #999 !important;
+    background: transparent !important;
+    color: #111 !important;
+  }
+
+  .actions {
+    display: none !important;
+  }
+}
