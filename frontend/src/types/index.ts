@@ -111,6 +111,7 @@ export interface UpdateNCRRequest {
   corrective_action?: string;
   closeout_date?: string;
   team_lead_signature?: string;
+  send_notification?: boolean;
 }
 
 export interface NextNCRNumberResponse {

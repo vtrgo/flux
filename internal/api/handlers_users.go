@@ -1,8 +1,8 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -12,27 +12,28 @@ import (
 	"github.com/vtrgo/flux/internal/models"
 )
 
-// handleGetUsers fetches all active users, optionally filtered by department
+// handleGetUsers fetches all active users, optionally filtered by department or role
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	deptFilter := r.URL.Query().Get("department")
+	roleFilter := r.URL.Query().Get("role")
 
-	var rows *sql.Rows
-	var err error
-
+	query := `
+		SELECT id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
+		FROM users
+		WHERE 1=1
+	`
+	var args []interface{}
 	if deptFilter != "" {
-		rows, err = db.DB.Query(`
-			SELECT id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
-			FROM users
-			WHERE LOWER(department) = LOWER($1)
-			ORDER BY username ASC
-		`, deptFilter)
-	} else {
-		rows, err = db.DB.Query(`
-			SELECT id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
-			FROM users
-			ORDER BY username ASC
-		`)
+		args = append(args, deptFilter)
+		query += fmt.Sprintf(" AND LOWER(department) = LOWER($%d)", len(args))
 	}
+	if roleFilter != "" {
+		args = append(args, roleFilter)
+		query += fmt.Sprintf(" AND LOWER(role) = LOWER($%d)", len(args))
+	}
+	query += " ORDER BY first_name ASC, last_name ASC, username ASC"
+
+	rows, err := db.DB.Query(query, args...)
 
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Database error: ", err)

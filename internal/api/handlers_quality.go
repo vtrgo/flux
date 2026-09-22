@@ -1264,6 +1264,7 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 		CorrectiveAction   *string `json:"corrective_action"`
 		CloseoutDate       *string `json:"closeout_date"`
 		TeamLeadSignature  *string `json:"team_lead_signature"`
+		SendNotification   bool    `json:"send_notification"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1299,7 +1300,10 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 		statusVal = *req.Status
 	}
 
+	var assignedUserEmail *string
+	var openedByName string
 	var ncr models.NCRDetail
+
 	err = db.DB.QueryRow(`
 		WITH updated AS (
 			UPDATE defects
@@ -1346,6 +1350,8 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 		       c.username as created_by_user_name,
 		       f.username as fixed_by_user_name,
 		       v.username as verified_by_user_name,
+		       u.email as assigned_user_email,
+		       COALESCE(NULLIF(TRIM(CONCAT(auth_user.first_name, ' ', auth_user.last_name)), ''), auth_user.username, 'System') as opened_by_name,
 		       m.order_number,
 		       so.internal_project_number,
 		       so.project_name,
@@ -1355,6 +1361,7 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN users c ON u_tbl.created_by_user_id = c.id
 		LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
 		LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
+		LEFT JOIN users auth_user ON NULLIF($15, '')::uuid = auth_user.id
 		LEFT JOIN machines m ON u_tbl.machine_id = m.id
 		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
 	`, ncrID, req.Assembler, req.Location, req.Description, req.Severity, req.Notes,
@@ -1366,6 +1373,7 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 		&ncr.Description, &ncr.Severity, &ncr.Status, &ncr.Notes, &ncr.ResolvedBy, &ncr.ResolvedAt, &ncr.CreatedAt, &ncr.DueDate,
 		&ncr.IsNCR, &ncr.NCRNumber, &ncr.Assembler, &ncr.Location, &ncr.RootCause, &ncr.CorrectiveAction, &ncr.CloseoutDate, &ncr.TeamLeadSignature,
 		&ncr.AssignedUserName, &ncr.CreatedByUserName, &ncr.FixedByUserName, &ncr.VerifiedByUserName,
+		&assignedUserEmail, &openedByName,
 		&ncr.OrderNumber, &ncr.InternalProjectNumber, &ncr.ProjectName, &ncr.CustomerName,
 	)
 
@@ -1376,6 +1384,10 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 
 	BroadcastEvent("defect_updated", ncr.Defect)
 	slog.Debug("NCR updated", "defect_id", ncrID, "status", ncr.Status)
+
+	if req.SendNotification {
+		dispatchDefectNotification(r.Context(), ncr.Defect, assignedUserEmail, ncr.OrderNumber, openedByName)
+	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, ncr)

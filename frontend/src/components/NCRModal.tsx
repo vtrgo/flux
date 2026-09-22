@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "../lib/api";
 import styles from "./NCRModal.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { toast } from "sonner";
-import { Machine, NCR, NextNCRNumberResponse } from "../types";
+import { Machine, NCR, User, NextNCRNumberResponse } from "../types";
 import { ImageUploader } from "./ImageUploader";
 import { AttachmentViewer } from "./AttachmentViewer";
+import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
+import { useSSE } from "./SSEProvider";
 import { toCalendarDateInput, calendarDateToUtcNoon } from "../lib/dateUtils";
 import { formatDepartmentName } from "../lib/departments";
 
@@ -29,7 +31,10 @@ export function NCRModal({
   autoPrint,
 }: NCRModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [managers, setManagers] = useState<User[]>([]);
+  const [attachments, setAttachments] = useState<{ id: string; filename: string; mime_type?: string }[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [sendNotification, setSendNotification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -39,9 +44,6 @@ export function NCRModal({
     assembler: "",
     location: "",
     description: "",
-    severity: "moderate",
-    source_department: "quality",
-    assigned_department: "assembly",
     root_cause: "",
     corrective_action: "",
     closeout_date: "",
@@ -59,6 +61,41 @@ export function NCRModal({
     { enableOnFormTags: true },
     [isOpen, onClose]
   );
+
+  // Load managers from database for Team Lead Signature selection
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchApi<User[]>("users?role=manager")
+      .then((data) => setManagers(data || []))
+      .catch((err) => console.error("Failed to fetch managers", err));
+  }, [isOpen]);
+
+  const editingNCRId = editingNCR?.id;
+
+  // Load attachments for viewing and printing
+  const loadAttachments = useCallback(async () => {
+    if (!editingNCRId) {
+      setAttachments([]);
+      return;
+    }
+    try {
+      const data = await fetchApi<{ id: string; filename: string; mime_type?: string }[]>(
+        `issues/${editingNCRId}/attachments`
+      );
+      setAttachments(data || []);
+    } catch (err) {
+      console.error("Failed to load attachments", err);
+    }
+  }, [editingNCRId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadAttachments();
+    }
+  }, [isOpen, loadAttachments]);
+
+  useSSE("attachment_added", () => loadAttachments());
+  useSSE("attachment_deleted", () => loadAttachments());
 
   useEffect(() => {
     if (!isOpen) return;
@@ -85,9 +122,6 @@ export function NCRModal({
         assembler: editingNCR.assembler || "",
         location: editingNCR.location || "",
         description: editingNCR.description || "",
-        severity: editingNCR.severity || "moderate",
-        source_department: editingNCR.source_department || "quality",
-        assigned_department: editingNCR.assigned_department || "assembly",
         root_cause: editingNCR.root_cause || "",
         corrective_action: editingNCR.corrective_action || "",
         closeout_date: toCalendarDateInput(editingNCR.closeout_date),
@@ -114,9 +148,6 @@ export function NCRModal({
         assembler: "",
         location: "",
         description: "",
-        severity: "moderate",
-        source_department: "quality",
-        assigned_department: "assembly",
         root_cause: "",
         corrective_action: "",
         closeout_date: "",
@@ -149,9 +180,13 @@ export function NCRModal({
 
     const payload = {
       ...formData,
+      severity: editingNCR?.severity || "moderate",
+      source_department: editingNCR?.source_department || "quality",
+      assigned_department: editingNCR?.assigned_department || "assembly",
       closeout_date: formData.closeout_date
         ? calendarDateToUtcNoon(formData.closeout_date)
         : undefined,
+      send_notification: sendNotification,
     };
 
     try {
@@ -212,9 +247,6 @@ export function NCRModal({
         assembler: "",
         location: "",
         description: "",
-        severity: "moderate",
-        source_department: "quality",
-        assigned_department: "assembly",
         root_cause: "",
         corrective_action: "",
         closeout_date: "",
@@ -227,6 +259,35 @@ export function NCRModal({
         }
       });
     }
+  };
+
+  const handleMarkClosed = () => {
+    setFormData((prev) => ({
+      ...prev,
+      status: "fixed",
+      closeout_date: prev.closeout_date || new Date().toISOString().split("T")[0],
+    }));
+    toast.info("NCR marked as Fixed / Closed. Click 'Save Changes' to commit.");
+  };
+
+  const handleVerify = () => {
+    if (!formData.team_lead_signature) {
+      toast.error("Please select a Manager / Team Lead sign-off before verifying.");
+    }
+    setFormData((prev) => ({
+      ...prev,
+      status: "verified",
+      closeout_date: prev.closeout_date || new Date().toISOString().split("T")[0],
+    }));
+    toast.info("NCR marked as Verified & Cleared. Click 'Save Changes' to commit.");
+  };
+
+  const handleReopen = () => {
+    setFormData((prev) => ({
+      ...prev,
+      status: "open",
+    }));
+    toast.info("NCR re-opened. Click 'Save Changes' to commit.");
   };
 
   const handlePrint = () => {
@@ -246,6 +307,13 @@ export function NCRModal({
   const selectedMachineDisplay = selectedMachine
     ? `${selectedMachine.order_number} (${selectedMachine.model_type})`
     : formData.machine_id || "—";
+
+  const selectedManagerUser = managers.find(
+    (m) =>
+      ((m.first_name && m.last_name)
+        ? `${m.first_name} ${m.last_name}`
+        : m.username) === formData.team_lead_signature
+  );
 
   useAppHotkeys(
     "ctrl+enter, meta+enter",
@@ -277,6 +345,9 @@ export function NCRModal({
             <div className={styles.headerText}>
               <h2 className={styles.headerTitle}>Fabricated Components</h2>
               <h3 className={styles.headerSubtitle}>Non-Conformance Report</h3>
+              <div className={styles.printOnlyField} style={{ marginTop: "6px", fontWeight: 700, textTransform: "uppercase", color: "#006680" }}>
+                STATUS: {formData.status === "verified" ? "VERIFIED & CLEARED" : formData.status === "fixed" ? "FIXED / PENDING VERIFICATION" : "OPEN"}
+              </div>
             </div>
           </div>
 
@@ -390,55 +461,6 @@ export function NCRModal({
               </div>
             </div>
 
-            <div className={styles.formGroup}>
-              <label htmlFor="severity" className={styles.label}>
-                Severity
-              </label>
-              <select
-                id="severity"
-                value={formData.severity}
-                onChange={(e) =>
-                  setFormData({ ...formData, severity: e.target.value })
-                }
-                className={`${styles.selectField} ${styles.screenOnlyField}`}
-              >
-                <option value="minor">Minor</option>
-                <option value="moderate">Moderate</option>
-                <option value="critical">Critical</option>
-              </select>
-              <div className={styles.printOnlyField} style={{ textTransform: "uppercase", fontWeight: 600 }}>
-                {formData.severity}
-              </div>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label htmlFor="assigned_dept" className={styles.label}>
-                Routing Department
-              </label>
-              <select
-                id="assigned_dept"
-                value={formData.assigned_department}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    assigned_department: e.target.value,
-                  })
-                }
-                className={`${styles.selectField} ${styles.screenOnlyField}`}
-              >
-                <option value="assembly">Assembly</option>
-                <option value="machine-shop">Machine Shop</option>
-                <option value="laser">Laser</option>
-                <option value="electrical-controls">Electrical / Controls</option>
-                <option value="enclosures">Enclosures</option>
-                <option value="design">Design</option>
-                <option value="kitting">Kitting</option>
-              </select>
-              <div className={styles.printOnlyField}>
-                {formatDepartmentName(formData.assigned_department)}
-              </div>
-            </div>
-
             <div className={`${styles.formGroup} ${styles.fullWidth}`}>
               <div className={styles.label}>
                 <span>Description of Defect</span>
@@ -546,6 +568,35 @@ export function NCRModal({
                 </div>
               )}
             </div>
+
+            {/* Attached Photos & Documentation (Printable Gallery) */}
+            {(attachments.length > 0 || pendingFiles.length > 0) && (
+              <div className={`${styles.formGroup} ${styles.fullWidth} ${styles.printAttachmentsSection}`}>
+                <div className={styles.sectionTitle}>Attached Photos &amp; Documentation</div>
+                <div className={styles.printAttachmentsGrid}>
+                  {attachments.map((att) => (
+                    <div key={att.id} className={styles.printAttachmentCard}>
+                      <img
+                        src={`/api/attachments/${att.id}`}
+                        alt={att.filename}
+                        className={styles.printAttachmentImg}
+                      />
+                      <span className={styles.printAttachmentFilename}>{att.filename}</span>
+                    </div>
+                  ))}
+                  {pendingFiles.map((file, idx) => (
+                    <div key={idx} className={styles.printAttachmentCard}>
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className={styles.printAttachmentImg}
+                      />
+                      <span className={styles.printAttachmentFilename}>{file.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section: Non-Conformance Close-out */}
@@ -588,6 +639,37 @@ export function NCRModal({
             </div>
 
             <div className={styles.formGroup}>
+              <label htmlFor="ncr_status" className={styles.label}>
+                NCR Lifecycle Status
+              </label>
+              <select
+                id="ncr_status"
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    status: e.target.value as "open" | "fixed" | "verified",
+                  })
+                }
+                className={`${styles.selectField} ${styles.screenOnlyField}`}
+              >
+                <option value="open">Open (Defect Active)</option>
+                <option value="fixed">Fixed / Pending Verification</option>
+                <option value="verified">Verified &amp; Closed</option>
+              </select>
+              <div
+                className={styles.printOnlyField}
+                style={{ fontWeight: 600, textTransform: "uppercase" }}
+              >
+                {formData.status === "verified"
+                  ? "VERIFIED & CLOSED"
+                  : formData.status === "fixed"
+                  ? "FIXED / PENDING VERIFICATION"
+                  : "OPEN"}
+              </div>
+            </div>
+
+            <div className={styles.formGroup}>
               <label htmlFor="closeout_date" className={styles.label}>
                 Date for Completion / Verification
               </label>
@@ -605,12 +687,11 @@ export function NCRModal({
               </div>
             </div>
 
-            <div className={styles.formGroup}>
+            <div className={`${styles.formGroup} ${styles.fullWidth}`}>
               <label htmlFor="signature" className={styles.label}>
-                Team Lead Signature / Sign-off
+                Team Lead Signature (Manager Sign-off)
               </label>
-              <input
-                type="text"
+              <select
                 id="signature"
                 value={formData.team_lead_signature}
                 onChange={(e) =>
@@ -619,9 +700,21 @@ export function NCRModal({
                     team_lead_signature: e.target.value,
                   })
                 }
-                placeholder="Sign digitally or print to sign"
-                className={`${styles.inputField} ${styles.screenOnlyField}`}
-              />
+                className={`${styles.selectField} ${styles.screenOnlyField}`}
+              >
+                <option value="">-- Select Manager Sign-off --</option>
+                {managers.map((mgr) => {
+                  const fullName =
+                    mgr.first_name && mgr.last_name
+                      ? `${mgr.first_name} ${mgr.last_name}`
+                      : mgr.username;
+                  return (
+                    <option key={mgr.id} value={fullName}>
+                      {fullName} {mgr.department ? `(${formatDepartmentName(mgr.department)})` : ""}
+                    </option>
+                  );
+                })}
+              </select>
               <div className={styles.printOnlyField}>
                 {formData.team_lead_signature ? (
                   <span className={styles.digitalSignature}>
@@ -636,8 +729,60 @@ export function NCRModal({
             </div>
           </div>
 
+          {/* Notification Routing */}
+          <div className="no-print" style={{ margin: "1rem 0 0.5rem" }}>
+            <NotificationRoutingCheckbox
+              checked={sendNotification}
+              onChange={setSendNotification}
+              assignedUser={selectedManagerUser}
+            />
+          </div>
+
           {/* Actions */}
           <div className={`${styles.actions} no-print`}>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginRight: "auto" }}>
+              {editingNCR && formData.status !== "fixed" && formData.status !== "verified" && (
+                <button
+                  type="button"
+                  className="vtr-btn"
+                  onClick={handleMarkClosed}
+                  style={{
+                    backgroundColor: "rgba(245, 158, 11, 0.15)",
+                    color: "#f59e0b",
+                    borderColor: "#f59e0b",
+                  }}
+                  title="Mark rework completed and set to Fixed"
+                >
+                  Mark Fixed / Closed
+                </button>
+              )}
+              {editingNCR && formData.status !== "verified" && (
+                <button
+                  type="button"
+                  className="vtr-btn"
+                  onClick={handleVerify}
+                  style={{
+                    backgroundColor: "rgba(16, 185, 129, 0.15)",
+                    color: "#10b981",
+                    borderColor: "#10b981",
+                  }}
+                  title="Verify resolution and close out NCR"
+                >
+                  Verify &amp; Sign Off
+                </button>
+              )}
+              {editingNCR && formData.status !== "open" && (
+                <button
+                  type="button"
+                  className="vtr-btn vtr-btn-secondary"
+                  onClick={handleReopen}
+                  title="Re-open this NCR"
+                >
+                  Re-Open NCR
+                </button>
+              )}
+            </div>
+
             <button
               type="button"
               className="vtr-btn vtr-btn-secondary"

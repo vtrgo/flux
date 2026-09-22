@@ -154,7 +154,8 @@
 }
 
 .printOnlyField,
-.printOnlyBox {
+.printOnlyBox,
+.printAttachmentsSection {
   display: none;
 }
 
@@ -310,6 +311,52 @@
     display: flex !important;
     align-items: center !important;
     color: #718096 !important;
+    font-family: var(--font-mono) !important;
+  }
+
+  /* Printable Attached Images Gallery */
+  .printAttachmentsSection {
+    display: block !important;
+    margin-top: 25px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .printAttachmentsGrid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 15px !important;
+    margin-top: 12px !important;
+  }
+
+  .printAttachmentCard {
+    border: 1px solid #cbd5e0 !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    background: #ffffff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 220px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .printAttachmentImg {
+    width: 100% !important;
+    height: 160px !important;
+    object-fit: contain !important;
+    border-radius: 2px !important;
+    display: block !important;
+    background: #f8fafc !important;
+  }
+
+  .printAttachmentFilename {
+    font-size: 0.75rem !important;
+    color: #4a5568 !important;
+    margin-top: 6px !important;
+    text-align: center !important;
+    word-break: break-all !important;
     font-family: var(--font-mono) !important;
   }
 
