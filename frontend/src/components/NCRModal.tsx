@@ -12,6 +12,7 @@ import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
 import { useSSE } from "./SSEProvider";
 import { toCalendarDateInput, calendarDateToUtcNoon } from "../lib/dateUtils";
 import { formatDepartmentName } from "../lib/departments";
+import { Authorize } from "./Authorize";
 
 interface NCRModalProps {
   isOpen: boolean;
@@ -99,6 +100,9 @@ export function NCRModal({
 
   useEffect(() => {
     if (!isOpen) return;
+
+    // Clear notification routing checkbox on review/edit so new notifications can be explicitly dispatched
+    setSendNotification(false);
 
     fetchApi<Machine[]>("machines")
       .then((data) => {
@@ -253,6 +257,7 @@ export function NCRModal({
         team_lead_signature: "",
         status: "open",
       });
+      setSendNotification(false);
       fetchApi<NextNCRNumberResponse>("ncrs/next-number").then((resp) => {
         if (resp?.next_number) {
           setFormData((prev) => ({ ...prev, ncr_number: resp.next_number }));
@@ -272,7 +277,7 @@ export function NCRModal({
 
   const handleVerify = () => {
     if (!formData.team_lead_signature) {
-      toast.error("Please select a Manager / Team Lead sign-off before verifying.");
+      toast.error("Please select an Assigned Responsible Person before verifying.");
     }
     setFormData((prev) => ({
       ...prev,
@@ -689,7 +694,7 @@ export function NCRModal({
 
             <div className={`${styles.formGroup} ${styles.fullWidth}`}>
               <label htmlFor="signature" className={styles.label}>
-                Team Lead Signature (Manager Sign-off)
+                Assigned Responsible Person (Manager Sign-off)
               </label>
               <select
                 id="signature"
@@ -702,7 +707,7 @@ export function NCRModal({
                 }
                 className={`${styles.selectField} ${styles.screenOnlyField}`}
               >
-                <option value="">-- Select Manager Sign-off --</option>
+                <option value="">-- Select Assigned Responsible Person --</option>
                 {managers.map((mgr) => {
                   const fullName =
                     mgr.first_name && mgr.last_name
@@ -741,36 +746,38 @@ export function NCRModal({
           {/* Actions */}
           <div className={`${styles.actions} no-print`}>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginRight: "auto" }}>
-              {editingNCR && formData.status !== "fixed" && formData.status !== "verified" && (
-                <button
-                  type="button"
-                  className="vtr-btn"
-                  onClick={handleMarkClosed}
-                  style={{
-                    backgroundColor: "rgba(245, 158, 11, 0.15)",
-                    color: "#f59e0b",
-                    borderColor: "#f59e0b",
-                  }}
-                  title="Mark rework completed and set to Fixed"
-                >
-                  Mark Fixed / Closed
-                </button>
-              )}
-              {editingNCR && formData.status !== "verified" && (
-                <button
-                  type="button"
-                  className="vtr-btn"
-                  onClick={handleVerify}
-                  style={{
-                    backgroundColor: "rgba(16, 185, 129, 0.15)",
-                    color: "#10b981",
-                    borderColor: "#10b981",
-                  }}
-                  title="Verify resolution and close out NCR"
-                >
-                  Verify &amp; Sign Off
-                </button>
-              )}
+              <Authorize roles={['admin', 'manager']}>
+                {editingNCR && formData.status !== "fixed" && formData.status !== "verified" && (
+                  <button
+                    type="button"
+                    className="vtr-btn"
+                    onClick={handleMarkClosed}
+                    style={{
+                      backgroundColor: "rgba(245, 158, 11, 0.15)",
+                      color: "#f59e0b",
+                      borderColor: "#f59e0b",
+                    }}
+                    title="Mark rework completed and set to Fixed"
+                  >
+                    Mark Fixed / Closed
+                  </button>
+                )}
+                {editingNCR && formData.status !== "verified" && (
+                  <button
+                    type="button"
+                    className="vtr-btn"
+                    onClick={handleVerify}
+                    style={{
+                      backgroundColor: "rgba(16, 185, 129, 0.15)",
+                      color: "#10b981",
+                      borderColor: "#10b981",
+                    }}
+                    title="Verify resolution and close out NCR"
+                  >
+                    Verify &amp; Sign Off
+                  </button>
+                )}
+              </Authorize>
               {editingNCR && formData.status !== "open" && (
                 <button
                   type="button"

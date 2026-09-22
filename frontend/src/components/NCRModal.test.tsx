@@ -4,7 +4,12 @@ import React from 'react';
 import { NCRModal } from './NCRModal';
 import { fetchApi } from '../lib/api';
 
+import { useAuth } from '../contexts/AuthContext';
+
 vi.mock('../lib/api');
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
+}));
 vi.mock('./ImageUploader', () => ({
   ImageUploader: () => <div data-testid="image-uploader" />
 }));
@@ -42,6 +47,16 @@ describe('NCRModal Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (useAuth as any).mockReturnValue({
+      user: { id: 'usr-1', username: 'admin_user', role: 'manager' },
+      hasRole: (roles: string | string[]) => {
+        const r = Array.isArray(roles) ? roles : [roles];
+        return r.includes('manager') || r.includes('admin');
+      },
+      hasDepartment: () => true,
+      isAdmin: false,
+      loading: false,
+    });
     (fetchApi as any).mockImplementation((url: string) => {
       if (url === 'machines') {
         return Promise.resolve(mockMachines);
@@ -90,7 +105,7 @@ describe('NCRModal Component', () => {
     expect(screen.getByLabelText(/Root Cause of NCR/i)).toBeDefined();
     expect(screen.getByLabelText(/Correction Taken \/ Action Items/i)).toBeDefined();
     expect(screen.getByLabelText(/NCR Lifecycle Status/i)).toBeDefined();
-    expect(screen.getByLabelText(/Team Lead Signature/i)).toBeDefined();
+    expect(screen.getByLabelText(/Assigned Responsible Person/i)).toBeDefined();
 
     // Verify Severity and Routing Department are completely removed from the form
     expect(screen.queryByLabelText(/^Severity$/i)).toBeNull();
@@ -100,7 +115,7 @@ describe('NCRModal Component', () => {
     expect(ncrInput.value).toBe('NCR-2026-042');
   });
 
-  it('loads managers from database into Team Lead Signature dropdown', async () => {
+  it('loads managers from database into Assigned Responsible Person dropdown', async () => {
     await act(async () => {
       render(
         <NCRModal
@@ -111,8 +126,11 @@ describe('NCRModal Component', () => {
     });
 
     expect(fetchApi).toHaveBeenCalledWith('users?role=manager');
-    const signatureSelect = screen.getByLabelText(/Team Lead Signature/i) as HTMLSelectElement;
+    const signatureSelect = screen.getByLabelText(/Assigned Responsible Person/i) as HTMLSelectElement;
     expect(signatureSelect).toBeDefined();
+
+    // Check placeholder option
+    expect(screen.getByRole('option', { name: /-- Select Assigned Responsible Person --/i })).toBeDefined();
 
     // Check that manager options are rendered
     expect(screen.getByRole('option', { name: /Enda McNamara \(Assembly\)/i })).toBeDefined();
@@ -140,7 +158,7 @@ describe('NCRModal Component', () => {
     const assemblerInput = screen.getByLabelText(/Assembler/i);
     const locationInput = screen.getByLabelText(/Location of NC/i);
     const descInput = screen.getByPlaceholderText(/Provide a detailed description of the non-conformance/i);
-    const signatureSelect = screen.getByLabelText(/Team Lead Signature/i);
+    const signatureSelect = screen.getByLabelText(/Assigned Responsible Person/i);
 
     fireEvent.change(assemblerInput, { target: { value: 'Alex Tech' } });
     fireEvent.change(locationInput, { target: { value: 'Station 2 - Track B' } });
@@ -356,6 +374,79 @@ describe('NCRModal Component', () => {
     expect(printBtn).toBeDefined();
 
     printSpy.mockRestore();
+  });
+
+  it('clears Route to notifications checkbox when reviewing or editing an existing NCR', async () => {
+    await act(async () => {
+      render(
+        <NCRModal
+          isOpen={true}
+          onClose={() => {}}
+          editingNCR={{
+            id: 'ncr-99',
+            machine_id: 'm-1',
+            order_number: 'VTR-1001',
+            is_ncr: true,
+            ncr_number: 'NCR-2026-099',
+            assembler: 'Sam Tech',
+            location: 'Station 1 Rail',
+            description: 'Rail defect 1.2mm',
+            severity: 'moderate',
+            status: 'open',
+            source_department: 'quality',
+            assigned_department: 'assembly',
+            team_lead_signature: 'Enda McNamara',
+            created_at: '2026-09-22T10:00:00Z',
+          }}
+        />
+      );
+    });
+
+    const notifyCheckbox = screen.getByRole('checkbox', { name: /ROUTE TO NOTIFICATIONS/i }) as HTMLInputElement;
+    expect(notifyCheckbox.checked).toBe(false);
+  });
+
+  it('hides Mark Fixed / Closed and Verify & Sign Off buttons if user is not manager or above', async () => {
+    (useAuth as any).mockReturnValue({
+      user: { id: 'usr-operator', username: 'op_user', role: 'operator' },
+      hasRole: (roles: string | string[]) => {
+        const r = Array.isArray(roles) ? roles : [roles];
+        return r.includes('operator');
+      },
+      hasDepartment: () => true,
+      isAdmin: false,
+      loading: false,
+    });
+
+    await act(async () => {
+      render(
+        <NCRModal
+          isOpen={true}
+          onClose={() => {}}
+          editingNCR={{
+            id: 'ncr-99',
+            machine_id: 'm-1',
+            order_number: 'VTR-1001',
+            is_ncr: true,
+            ncr_number: 'NCR-2026-099',
+            assembler: 'Sam Tech',
+            location: 'Station 1 Rail',
+            description: 'Rail defect 1.2mm',
+            severity: 'moderate',
+            status: 'open',
+            source_department: 'quality',
+            assigned_department: 'assembly',
+            team_lead_signature: 'Enda McNamara',
+            created_at: '2026-09-22T10:00:00Z',
+          }}
+        />
+      );
+    });
+
+    expect(screen.queryByRole('button', { name: /Mark Fixed \/ Closed/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Verify & Sign Off/i })).toBeNull();
+    // Non-managers can still see standard cancel / save buttons
+    expect(screen.getByRole('button', { name: /Save Changes/i })).toBeDefined();
   });
 });
 
