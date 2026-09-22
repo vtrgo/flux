@@ -9,6 +9,7 @@ import { Machine, NCR, NextNCRNumberResponse } from "../types";
 import { ImageUploader } from "./ImageUploader";
 import { AttachmentViewer } from "./AttachmentViewer";
 import { toCalendarDateInput, calendarDateToUtcNoon } from "../lib/dateUtils";
+import { formatDepartmentName } from "../lib/departments";
 
 interface NCRModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface NCRModalProps {
   editingNCR?: NCR | null;
   preselectedMachineId?: string;
   onSaved?: () => void;
+  autoPrint?: boolean;
 }
 
 export function NCRModal({
@@ -24,6 +26,7 @@ export function NCRModal({
   editingNCR,
   preselectedMachineId,
   onSaved,
+  autoPrint,
 }: NCRModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -230,6 +233,20 @@ export function NCRModal({
     window.print();
   };
 
+  useEffect(() => {
+    if (isOpen && autoPrint) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, autoPrint]);
+
+  const selectedMachine = machines.find((m) => m.id === formData.machine_id);
+  const selectedMachineDisplay = selectedMachine
+    ? `${selectedMachine.order_number} (${selectedMachine.model_type})`
+    : formData.machine_id || "—";
+
   useAppHotkeys(
     "ctrl+enter, meta+enter",
     () => {
@@ -247,7 +264,7 @@ export function NCRModal({
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <form onSubmit={handleSubmit} className={styles.formContainer}>
+        <form onSubmit={handleSubmit} className={styles.formContainer} id="ncr-printable-report">
           {/* Form Header */}
           <div className={styles.formHeader}>
             <div className={styles.logoArea}>
@@ -278,8 +295,11 @@ export function NCRModal({
                 }
                 placeholder="e.g., NCR-2026-001"
                 required
-                className={styles.inputField}
+                className={`${styles.inputField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyField} style={{ fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                {formData.ncr_number || "NCR-____-____"}
+              </div>
             </div>
 
             <div className={styles.formGroup}>
@@ -294,8 +314,11 @@ export function NCRModal({
                   setFormData({ ...formData, date: e.target.value })
                 }
                 required
-                className={styles.inputField}
+                className={`${styles.inputField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyField}>
+                {formData.date || "—"}
+              </div>
             </div>
 
             <div className={styles.formGroup}>
@@ -309,7 +332,7 @@ export function NCRModal({
                   setFormData({ ...formData, machine_id: e.target.value })
                 }
                 required
-                className={styles.selectField}
+                className={`${styles.selectField} ${styles.screenOnlyField}`}
               >
                 <option value="">-- Select Machine / Project --</option>
                 {machines.map((m) => (
@@ -318,6 +341,9 @@ export function NCRModal({
                   </option>
                 ))}
               </select>
+              <div className={styles.printOnlyField}>
+                {selectedMachineDisplay}
+              </div>
             </div>
 
             <div className={styles.formGroup}>
@@ -333,8 +359,11 @@ export function NCRModal({
                 }
                 placeholder="Technician name"
                 required
-                className={styles.inputField}
+                className={`${styles.inputField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyField}>
+                {formData.assembler || "—"}
+              </div>
             </div>
           </div>
 
@@ -354,8 +383,11 @@ export function NCRModal({
                 }
                 placeholder="e.g., Station 3, main assembly track, rear weld joint"
                 required
-                className={styles.inputField}
+                className={`${styles.inputField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyField}>
+                {formData.location || "—"}
+              </div>
             </div>
 
             <div className={styles.formGroup}>
@@ -368,12 +400,15 @@ export function NCRModal({
                 onChange={(e) =>
                   setFormData({ ...formData, severity: e.target.value })
                 }
-                className={styles.selectField}
+                className={`${styles.selectField} ${styles.screenOnlyField}`}
               >
                 <option value="minor">Minor</option>
                 <option value="moderate">Moderate</option>
                 <option value="critical">Critical</option>
               </select>
+              <div className={styles.printOnlyField} style={{ textTransform: "uppercase", fontWeight: 600 }}>
+                {formData.severity}
+              </div>
             </div>
 
             <div className={styles.formGroup}>
@@ -389,7 +424,7 @@ export function NCRModal({
                     assigned_department: e.target.value,
                   })
                 }
-                className={styles.selectField}
+                className={`${styles.selectField} ${styles.screenOnlyField}`}
               >
                 <option value="assembly">Assembly</option>
                 <option value="machine-shop">Machine Shop</option>
@@ -399,12 +434,16 @@ export function NCRModal({
                 <option value="design">Design</option>
                 <option value="kitting">Kitting</option>
               </select>
+              <div className={styles.printOnlyField}>
+                {formatDepartmentName(formData.assigned_department)}
+              </div>
             </div>
 
             <div className={`${styles.formGroup} ${styles.fullWidth}`}>
               <div className={styles.label}>
                 <span>Description of Defect</span>
                 <span
+                  className="no-print"
                   style={{
                     fontSize: "0.75rem",
                     color:
@@ -425,8 +464,11 @@ export function NCRModal({
                 maxLength={255}
                 placeholder="Provide a detailed description of the non-conformance..."
                 required
-                className={styles.textareaField}
+                className={`${styles.textareaField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyBox}>
+                {formData.description || "—"}
+              </div>
             </div>
 
             {/* Photo Attachments */}
@@ -520,8 +562,11 @@ export function NCRModal({
                   setFormData({ ...formData, root_cause: e.target.value })
                 }
                 placeholder="Why did this occur?"
-                className={styles.textareaField}
+                className={`${styles.textareaField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyBox}>
+                {formData.root_cause || "—"}
+              </div>
             </div>
 
             <div className={`${styles.formGroup} ${styles.fullWidth}`}>
@@ -535,8 +580,11 @@ export function NCRModal({
                   setFormData({ ...formData, corrective_action: e.target.value })
                 }
                 placeholder="Describe the rework or corrective action executed..."
-                className={styles.textareaField}
+                className={`${styles.textareaField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyBox}>
+                {formData.corrective_action || "—"}
+              </div>
             </div>
 
             <div className={styles.formGroup}>
@@ -550,8 +598,11 @@ export function NCRModal({
                 onChange={(e) =>
                   setFormData({ ...formData, closeout_date: e.target.value })
                 }
-                className={styles.inputField}
+                className={`${styles.inputField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyField}>
+                {formData.closeout_date || "____ / ____ / ________"}
+              </div>
             </div>
 
             <div className={styles.formGroup}>
@@ -569,13 +620,24 @@ export function NCRModal({
                   })
                 }
                 placeholder="Sign digitally or print to sign"
-                className={styles.inputField}
+                className={`${styles.inputField} ${styles.screenOnlyField}`}
               />
+              <div className={styles.printOnlyField}>
+                {formData.team_lead_signature ? (
+                  <span className={styles.digitalSignature}>
+                    {formData.team_lead_signature}
+                  </span>
+                ) : (
+                  <div className={styles.signatureLine}>
+                    <span>X ________________________________________</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className={styles.actions}>
+          <div className={`${styles.actions} no-print`}>
             <button
               type="button"
               className="vtr-btn vtr-btn-secondary"

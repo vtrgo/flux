@@ -107,3 +107,32 @@ a {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Print optimization for reports and NCR forms */
+@media print {
+  @page {
+    size: portrait;
+    margin: 0.5in;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #1a202c !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  .vtr-header,
+  header,
+  nav,
+  aside,
+  footer,
+  button,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+}

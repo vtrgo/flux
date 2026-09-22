@@ -19,6 +19,7 @@ export default function NCRTrackerPage() {
   const [activeStatus, setActiveStatus] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedNCR, setSelectedNCR] = useState<NCR | null>(null);
+  const [autoPrint, setAutoPrint] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
 
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -58,11 +59,19 @@ export default function NCRTrackerPage() {
 
   const openCreateModal = () => {
     setSelectedNCR(null);
+    setAutoPrint(false);
     setIsModalOpen(true);
   };
 
   const openEditModal = (ncr: NCR) => {
     setSelectedNCR(ncr);
+    setAutoPrint(false);
+    setIsModalOpen(true);
+  };
+
+  const handlePrintNCR = (ncr: NCR) => {
+    setSelectedNCR(ncr);
+    setAutoPrint(true);
     setIsModalOpen(true);
   };
 
@@ -114,7 +123,7 @@ export default function NCRTrackerPage() {
 
   return (
     <main className={styles.container}>
-      <header className={styles.header}>
+      <header className={`${styles.header} no-print`}>
         <div className={styles.titleArea}>
           <h1 className={styles.title}>Non-Conformance Reports (NCR)</h1>
           <p className={styles.subtitle}>
@@ -143,7 +152,7 @@ export default function NCRTrackerPage() {
       </header>
 
       {/* KPI Metrics */}
-      <section className={styles.metricsGrid}>
+      <section className={`${styles.metricsGrid} no-print`}>
         <div className={styles.metricCard}>
           <span className={styles.metricValue}>{totalCount}</span>
           <span className={styles.metricLabel}>Total NCRs Logged</span>
@@ -169,7 +178,7 @@ export default function NCRTrackerPage() {
       </section>
 
       {/* Filter & Search Bar */}
-      <section className={styles.controls}>
+      <section className={`${styles.controls} no-print`}>
         <input
           ref={searchInputRef}
           type="text"
@@ -192,7 +201,7 @@ export default function NCRTrackerPage() {
 
       {/* Content Rendering: Cards or Table */}
       {ncrs.length === 0 ? (
-        <div className={styles.empty}>
+        <div className={`${styles.empty} no-print`}>
           <p>No Non-Conformance Reports match your search criteria.</p>
           <button
             type="button"
@@ -204,7 +213,7 @@ export default function NCRTrackerPage() {
           </button>
         </div>
       ) : viewMode === "table" ? (
-        <div className={styles.tableWrapper}>
+        <div className={`${styles.tableWrapper} no-print`}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -263,10 +272,11 @@ export default function NCRTrackerPage() {
                         style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          openEditModal(ncr);
+                          handlePrintNCR(ncr);
                         }}
+                        title="Print / Save to PDF"
                       >
-                        🖨️ Print / View
+                        🖨️ Print Report
                       </button>
                       <button
                         type="button"
@@ -289,13 +299,7 @@ export default function NCRTrackerPage() {
           </table>
         </div>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: "1.25rem",
-          }}
-        >
+        <div className={`${styles.cardsGrid} no-print`}>
           {ncrs.map((ncr) => (
             <IssueCard
               key={ncr.id}
@@ -309,10 +313,11 @@ export default function NCRTrackerPage() {
                     style={{ flex: 1, padding: "0.35rem 0.5rem", fontSize: "0.75rem" }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      openEditModal(ncr);
+                      handlePrintNCR(ncr);
                     }}
+                    title="Print / Save to PDF"
                   >
-                    🖨️ View &amp; Print NCR
+                    🖨️ Print Report
                   </button>
                   {ncr.status === "open" && (
                     <button
@@ -370,6 +375,7 @@ export default function NCRTrackerPage() {
         onClose={() => setIsModalOpen(false)}
         editingNCR={selectedNCR}
         onSaved={fetchNCRs}
+        autoPrint={autoPrint}
       />
     </main>
   );

@@ -212,3 +212,29 @@
   color: var(--vtr-theme-primary, #00e5ff);
   letter-spacing: 0.1em;
 }
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Ensure NCR report prints cleanly without metrics cards or tracker controls */
+@media print {
+  .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    border: none !important;
+  }
+
+  .header,
+  .metricsGrid,
+  .controls,
+  .tableWrapper,
+  .cardsGrid,
+  .empty {
+    display: none !important;
+  }
+}

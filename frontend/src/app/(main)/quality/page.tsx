@@ -149,7 +149,7 @@ export default function QualityResolutionHub() {
 
   return (
     <main className={styles.container}>
-      <header className={styles.header}>
+      <header className={`${styles.header} no-print`}>
         <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>Quality / PM Hub</h1>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <Link href="/ncrs" className="vtr-btn vtr-btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
@@ -166,7 +166,7 @@ export default function QualityResolutionHub() {
         </div>
       </header>
 
-      <div className={styles.filters}>
+      <div className={`${styles.filters} no-print`}>
         <input 
           ref={searchInputRef}
           type="text" 
@@ -200,7 +200,7 @@ export default function QualityResolutionHub() {
         )}
       </div>
 
-      <div className={styles.grid}>
+      <div className={`${styles.grid} no-print`}>
         {/* OPEN COLUMN */}
         <section className={styles.column}>
           <h2>

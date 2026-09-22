@@ -102,4 +102,54 @@ describe('NCRModal Component', () => {
     expect(handleSaved).toHaveBeenCalled();
     expect(handleClose).toHaveBeenCalled();
   });
+
+  it('renders clean printable report elements and signature line', async () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    await act(async () => {
+      render(
+        <NCRModal
+          isOpen={true}
+          onClose={() => {}}
+          autoPrint={true}
+          editingNCR={{
+            id: 'ncr-99',
+            machine_id: 'm-1',
+            order_number: 'VTR-1001',
+            is_ncr: true,
+            ncr_number: 'NCR-2026-099',
+            assembler: 'Sam Tech',
+            location: 'Station 1 Rail',
+            description: 'Rail defect 1.2mm',
+            severity: 'critical',
+            status: 'open',
+            source_department: 'quality',
+            assigned_department: 'assembly',
+            root_cause: 'Misaligned jig',
+            corrective_action: 'Re-calibrated jig',
+            team_lead_signature: 'Lead Tech Jane',
+            created_at: '2026-09-22T10:00:00Z',
+          }}
+        />
+      );
+    });
+
+    // Check printable container
+    const printableReport = document.getElementById('ncr-printable-report');
+    expect(printableReport).toBeDefined();
+
+    // Check title and logo
+    expect(screen.getByText(/Fabricated Components/i)).toBeDefined();
+    expect(screen.getByText(/Non-Conformance Report/i)).toBeDefined();
+
+    // Check digital signature representation
+    expect(screen.getByText('Lead Tech Jane')).toBeDefined();
+
+    // Verify print button exists
+    const printBtn = screen.getByRole('button', { name: /Print \/ Save to PDF/i });
+    expect(printBtn).toBeDefined();
+
+    printSpy.mockRestore();
+  });
 });
+

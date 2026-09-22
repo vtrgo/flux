@@ -118,4 +118,25 @@ describe('NCRTrackerPage', () => {
     expect(screen.getByText(/Fabricated Components/i)).toBeDefined();
     expect(screen.getByLabelText(/NCR Identification #/i)).toBeDefined();
   });
+
+  it('marks summary details for NCR counts with no-print so they do not print', async () => {
+    let containerElement: HTMLElement;
+    await act(async () => {
+      const { container } = render(<NCRTrackerPage />);
+      containerElement = container;
+    });
+
+    // Check that summary details for NCR counts (metricsGrid) has no-print
+    const metricsGrid = containerElement!.querySelector('section[class*="metricsGrid"]');
+    expect(metricsGrid).toBeDefined();
+    expect(metricsGrid?.className).toContain('no-print');
+
+    // Check that header and controls also have no-print
+    const header = containerElement!.querySelector('header');
+    expect(header?.className).toContain('no-print');
+
+    const controls = containerElement!.querySelector('section[class*="controls"]');
+    expect(controls?.className).toContain('no-print');
+  });
 });
+
