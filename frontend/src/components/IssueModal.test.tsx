@@ -381,4 +381,54 @@ describe('IssueModal Assignee Department Filtering', () => {
       expect(screen.queryByRole('button', { name: /UPGRADE TO NCR/i })).toBeNull();
     });
   });
+
+  it('successfully submits edits when assigned/routing is set to Quality / PM', async () => {
+    const mockDefect = {
+      id: 'def-789',
+      machine_id: 'mach-1',
+      order_number: 'ORD-100',
+      source_department: 'assembly',
+      assigned_department: 'quality',
+      assigned_user_id: 'u4',
+      severity: 'moderate',
+      status: 'open',
+      description: 'Quality PM issue',
+      notes: 'Initial notes',
+      created_at: new Date().toISOString()
+    };
+
+    (fetchApi as any).mockImplementation((url: string) => {
+      if (url === 'machines') {
+        return Promise.resolve([
+          { id: 'mach-1', order_number: 'ORD-100', model_type: 'ModelA' }
+        ]);
+      }
+      return Promise.resolve(mockDefect);
+    });
+
+    const onClose = vi.fn();
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={onClose}
+          editingDefect={mockDefect as any}
+        />
+      );
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /SAVE CHANGES/i });
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(fetchApi).toHaveBeenCalledWith(
+      'defects/def-789/edit',
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"assigned_department":"quality"')
+      })
+    );
+    expect(onClose).toHaveBeenCalled();
+  });
 });

@@ -364,6 +364,35 @@ func TestDefects(t *testing.T) {
 			t.Errorf("expected assigned_department 'quality', got '%s'", defect.AssignedDepartment)
 		}
 	})
+
+	t.Run("Edit Defect - Route to Quality / PM (Success)", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"source_department":   "assembly",
+			"assigned_department": "quality",
+			"severity":            "moderate",
+			"description":         "Routed to Quality / PM for final signoff",
+			"notes":               "Signoff required",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/defects/%s/edit", defectID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusOK, rr.Body.String())
+		}
+
+		var updated models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&updated); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if updated.AssignedDepartment != "quality" {
+			t.Errorf("expected assigned_department 'quality', got '%s'", updated.AssignedDepartment)
+		}
+	})
 }
 
 
