@@ -82,12 +82,44 @@ if [ -n "$RELEASE_TAG" ]; then
   fi
 
   echo "Downloading: $TARBALL_URL"
+  TMP_DIR=$(mktemp -d)
+  curl -sL "$TARBALL_URL" | tar -xz -C "$TMP_DIR" --strip-components=1
   mkdir -p "$FLUX_DIR"
-  curl -sL "$TARBALL_URL" | tar -xz -C "$FLUX_DIR" --strip-components=1 --overwrite
+
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --delete \
+      --exclude='.env*' \
+      --exclude='/data' \
+      --exclude='/bin' \
+      --exclude='/frontend/node_modules' \
+      --exclude='/frontend/.next' \
+      --exclude='/frontend/out' \
+      "$TMP_DIR/" "$FLUX_DIR/"
+  else
+    rm -rf "$FLUX_DIR/internal" "$FLUX_DIR/cmd" "$FLUX_DIR/scripts" "$FLUX_DIR/frontend/src"
+    cp -a "$TMP_DIR/." "$FLUX_DIR/"
+  fi
+  rm -rf "$TMP_DIR"
 else
   echo "== [1/5] Performing in-place deployment from existing directory =="
   mkdir -p "$FLUX_DIR"
 fi
+
+# Clean up known obsolete legacy files that were removed in past refactors
+rm -f "$FLUX_DIR/internal/api/handlers_assembly.go" \
+      "$FLUX_DIR/internal/api/handlers_assembly_test.go" \
+      "$FLUX_DIR/internal/api/handlers_controls.go" \
+      "$FLUX_DIR/internal/api/handlers_controls_test.go" \
+      "$FLUX_DIR/internal/api/handlers_design.go" \
+      "$FLUX_DIR/internal/api/handlers_design_test.go" \
+      "$FLUX_DIR/internal/api/handlers_enclosures.go" \
+      "$FLUX_DIR/internal/api/handlers_enclosures_test.go" \
+      "$FLUX_DIR/internal/api/handlers_kitting.go" \
+      "$FLUX_DIR/internal/api/handlers_kitting_test.go" \
+      "$FLUX_DIR/frontend/src/components/HeaderMetric.tsx" \
+      "$FLUX_DIR/frontend/src/styles/assets.css" \
+      "$FLUX_DIR/frontend/src/styles/creator.css" \
+      "$FLUX_DIR/frontend/src/styles/index.css" 2>/dev/null || true
 
 # Ensure correct file permissions
 chown -R "$SERVICE_USER:$SERVICE_GROUP" "$FLUX_DIR"
