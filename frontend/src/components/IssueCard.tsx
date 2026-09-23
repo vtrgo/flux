@@ -27,10 +27,20 @@ export const IssueCard = React.memo(function IssueCard({ issue, onClick, cardSty
       }}
     >
       <div className={styles.cardHeader}>
-        <span className={styles.orderNumber}>{issue.order_number}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <span className={styles.orderNumber}>{issue.order_number}</span>
+          {issue.is_ncr && (
+            <span className={styles.ncrBadge}>{issue.ncr_number || 'NCR'}</span>
+          )}
+        </div>
         <span className={`${styles.severity} ${styles[issue.severity] || ''}`}>{issue.severity}</span>
       </div>
       <h3 className={styles.source}>Source: {issue.source_department}</h3>
+      {issue.location && (
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary, #aaa)', marginBottom: '0.35rem' }}>
+          <strong>Location:</strong> {issue.location} {issue.assembler ? `• ${issue.assembler}` : ''}
+        </div>
+      )}
       <p className={styles.description}>{issue.description}</p>
       {issue.assigned_user_name && (
         <div className={styles.assignee}>

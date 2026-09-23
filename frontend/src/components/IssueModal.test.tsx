@@ -4,14 +4,29 @@ import React from 'react';
 import { IssueModal } from './IssueModal';
 import { useUsers } from '../hooks/useUsers';
 import { fetchApi } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 
 vi.mock('../hooks/useUsers');
 vi.mock('../lib/api');
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
+}));
 vi.mock('./ImageUploader', () => ({
   ImageUploader: () => <div data-testid="image-uploader" />
 }));
 vi.mock('./AttachmentViewer', () => ({
   AttachmentViewer: () => <div data-testid="attachment-viewer" />
+}));
+vi.mock('./NCRModal', () => ({
+  NCRModal: vi.fn(({ isOpen, upgradeFromDefect, onClose, onSaved }: any) => (
+    isOpen ? (
+      <div data-testid="mock-ncr-modal">
+        <span>Upgrade Defect: {upgradeFromDefect?.id}</span>
+        <button onClick={onSaved}>Save Mock NCR</button>
+        <button onClick={onClose}>Cancel Mock NCR</button>
+      </div>
+    ) : null
+  ))
 }));
 
 describe('IssueModal Assignee Department Filtering', () => {
@@ -26,6 +41,16 @@ describe('IssueModal Assignee Department Filtering', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (useAuth as any).mockReturnValue({
+      user: { id: 'u-mgr', username: 'mgr_user', role: 'manager' },
+      hasRole: (roles: string | string[]) => {
+        const r = Array.isArray(roles) ? roles : [roles];
+        return r.includes('manager') || r.includes('admin');
+      },
+      hasDepartment: () => true,
+      isAdmin: false,
+      loading: false,
+    });
     (useUsers as any).mockReturnValue({ users: mockUsers, loading: false });
     (fetchApi as any).mockResolvedValue([
       { id: 'mach-1', order_number: 'ORD-100', model_type: 'ModelA' }
@@ -256,5 +281,154 @@ describe('IssueModal Assignee Department Filtering', () => {
     expect(screen.queryByText('Alice Smith')).toBeNull();
     expect(screen.queryByText('Charlie Brown')).toBeNull();
     expect(screen.queryByText('Diana Prince')).toBeNull();
+  });
+
+  describe('Upgrade to NCR Functionality', () => {
+    const mockDefect = {
+      id: 'defect-456',
+      machine_id: 'mach-1',
+      order_number: 'ORD-100',
+      description: 'Chute misalignment',
+      severity: 'moderate',
+      source_department: 'assembly',
+      assigned_department: 'quality',
+      status: 'open',
+      is_ncr: false,
+    };
+
+    it('renders UPGRADE TO NCR button for managers editing an issue and opens NCRModal', async () => {
+      const onClose = vi.fn();
+
+      await act(async () => {
+        render(
+          <IssueModal
+            isOpen={true}
+            onClose={onClose}
+            editingDefect={mockDefect as any}
+          />
+        );
+      });
+
+      const upgradeBtn = screen.getByRole('button', { name: /UPGRADE TO NCR/i });
+      expect(upgradeBtn).toBeDefined();
+
+      // NCRModal should not be open yet
+      expect(screen.queryByTestId('mock-ncr-modal')).toBeNull();
+
+      // Click UPGRADE TO NCR
+      await act(async () => {
+        fireEvent.click(upgradeBtn);
+      });
+
+      // NCRModal should now be open with upgradeFromDefect passed
+      expect(screen.getByTestId('mock-ncr-modal')).toBeDefined();
+      expect(screen.getByText(/Upgrade Defect: defect-456/i)).toBeDefined();
+
+      // Saving the NCR should close IssueModal
+      await act(async () => {
+        fireEvent.click(screen.getByText(/Save Mock NCR/i));
+      });
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('hides UPGRADE TO NCR button when user lacks manager or admin role', async () => {
+      (useAuth as any).mockReturnValue({
+        user: { id: 'u-tech', username: 'tech_user', role: 'technician' },
+        hasRole: () => false,
+        hasDepartment: () => true,
+        isAdmin: false,
+        loading: false,
+      });
+
+      await act(async () => {
+        render(
+          <IssueModal
+            isOpen={true}
+            onClose={() => {}}
+            editingDefect={mockDefect as any}
+          />
+        );
+      });
+
+      expect(screen.queryByRole('button', { name: /UPGRADE TO NCR/i })).toBeNull();
+    });
+
+    it('does not render UPGRADE TO NCR button when defect is already an NCR', async () => {
+      await act(async () => {
+        render(
+          <IssueModal
+            isOpen={true}
+            onClose={() => {}}
+            editingDefect={{ ...mockDefect, is_ncr: true } as any}
+          />
+        );
+      });
+
+      expect(screen.queryByRole('button', { name: /UPGRADE TO NCR/i })).toBeNull();
+    });
+
+    it('does not render UPGRADE TO NCR button when creating a new issue', async () => {
+      await act(async () => {
+        render(
+          <IssueModal
+            isOpen={true}
+            onClose={() => {}}
+            editingDefect={null}
+          />
+        );
+      });
+
+      expect(screen.queryByRole('button', { name: /UPGRADE TO NCR/i })).toBeNull();
+    });
+  });
+
+  it('successfully submits edits when assigned/routing is set to Quality / PM', async () => {
+    const mockDefect = {
+      id: 'def-789',
+      machine_id: 'mach-1',
+      order_number: 'ORD-100',
+      source_department: 'assembly',
+      assigned_department: 'quality',
+      assigned_user_id: 'u4',
+      severity: 'moderate',
+      status: 'open',
+      description: 'Quality PM issue',
+      notes: 'Initial notes',
+      created_at: new Date().toISOString()
+    };
+
+    (fetchApi as any).mockImplementation((url: string) => {
+      if (url === 'machines') {
+        return Promise.resolve([
+          { id: 'mach-1', order_number: 'ORD-100', model_type: 'ModelA' }
+        ]);
+      }
+      return Promise.resolve(mockDefect);
+    });
+
+    const onClose = vi.fn();
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={onClose}
+          editingDefect={mockDefect as any}
+        />
+      );
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /SAVE CHANGES/i });
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(fetchApi).toHaveBeenCalledWith(
+      'defects/def-789/edit',
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.stringContaining('"assigned_department":"quality"')
+      })
+    );
+    expect(onClose).toHaveBeenCalled();
   });
 });

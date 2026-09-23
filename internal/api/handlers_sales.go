@@ -2,27 +2,16 @@ package api
 
 import (
 	"database/sql"
-	"strings"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
-
-func handleSalesOrders(w http.ResponseWriter, r *http.Request) {
-
-	switch r.Method {
-	case http.MethodGet:
-		getSalesOrders(w, r)
-	case http.MethodPost:
-		createSalesOrder(w, r)
-	default:
-		respondError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
-	}
-}
 
 func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
@@ -54,7 +43,7 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -65,7 +54,7 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&o.ID, &o.CustomerName, &o.PONumber, &o.InternalProjectNumber, &o.ProjectName, &o.ResponsiblePerson, &o.SalesRep, &o.TargetShipDate, &o.ActualShipDate, &o.Status, &o.CreatedAt, &o.CreatedBy, &o.CreatedByUserName,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning row", err)
 			return
 		}
 		orders = append(orders, o)
@@ -76,6 +65,41 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, orders)
+}
+
+// getSalesOrderByID retrieves a single sales order by its ID
+func getSalesOrderByID(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		respondError(w, http.StatusBadRequest, "Missing ID", nil)
+		return
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		respondError(w, http.StatusNotFound, "Sales order not found", nil)
+		return
+	}
+
+	var o models.SalesOrder
+	err := db.DB.QueryRow(`
+		SELECT 
+			so.id, so.customer_name, so.po_number, so.internal_project_number, so.project_name, so.responsible_person, so.sales_rep, so.target_ship_date, so.actual_ship_date, so.status, so.created_at, so.created_by,
+			u.username as created_by_user_name
+		FROM sales_orders so
+		LEFT JOIN users u ON so.created_by = u.id
+		WHERE so.id = $1
+	`, id).Scan(
+		&o.ID, &o.CustomerName, &o.PONumber, &o.InternalProjectNumber, &o.ProjectName, &o.ResponsiblePerson, &o.SalesRep, &o.TargetShipDate, &o.ActualShipDate, &o.Status, &o.CreatedAt, &o.CreatedBy, &o.CreatedByUserName,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondError(w, http.StatusNotFound, "Sales order not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Database error", err)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, o)
 }
 
 func createSalesOrder(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +139,7 @@ func createSalesOrder(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to insert sales order: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to insert sales order", err)
 		return
 	}
 
@@ -144,7 +168,7 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid input: ", err)
+		respondError(w, http.StatusBadRequest, "Invalid input", err)
 		return
 	}
 
@@ -163,7 +187,7 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 	`, req.CustomerName, req.PONumber, req.InternalProjectNumber, req.ProjectName, req.ResponsiblePerson, req.SalesRep, req.TargetShipDate, req.Status, id, actualShipDate)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 
@@ -193,7 +217,7 @@ func handleCloseSalesOrder(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusNotFound, "Sales order not found", nil)
 			return
 		}
-		respondError(w, http.StatusInternalServerError, "Failed to close sales order: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to close sales order", err)
 		return
 	}
 
@@ -223,7 +247,7 @@ func handleReopenSalesOrder(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusNotFound, "Sales order not found", nil)
 			return
 		}
-		respondError(w, http.StatusInternalServerError, "Failed to reopen sales order: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to reopen sales order", err)
 		return
 	}
 
@@ -241,11 +265,11 @@ func deleteSalesOrder(w http.ResponseWriter, r *http.Request) {
 
 	_, err := db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", id)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 
 	BroadcastEvent("sales_order_deleted", map[string]string{"id": id})
-	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 

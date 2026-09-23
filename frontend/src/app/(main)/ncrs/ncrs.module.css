@@ -1,0 +1,240 @@
+.container {
+  padding: 1.5rem 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  min-height: calc(100vh - 80px);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--vtr-theme-primary, #00e5ff);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #888);
+  font-family: var(--font-mono);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metricCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metricValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--vtr-theme-primary, #00e5ff);
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #888);
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 250px;
+  max-width: 400px;
+}
+
+.tableWrapper {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.table th {
+  padding: 0.85rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--border-color, #333);
+  color: var(--text-secondary, #aaa);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background: rgba(0, 229, 255, 0.03);
+}
+
+.ncrNumber {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--vtr-theme-primary, #00e5ff);
+  white-space: nowrap;
+}
+
+.orderNumber {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.severity {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid;
+  display: inline-block;
+}
+
+.severity.critical {
+  color: var(--accent-red, #ff3366);
+  border-color: var(--accent-red, #ff3366);
+  background: rgba(255, 51, 102, 0.1);
+}
+
+.severity.moderate {
+  color: var(--accent-amber, #ffaa00);
+  border-color: var(--accent-amber, #ffaa00);
+  background: rgba(255, 170, 0, 0.1);
+}
+
+.severity.minor {
+  color: var(--vtr-theme-primary, #00e5ff);
+  border-color: var(--vtr-theme-primary, #00e5ff);
+  background: rgba(0, 229, 255, 0.1);
+}
+
+.statusBadge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  display: inline-block;
+  font-weight: 600;
+}
+
+.statusBadge.open {
+  color: var(--accent-amber, #ffaa00);
+  background: rgba(255, 170, 0, 0.15);
+  border: 1px solid var(--accent-amber, #ffaa00);
+}
+
+.statusBadge.fixed {
+  color: #00e5ff;
+  background: rgba(0, 229, 255, 0.15);
+  border: 1px solid #00e5ff;
+}
+
+.statusBadge.verified {
+  color: var(--accent-green, #00ff88);
+  background: rgba(0, 255, 136, 0.15);
+  border: 1px solid var(--accent-green, #00ff88);
+}
+
+.tableActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary, #888);
+  font-family: var(--font-mono);
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  font-family: var(--font-mono);
+  color: var(--vtr-theme-primary, #00e5ff);
+  letter-spacing: 0.1em;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Ensure NCR report prints cleanly without metrics cards or tracker controls */
+@media print {
+  .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    border: none !important;
+  }
+
+  .header,
+  .metricsGrid,
+  .controls,
+  .tableWrapper,
+  .cardsGrid,
+  .empty {
+    display: none !important;
+  }
+}

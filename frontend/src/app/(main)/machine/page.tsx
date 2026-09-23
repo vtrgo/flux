@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSSE } from "../../../components/SSEProvider";
 import { fetchApi } from "../../../lib/api";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import styles from "./machine.module.css";
 import { ACTIVE_DEPARTMENTS } from "../../../lib/departments";
 
 import { IssueModal } from "../../../components/IssueModal";
-import { IssueCard } from "../../../components/IssueCard";
+import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
@@ -17,6 +17,7 @@ import { calculateDaysLate, formatFatDate } from "../../../lib/dateUtils";
 import { useDateTime } from "../../../contexts/DateTimeContext";
 
 function MachineDetailContent() {
+  const router = useRouter();
   const { timezone } = useDateTime();
   const searchParams = useSearchParams();
   const id = searchParams.get("id") as string;
@@ -47,7 +48,7 @@ function MachineDetailContent() {
 
   useSSE('machine_deleted', (deleted: { id: string }) => {
     if (deleted.id === id) {
-      window.location.href = '/';
+      router.push('/');
     }
   });
 
@@ -56,19 +57,17 @@ function MachineDetailContent() {
 
     const fetchData = async () => {
       try {
-        const [machines, defects] = await Promise.all([
-          fetchApi<Machine[]>(`machines`), 
+        const [machineData, defects] = await Promise.all([
+          fetchApi<Machine>(`machines/${id}`), 
           fetchApi<Defect[]>(`machines/${id}/defects`)
         ]);
 
-        const found = machines.find(m => m.id === id);
-        if (found) {
-          setMachine(found);
-          if (found.sales_order_id) {
+        if (machineData) {
+          setMachine(machineData);
+          if (machineData.sales_order_id) {
             try {
-              const orders = await fetchApi<SalesOrder[]>(`sales_orders`);
-              const foundOrder = orders.find(o => o.id === found.sales_order_id);
-              if (foundOrder) setSalesOrder(foundOrder);
+              const order = await fetchApi<SalesOrder>(`sales_orders/${machineData.sales_order_id}`);
+              if (order) setSalesOrder(order);
             } catch (err) {
               console.error("Failed to load sales order data", err);
             }
@@ -86,18 +85,17 @@ function MachineDetailContent() {
     fetchData();
   }, [id]);
 
-  const openNewModal = () => {
+  const openNewModal = useCallback(() => {
     setEditingDefect(null);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const openEditModal = (defect: Defect, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const openEditModal = useCallback((defect: Defect) => {
     setEditingDefect(defect);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async (e: React.MouseEvent, defectId: string) => {
+  const handleDelete = useCallback(async (e: React.MouseEvent, defectId: string) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to permanently delete this issue?")) return;
     try {
@@ -105,9 +103,9 @@ function MachineDetailContent() {
     } catch (err) {
       console.error("Failed to delete defect", err);
     }
-  };
+  }, []);
 
-  const handleStatusChange = async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
+  const handleStatusChange = useCallback(async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
     try {
       await fetchApi(`defects/${defect.id}`, {
@@ -120,7 +118,7 @@ function MachineDetailContent() {
     } catch (err) {
       console.error("Failed to update status", err);
     }
-  };
+  }, []);
 
   if (loading) return <div className={styles.loading}>ESTABLISHING CONNECTION...</div>;
   if (!machine) return <div className={styles.loading}>MACHINE NOT FOUND</div>;
@@ -138,7 +136,7 @@ function MachineDetailContent() {
     { key: 'other', label: 'Other', match: (d: Defect) => !ACTIVE_DEPARTMENTS.map(ad => ad.key).concat('controls').includes(d.assigned_department) }
   ];
 
-  const renderGroupedDefects = (defectList: Defect[], renderActions: (defect: Defect) => React.ReactNode, getStyle?: (defect: Defect) => React.CSSProperties) => {
+  const renderGroupedDefects = (defectList: Defect[]) => {
     if (defectList.length === 0) {
       return <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No issues.</p>;
     }
@@ -166,12 +164,12 @@ function MachineDetailContent() {
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {deptIssues.map(defect => (
-                  <IssueCard
+                  <IssueCardItem
                     key={defect.id}
                     issue={{ ...defect, order_number: machine.order_number }}
-                    onClick={() => openEditModal(defect)}
-                    cardStyle={getStyle?.(defect)}
-                    actions={renderActions(defect)}
+                    onCardClick={openEditModal}
+                    onStatusChange={handleStatusChange}
+                    onDelete={handleDelete}
                   />
                 ))}
               </div>
@@ -265,12 +263,7 @@ function MachineDetailContent() {
             Open Issues <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{openDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {renderGroupedDefects(openDefects, (defect) => (
-              <>
-                <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'fixed')}>MARK FIXED</button>
-                <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-              </>
-            ))}
+            {renderGroupedDefects(openDefects)}
           </div>
         </section>
 
@@ -280,13 +273,7 @@ function MachineDetailContent() {
             Fixed (Pending Verification) <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{fixedDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {renderGroupedDefects(fixedDefects, (defect) => (
-              <>
-                <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'verified')}>SIGN OFF</button>
-                <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>REJECT</button>
-                <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-              </>
-            ), () => ({ border: '1px solid var(--accent-amber)' }))}
+            {renderGroupedDefects(fixedDefects)}
           </div>
         </section>
 
@@ -296,12 +283,7 @@ function MachineDetailContent() {
             Verified & Cleared <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{verifiedDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {renderGroupedDefects(verifiedDefects, (defect) => (
-              <>
-                <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>RE-OPEN</button>
-                <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-              </>
-            ), () => ({ opacity: 0.6 }))}
+            {renderGroupedDefects(verifiedDefects)}
           </div>
         </section>
       </div>

@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useSSE } from "../../../components/SSEProvider";
 import { fetchApi } from "../../../lib/api";
 import Link from "next/link";
 import styles from "./quality.module.css";
-import { Machine, Defect } from "../../../types";
+import { Machine, Defect, NCR } from "../../../types";
 
 import { IssueModal } from "../../../components/IssueModal";
-import { IssueCard } from "../../../components/IssueCard";
+import { NCRModal } from "../../../components/NCRModal";
+import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
@@ -21,6 +22,9 @@ export default function QualityResolutionHub() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
+
+  const [isNCRModalOpen, setIsNCRModalOpen] = useState(false);
+  const [editingNCR, setEditingNCR] = useState<NCR | null>(null);
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,6 +72,11 @@ export default function QualityResolutionHub() {
     setIsModalOpen(true);
   };
 
+  const openNewNCRModal = () => {
+    setEditingNCR(null);
+    setIsNCRModalOpen(true);
+  };
+
   useAppHotkeys('/', (e) => {
     e.preventDefault();
     searchInputRef.current?.focus();
@@ -78,12 +87,21 @@ export default function QualityResolutionHub() {
     openNewModal();
   });
 
-  const openEditModal = (defect: Defect) => {
+  const openEditModal = useCallback((defect: Defect) => {
     setEditingDefect(defect);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async (e: React.MouseEvent, defectId: string) => {
+  const handleCardClick = useCallback((defect: Defect) => {
+    if (defect.is_ncr) {
+      setEditingNCR(defect as NCR);
+      setIsNCRModalOpen(true);
+    } else {
+      openEditModal(defect);
+    }
+  }, [openEditModal]);
+
+  const handleDelete = useCallback(async (e: React.MouseEvent, defectId: string) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to permanently delete this issue?")) return;
     try {
@@ -91,9 +109,9 @@ export default function QualityResolutionHub() {
     } catch (err) {
       console.error("Failed to delete defect", err);
     }
-  };
+  }, []);
 
-  const handleStatusChange = async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
+  const handleStatusChange = useCallback(async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
     try {
       await fetchApi(`defects/${defect.id}`, {
@@ -106,7 +124,7 @@ export default function QualityResolutionHub() {
     } catch (err) {
       console.error("Failed to update status", err);
     }
-  };
+  }, []);
 
   const uniqueAssignedDepts = Array.from(new Set(defects.map(d => d.assigned_department))).filter(Boolean);
   const uniqueSeverities = Array.from(new Set(defects.map(d => d.severity))).filter(Boolean);
@@ -131,9 +149,16 @@ export default function QualityResolutionHub() {
 
   return (
     <main className={styles.container}>
-      <header className={styles.header}>
+      <header className={`${styles.header} no-print`}>
         <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>Quality / PM Hub</h1>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <Link href="/ncrs" className="vtr-btn vtr-btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
+            📋 NCR Tracker
+          </Link>
+          <button className="vtr-btn" onClick={openNewNCRModal} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2, borderColor: 'var(--vtr-theme-primary)' }}>
+            <span>+ CREATE NCR</span>
+            <span style={{ fontSize: '0.65rem', opacity: 0.7, textTransform: 'none' }}>(Non-Conformance)</span>
+          </button>
           <button className="vtr-btn" onClick={openNewModal} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
             <span>+ ADD ISSUE</span>
             <span style={{ fontSize: '0.65rem', opacity: 0.7, textTransform: 'none' }}>(Press &apos;C&apos;)</span>
@@ -141,7 +166,7 @@ export default function QualityResolutionHub() {
         </div>
       </header>
 
-      <div className={styles.filters}>
+      <div className={`${styles.filters} no-print`}>
         <input 
           ref={searchInputRef}
           type="text" 
@@ -175,7 +200,7 @@ export default function QualityResolutionHub() {
         )}
       </div>
 
-      <div className={styles.grid}>
+      <div className={`${styles.grid} no-print`}>
         {/* OPEN COLUMN */}
         <section className={styles.column}>
           <h2>
@@ -186,16 +211,12 @@ export default function QualityResolutionHub() {
             {openDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No open issues.</p>
             ) : openDefects.map(defect => (
-              <IssueCard
+              <IssueCardItem
                 key={defect.id}
                 issue={defect}
-                onClick={() => openEditModal(defect)}
-                actions={
-                  <>
-                    <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'fixed')}>MARK FIXED</button>
-                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                  </>
-                }
+                onCardClick={handleCardClick}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -211,17 +232,12 @@ export default function QualityResolutionHub() {
             {fixedDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No fixes pending verification.</p>
             ) : fixedDefects.map(defect => (
-              <IssueCard
+              <IssueCardItem
                 key={defect.id}
                 issue={defect}
-                onClick={() => openEditModal(defect)}
-                actions={
-                  <>
-                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'verified')}>SIGN OFF</button>
-                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>REJECT</button>
-                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                  </>
-                }
+                onCardClick={handleCardClick}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -237,17 +253,12 @@ export default function QualityResolutionHub() {
             {verifiedDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No cleared issues.</p>
             ) : verifiedDefects.map(defect => (
-              <IssueCard
+              <IssueCardItem
                 key={defect.id}
                 issue={defect}
-                onClick={() => openEditModal(defect)}
-                cardStyle={{ opacity: 0.6 }}
-                actions={
-                  <>
-                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>RE-OPEN</button>
-                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                  </>
-                }
+                onCardClick={handleCardClick}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -258,6 +269,13 @@ export default function QualityResolutionHub() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         editingDefect={editingDefect} 
+      />
+
+      <NCRModal
+        isOpen={isNCRModalOpen}
+        onClose={() => setIsNCRModalOpen(false)}
+        editingNCR={editingNCR}
+        onSaved={fetchData}
       />
     </main>
   );

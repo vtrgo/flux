@@ -8,7 +8,7 @@ import { NotificationBell } from "./NotificationBell";
 
 export function GlobalHeader() {
   return (
-    <header style={{ 
+    <header className="vtr-header no-print" style={{ 
       display: 'flex', 
       justifyContent: 'space-between', 
       alignItems: 'center', 

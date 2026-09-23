@@ -2,7 +2,7 @@ package api
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
@@ -12,7 +12,7 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.WriteHeader(status)
 	if data != nil {
 		if err := json.NewEncoder(w).Encode(data); err != nil {
-			log.Printf("Error encoding JSON response: %v", err)
+			slog.Error("Failed to encode JSON response", "error", err)
 		}
 	}
 }
@@ -21,7 +21,7 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 // Internal errors are logged but not leaked to the client.
 func respondError(w http.ResponseWriter, status int, clientMessage string, internalErr error) {
 	if internalErr != nil {
-		log.Printf("Error (status %d): %v", status, internalErr)
+		slog.Error("HTTP error response", "status", status, "error", internalErr)
 	}
 	respondJSON(w, status, map[string]string{"error": clientMessage})
 }

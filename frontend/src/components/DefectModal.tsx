@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { fetchApi } from "../lib/api";
 import { Defect } from "../types";
 import { formatDepartmentName } from "../lib/departments";
-import styles from "../app/page.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { IssueCard } from "./IssueCard";
 
@@ -22,15 +21,11 @@ export function DefectModal({ machineId, department, machineName, onClose }: Def
   useAppHotkeys('escape', () => onClose(), { enableOnFormTags: true }, [onClose]);
 
   useEffect(() => {
-    fetchApi<Defect[]>(`machines/${machineId}/defects`)
+    fetchApi<Defect[]>(`machines/${machineId}/defects`, {
+      params: { department },
+    })
       .then((data) => {
-        // Filter out defects just for this department
-        const filtered = (data || []).filter(
-          (d) =>
-            d.assigned_department === department ||
-            (department === "electrical_controls" && d.assigned_department === "controls")
-        );
-        setDefects(filtered);
+        setDefects(data || []);
         setLoading(false);
       })
       .catch((err) => {

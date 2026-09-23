@@ -1,0 +1,366 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.modal {
+  background: var(--bg-surface, #1e1e1e);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 860px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.formContainer {
+  padding: 2rem;
+  background: var(--bg-surface, #1e1e1e);
+  color: var(--text-primary, #fff);
+}
+
+.formHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--border-color, #333);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.logoArea {
+  display: flex;
+  align-items: center;
+}
+
+.logoImage {
+  max-width: 220px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.headerText {
+  text-align: right;
+}
+
+.headerTitle {
+  color: var(--vtr-theme-primary, #00e5ff);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.headerSubtitle {
+  color: var(--text-secondary, #aaa);
+  margin: 4px 0 0 0;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.sectionTitle {
+  background-color: rgba(0, 102, 128, 0.15);
+  color: var(--vtr-theme-primary, #00e5ff);
+  padding: 8px 12px;
+  font-weight: bold;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid var(--vtr-theme-primary, #00e5ff);
+  border-radius: 0 4px 4px 0;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup.fullWidth {
+  grid-column: span 2;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #bbb);
+  margin-bottom: 0.35rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inputField,
+.selectField,
+.textareaField {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background-color: var(--bg-input, #2a2a2a);
+  color: var(--text-primary, #fff);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.inputField:focus,
+.selectField:focus,
+.textareaField:focus {
+  outline: none;
+  border-color: var(--vtr-theme-primary, #00e5ff);
+  box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.2);
+}
+
+.textareaField {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border-color, #333);
+  padding-top: 1.25rem;
+}
+
+.printPreview {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #888);
+}
+
+.printOnlyField,
+.printOnlyBox,
+.printAttachmentsSection {
+  display: none;
+}
+
+/* Print layout strictly adhering to NCR_FORM.HTML specification */
+@media print {
+  :global(body) {
+    background: #ffffff !important;
+    color: #2d3748 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  :global(header),
+  :global(nav),
+  :global(.vtr-header),
+  :global(.no-print) {
+    display: none !important;
+  }
+
+  .overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+    width: 100% !important;
+    height: auto !important;
+    inset: auto !important;
+  }
+
+  .modal {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  .formContainer {
+    max-width: 800px;
+    margin: 0 auto !important;
+    padding: 30px !important;
+    background: #ffffff !important;
+    color: #2d3748 !important;
+    border: 1px solid #e1e4e8 !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .formHeader {
+    border-bottom: 2px solid #e2e8f0 !important;
+    padding-bottom: 15px !important;
+    margin-bottom: 25px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .logoImage {
+    max-width: 220px !important;
+    height: auto !important;
+  }
+
+  .headerTitle {
+    color: #006680 !important;
+    font-size: 1.6rem !important;
+    letter-spacing: 1px !important;
+    font-weight: 700 !important;
+  }
+
+  .headerSubtitle {
+    color: #4a5568 !important;
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+  }
+
+  .sectionTitle {
+    background-color: #e6f4f8 !important;
+    color: #00556c !important;
+    padding: 8px 12px !important;
+    font-weight: bold !important;
+    margin-top: 25px !important;
+    margin-bottom: 15px !important;
+    border-left: 4px solid #006680 !important;
+    border-radius: 0 4px 4px 0 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .formGrid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 15px !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .label {
+    color: #4a5568 !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 5px !important;
+  }
+
+  .screenOnlyField {
+    display: none !important;
+  }
+
+  .printOnlyField {
+    display: block !important;
+    padding: 9px 12px !important;
+    border: 1px solid #cbd5e0 !important;
+    border-radius: 4px !important;
+    font-size: 0.95rem !important;
+    color: #2d3748 !important;
+    background: #ffffff !important;
+    min-height: 38px !important;
+    box-sizing: border-box !important;
+    line-height: 1.2 !important;
+  }
+
+  .printOnlyBox {
+    display: block !important;
+    padding: 10px 12px !important;
+    border: 1px solid #cbd5e0 !important;
+    border-radius: 4px !important;
+    font-size: 0.95rem !important;
+    color: #2d3748 !important;
+    background: #ffffff !important;
+    min-height: 70px !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    line-height: 1.4 !important;
+    box-sizing: border-box !important;
+  }
+
+  .digitalSignature {
+    font-family: var(--font-mono) !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: #00556c !important;
+  }
+
+  .signatureLine {
+    display: flex !important;
+    align-items: center !important;
+    color: #718096 !important;
+    font-family: var(--font-mono) !important;
+  }
+
+  /* Printable Attached Images Gallery */
+  .printAttachmentsSection {
+    display: block !important;
+    margin-top: 25px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .printAttachmentsGrid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 15px !important;
+    margin-top: 12px !important;
+  }
+
+  .printAttachmentCard {
+    border: 1px solid #cbd5e0 !important;
+    border-radius: 4px !important;
+    padding: 8px !important;
+    background: #ffffff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 220px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .printAttachmentImg {
+    width: 100% !important;
+    height: 160px !important;
+    object-fit: contain !important;
+    border-radius: 2px !important;
+    display: block !important;
+    background: #f8fafc !important;
+  }
+
+  .printAttachmentFilename {
+    font-size: 0.75rem !important;
+    color: #4a5568 !important;
+    margin-top: 6px !important;
+    text-align: center !important;
+    word-break: break-all !important;
+    font-family: var(--font-mono) !important;
+  }
+
+  .actions {
+    display: none !important;
+  }
+}

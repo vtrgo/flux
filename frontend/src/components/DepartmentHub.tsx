@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { fetchApi } from "../lib/api";
 import { useDepartmentIssues } from "../hooks/useDepartmentIssues";
 import Link from "next/link";
 import styles from "../app/(main)/quality/quality.module.css";
 import { IssueModal } from "./IssueModal";
-import { IssueCard } from "./IssueCard";
+import { IssueCardItem } from "./IssueCardItem";
 import { FilterButtonGroup } from "./FilterButtonGroup";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 
@@ -28,10 +28,10 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const openNewModal = () => {
+  const openNewModal = useCallback(() => {
     setEditingDefect(null);
     setIsModalOpen(true);
-  };
+  }, []);
 
   useAppHotkeys('/', (e) => {
     e.preventDefault();
@@ -43,13 +43,12 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
     openNewModal();
   });
 
-  const openEditModal = (defect: Defect, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const openEditModal = useCallback((defect: Defect) => {
     setEditingDefect(defect);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async (e: React.MouseEvent, defectId: string) => {
+  const handleDelete = useCallback(async (e: React.MouseEvent, defectId: string) => {
     e.stopPropagation();
     if (!confirm("Are you sure you want to delete this issue?")) return;
     try {
@@ -57,9 +56,9 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
     } catch (err) {
       console.error("Failed to delete defect", err);
     }
-  };
+  }, []);
 
-  const handleStatusChange = async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
+  const handleStatusChange = useCallback(async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
     try {
       await fetchApi(`defects/${defect.id}`, {
@@ -69,7 +68,7 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
     } catch (err) {
       console.error("Failed to update status", err);
     }
-  };
+  }, []);
 
   if (loading) return <div className={styles.loading}>LOADING {title.toUpperCase()}...</div>;
 
@@ -152,16 +151,12 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
                     {openF.length === 0 ? (
                       <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No open issues.</p>
                     ) : openF.map(issue => (
-                      <IssueCard
+                      <IssueCardItem
                         key={issue.id}
                         issue={issue}
-                        onClick={() => openEditModal(issue)}
-                        actions={
-                          <>
-                            <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'fixed')}>MARK FIXED</button>
-                            <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
-                          </>
-                        }
+                        onCardClick={openEditModal}
+                        onStatusChange={handleStatusChange}
+                        onDelete={handleDelete}
                       />
                     ))}
                   </div>
@@ -174,18 +169,12 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
                     {fixedF.length === 0 ? (
                       <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No issues pending verification.</p>
                     ) : fixedF.map(issue => (
-                      <IssueCard
+                      <IssueCardItem
                         key={issue.id}
                         issue={issue}
-                        onClick={() => openEditModal(issue)}
-                        cardStyle={{ borderColor: 'var(--accent-amber)' }}
-                        actions={
-                          <>
-                            <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'verified')}>SIGN OFF</button>
-                            <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'open')}>REJECT</button>
-                            <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
-                          </>
-                        }
+                        onCardClick={openEditModal}
+                        onStatusChange={handleStatusChange}
+                        onDelete={handleDelete}
                       />
                     ))}
                   </div>
@@ -198,17 +187,13 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
                     {verifiedF.length === 0 ? (
                       <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No completed issues.</p>
                     ) : verifiedF.map(issue => (
-                      <IssueCard
+                      <IssueCardItem
                         key={issue.id}
                         issue={issue}
-                        onClick={() => openEditModal(issue)}
-                        cardStyle={{ opacity: 0.6, cursor: 'pointer' }}
-                        actions={
-                          <>
-                            <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, issue, 'open')}>RE-OPEN</button>
-                            <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, issue.id)}>🗑️</button>
-                          </>
-                        }
+                        onCardClick={openEditModal}
+                        onStatusChange={handleStatusChange}
+                        onDelete={handleDelete}
+                        cardStyle={{ cursor: 'pointer' }}
                       />
                     ))}
                   </div>

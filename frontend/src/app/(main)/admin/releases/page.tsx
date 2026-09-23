@@ -371,9 +371,9 @@ export default function AdminReleasesPage() {
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.8rem'
                 }}>
-                  <code>git tag -a v1.4.1 -m &quot;Release v1.4.1&quot; &amp;&amp; git push origin v1.4.1</code>
+                  <code>git tag -a v1.7.2 -m &quot;Release v1.7.2&quot; &amp;&amp; git push origin v1.7.2</code>
                   <button 
-                    onClick={() => copyToClipboard('git tag -a v1.4.1 -m "Release v1.4.1" && git push origin v1.4.1', 'git tag command')}
+                    onClick={() => copyToClipboard('git tag -a v1.7.2 -m "Release v1.7.2" && git push origin v1.7.2', 'git tag command')}
                     className="vtr-btn vtr-btn-secondary"
                     style={{ padding: '0.2rem 0.4rem', fontSize: '0.7rem' }}
                   >

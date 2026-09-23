@@ -8,6 +8,7 @@ import (
 )
 
 func TestAttachments(t *testing.T) {
+	setupTestDB(t)
 	// Need to initialize db and create a fake machine/defect first.
 	// But we can just test the 404 / error cases if DB is not set up perfectly for integration,
 	// or we can test it expecting a 400/404.

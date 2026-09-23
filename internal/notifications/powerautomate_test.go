@@ -84,6 +84,110 @@ func TestPowerAutomateChannel_BuildAdaptiveCard(t *testing.T) {
 	}
 }
 
+func TestPowerAutomateChannel_BuildAdaptiveCard_NCR(t *testing.T) {
+	cfg := Config{
+		Enabled:               true,
+		PowerAutomateURL:      "http://example.com/webhook",
+		DefaultRecipientEmail: "justin@vtrfeedersolutions.com",
+	}
+	channel := NewPowerAutomateChannel(cfg, nil)
+
+	dateOpened := time.Date(2026, 9, 22, 14, 0, 0, 0, time.UTC)
+
+	notif := IssueNotification{
+		DefectID:          uuid.New(),
+		MachineID:         uuid.New(),
+		MachineNumber:     "VTR-2001",
+		Description:       "Linear track guide misaligned by 2.5mm",
+		Severity:          "moderate",
+		AssignedDept:      "assembly",
+		RecipientEmail:    "enda@vtrfeedersolutions.com",
+		OpenedByName:      "Quality Inspector Jane",
+		DateOpened:        dateOpened,
+		Timezone:          "America/Toronto",
+		IsNCR:             true,
+		NCRNumber:         "NCR-2026-088",
+		Assembler:         "Sam Technician",
+		Location:          "Station 2 Feed Rail",
+		RootCause:         "Guide fixture clamp loosened during vibration cycle",
+		CorrectiveAction:  "Re-torqued clamp bolts and re-aligned rail",
+		TeamLeadSignature: "Enda McNamara",
+		Status:            "open",
+	}
+
+	card := channel.BuildAdaptiveCard(notif)
+
+	if card.RecipientEmail != "enda@vtrfeedersolutions.com" {
+		t.Errorf("expected recipient enda@vtrfeedersolutions.com, got %s", card.RecipientEmail)
+	}
+
+	// Verify header explicitly indicates NCR and NCR Number
+	if card.Body[0].Text != "⚠️ NON-CONFORMANCE REPORT: NCR-2026-088 (Machine: VTR-2001)" {
+		t.Errorf("unexpected header text: %s", card.Body[0].Text)
+	}
+
+	// Verify description contains NCR context
+	if card.Body[1].Text != "**NCR Non-Conformance Details:**\nLinear track guide misaligned by 2.5mm" {
+		t.Errorf("unexpected description text: %s", card.Body[1].Text)
+	}
+
+	// Verify Facts contain NCR details
+	facts := card.Body[2].Facts
+	foundType := false
+	foundNCRNum := false
+	foundLocation := false
+	foundAssembler := false
+	foundResponsible := false
+	foundRootCause := false
+	foundCorrection := false
+
+	for _, f := range facts {
+		if f.Title == "Notification Type:" && f.Value == "Non-Conformance Report (NCR)" {
+			foundType = true
+		}
+		if f.Title == "NCR Identification #:" && f.Value == "NCR-2026-088" {
+			foundNCRNum = true
+		}
+		if f.Title == "Location of NC:" && f.Value == "Station 2 Feed Rail" {
+			foundLocation = true
+		}
+		if f.Title == "Assembler:" && f.Value == "Sam Technician" {
+			foundAssembler = true
+		}
+		if f.Title == "Assigned Responsible:" && f.Value == "Enda McNamara" {
+			foundResponsible = true
+		}
+		if f.Title == "Root Cause:" && f.Value == "Guide fixture clamp loosened during vibration cycle" {
+			foundRootCause = true
+		}
+		if f.Title == "Corrective Action:" && f.Value == "Re-torqued clamp bolts and re-aligned rail" {
+			foundCorrection = true
+		}
+	}
+
+	if !foundType {
+		t.Error("missing or incorrect Notification Type fact")
+	}
+	if !foundNCRNum {
+		t.Error("missing or incorrect NCR Identification # fact")
+	}
+	if !foundLocation {
+		t.Error("missing or incorrect Location of NC fact")
+	}
+	if !foundAssembler {
+		t.Error("missing or incorrect Assembler fact")
+	}
+	if !foundResponsible {
+		t.Error("missing or incorrect Assigned Responsible fact")
+	}
+	if !foundRootCause {
+		t.Error("missing or incorrect Root Cause fact")
+	}
+	if !foundCorrection {
+		t.Error("missing or incorrect Corrective Action fact")
+	}
+}
+
 func TestPowerAutomateChannel_DefaultRecipientEmail(t *testing.T) {
 	cfg := Config{
 		Enabled:               true,

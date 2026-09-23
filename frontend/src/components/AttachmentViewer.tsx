@@ -1,15 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "../lib/api";
 import { useSSE } from "./SSEProvider";
+import { Attachment } from "../types";
 
-export interface Attachment {
-  id: string;
-  issue_id: string;
-  filename: string;
-  mime_type: string;
-  byte_size: number;
-  created_at: string;
-}
+export type { Attachment };
 
 interface AttachmentViewerProps {
   issueId: string;

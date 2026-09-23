@@ -73,10 +73,6 @@ export default function Home() {
             const orderMachines = machines.filter(m => m.sales_order_id === order.id);
             const projectSummary = projectSummaries.find(s => s.sales_order_id === order.id);
 
-            const projectTotalOpen = projectSummary?.total_open || 0;
-            const projectTotalPending = projectSummary?.total_pending || 0;
-            const projectTotalClosed = projectSummary?.total_closed || 0;
-
             return (
               <ProjectCard
                 key={order.id}

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
 
@@ -37,6 +38,14 @@ func TestDefects(t *testing.T) {
 	if err := json.NewDecoder(machRr.Body).Decode(&createdMachine); err != nil {
 		t.Fatalf("Failed to decode machine: %v", err)
 	}
+
+	t.Cleanup(func() {
+		if db.DB != nil && createdMachine.ID.String() != "" {
+			if _, err := db.DB.Exec("DELETE FROM machines WHERE id = $1", createdMachine.ID); err != nil {
+				t.Logf("Failed to clean up test machine %s: %v", createdMachine.ID, err)
+			}
+		}
+	})
 
 	var defectID string
 
@@ -362,6 +371,35 @@ func TestDefects(t *testing.T) {
 
 		if defect.AssignedDepartment != "quality" {
 			t.Errorf("expected assigned_department 'quality', got '%s'", defect.AssignedDepartment)
+		}
+	})
+
+	t.Run("Edit Defect - Route to Quality / PM (Success)", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"source_department":   "assembly",
+			"assigned_department": "quality",
+			"severity":            "moderate",
+			"description":         "Routed to Quality / PM for final signoff",
+			"notes":               "Signoff required",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/defects/%s/edit", defectID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusOK, rr.Body.String())
+		}
+
+		var updated models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&updated); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if updated.AssignedDepartment != "quality" {
+			t.Errorf("expected assigned_department 'quality', got '%s'", updated.AssignedDepartment)
 		}
 	})
 }

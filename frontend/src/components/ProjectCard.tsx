@@ -1,5 +1,5 @@
 import React from 'react';
-import { SalesOrder, Machine, DefectSummary } from '../types';
+import { SalesOrder, Machine, DefectSummary, ProjectDefectSummary } from '../types';
 import { MachineCard } from './MachineCard';
 import { calculateProjectDaysLate } from '../lib/dateUtils';
 import { useDateTime } from '../contexts/DateTimeContext';
@@ -8,7 +8,7 @@ import styles from './ProjectCard.module.css';
 interface ProjectCardProps {
   order: SalesOrder;
   orderMachines: Machine[];
-  projectSummary: any; // Type may need adjustments depending on actual usage in Dashboard
+  projectSummary?: ProjectDefectSummary;
   defectSummaries: DefectSummary[];
   onDeleteMachine: (e: React.MouseEvent, id: string) => void;
   onSelectDept: (machineId: string, dept: string) => void;
