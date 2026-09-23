@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
 
@@ -20,6 +21,12 @@ func TestUsersEndpoints(t *testing.T) {
 
 	// Create test users in different departments
 	uniqueSuffix := time.Now().UnixNano()
+	t.Cleanup(func() {
+		_, _ = db.DB.Exec("DELETE FROM users WHERE username LIKE $1 OR username LIKE $2 OR username LIKE $3",
+			fmt.Sprintf("asm_tech_%d", uniqueSuffix),
+			fmt.Sprintf("ctrl_tech_%d", uniqueSuffix),
+			fmt.Sprintf("user_email_%d", uniqueSuffix))
+	})
 	userAssembly := map[string]interface{}{
 		"username":   fmt.Sprintf("asm_tech_%d", uniqueSuffix),
 		"first_name": "Assembly",

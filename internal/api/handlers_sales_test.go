@@ -28,6 +28,10 @@ func createTestRoleCookie(t *testing.T, role string) *http.Cookie {
 		t.Fatalf("failed to insert test admin user: %v", err)
 	}
 
+	t.Cleanup(func() {
+		_, _ = db.DB.Exec("DELETE FROM users WHERE id = $1", adminID)
+	})
+
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
 		UserID: adminID,
