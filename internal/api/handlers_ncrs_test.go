@@ -192,4 +192,85 @@ func TestNCRs(t *testing.T) {
 			t.Errorf("expected status 400 for missing assembler, got %d", rr.Code)
 		}
 	})
+
+	t.Run("Upgrade_Issue_To_NCR", func(t *testing.T) {
+		// 1. Create a regular defect (not an NCR)
+		var oldDefectID uuid.UUID
+		err := db.DB.QueryRow(`
+			INSERT INTO defects (machine_id, source_department, assigned_department, description, severity, status, is_ncr)
+			VALUES ($1, 'assembly', 'quality', 'Initial alignment issue to be upgraded', 'moderate', 'open', FALSE)
+			RETURNING id
+		`, machineID).Scan(&oldDefectID)
+		if err != nil {
+			t.Fatalf("failed to insert original defect: %v", err)
+		}
+
+		// 2. Insert an attachment linked to the old defect
+		var attachmentID uuid.UUID
+		err = db.DB.QueryRow(`
+			INSERT INTO attachments (issue_id, filename, mime_type, byte_size)
+			VALUES ($1, 'initial_photo.jpg', 'image/jpeg', 1024)
+			RETURNING id
+		`, oldDefectID).Scan(&attachmentID)
+		if err != nil {
+			t.Fatalf("failed to insert attachment: %v", err)
+		}
+
+		// 3. Post create NCR with upgrade_from_defect_id
+		upgradePayload := map[string]interface{}{
+			"machine_id":             machineID.String(),
+			"assembler":              "Alex Technician",
+			"location":               "Station 4 Track",
+			"description":            "Upgraded non-conformance for track alignment",
+			"severity":               "critical",
+			"source_department":      "quality",
+			"assigned_department":    "assembly",
+			"root_cause":             "Root cause identified during review",
+			"corrective_action":      "Corrective action scheduled",
+			"team_lead_signature":    "Enda McNamara",
+			"upgrade_from_defect_id": oldDefectID.String(),
+		}
+
+		body, _ := json.Marshal(upgradePayload)
+		req := httptest.NewRequest(http.MethodPost, "/api/ncrs", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("expected status 201, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var upgradedNCR models.NCRDetail
+		if err := json.NewDecoder(rr.Body).Decode(&upgradedNCR); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if !upgradedNCR.IsNCR {
+			t.Errorf("expected is_ncr to be true")
+		}
+		if upgradedNCR.NCRNumber == nil || *upgradedNCR.NCRNumber == "" {
+			t.Errorf("expected generated NCR number")
+		}
+
+		// 4. Verify old defect was removed
+		var oldDefectCount int
+		err = db.DB.QueryRow("SELECT count(*) FROM defects WHERE id = $1", oldDefectID).Scan(&oldDefectCount)
+		if err != nil {
+			t.Fatalf("failed to query old defect: %v", err)
+		}
+		if oldDefectCount != 0 {
+			t.Errorf("expected old defect to be deleted, count was %d", oldDefectCount)
+		}
+
+		// 5. Verify attachment was migrated to new NCR ID
+		var currentIssueID uuid.UUID
+		err = db.DB.QueryRow("SELECT issue_id FROM attachments WHERE id = $1", attachmentID).Scan(&currentIssueID)
+		if err != nil {
+			t.Fatalf("failed to query attachment: %v", err)
+		}
+		if currentIssueID != upgradedNCR.ID {
+			t.Errorf("expected attachment to be linked to new NCR %s, got %s", upgradedNCR.ID, currentIssueID)
+		}
+	})
 }

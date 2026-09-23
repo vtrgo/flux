@@ -453,5 +453,73 @@ describe('NCRModal Component', () => {
     // Non-managers can still see standard cancel / save buttons
     expect(screen.getByRole('button', { name: /Save Changes/i })).toBeDefined();
   });
+
+  it('pre-fills defect data and sends upgrade_from_defect_id when upgradeFromDefect is provided', async () => {
+    const mockDefect = {
+      id: 'defect-123',
+      machine_id: 'm-2',
+      order_number: 'VTR-1002',
+      description: 'Misaligned sensor bracket',
+      notes: 'Sensor bracket was bent during transport',
+      location: 'Section B',
+      assembler: 'Bob Jones',
+      severity: 'moderate',
+      status: 'open',
+      source_department: 'assembly',
+      assigned_department: 'machining',
+      created_at: '2026-09-20T12:00:00Z',
+    };
+
+    let postBody: any = null;
+    (fetchApi as any).mockImplementation((url: string, opts?: any) => {
+      if (url === 'machines') return Promise.resolve(mockMachines);
+      if (url === 'users?role=manager') return Promise.resolve(mockManagers);
+      if (url === 'ncrs/next-number') return Promise.resolve({ next_number: 'NCR-2026-105' });
+      if (url === 'issues/defect-123/attachments') return Promise.resolve(mockAttachments);
+      if (url === 'ncrs' && opts?.method === 'POST') {
+        postBody = JSON.parse(opts.body);
+        return Promise.resolve({ id: 'ncr-new-105', ncr_number: 'NCR-2026-105', ...postBody });
+      }
+      return Promise.resolve([]);
+    });
+
+    const onSaved = vi.fn();
+    const onClose = vi.fn();
+
+    await act(async () => {
+      render(
+        <NCRModal
+          isOpen={true}
+          onClose={onClose}
+          onSaved={onSaved}
+          upgradeFromDefect={mockDefect as any}
+        />
+      );
+    });
+
+    // Check pre-filled values
+    expect((screen.getByLabelText(/Project \/ Machine #/i) as HTMLSelectElement).value).toBe('m-2');
+    expect((screen.getByLabelText(/Location of NC/i) as HTMLInputElement).value).toBe('Section B');
+    expect((screen.getByLabelText(/Assembler/i) as HTMLInputElement).value).toBe('Bob Jones');
+    expect((screen.getByPlaceholderText(/Provide a detailed description of the non-conformance/i) as HTMLTextAreaElement).value).toBe('Misaligned sensor bracket');
+    expect((screen.getByLabelText(/Root Cause of NCR/i) as HTMLTextAreaElement).value).toBe('Sensor bracket was bent during transport');
+
+    // Submit button label should be "Upgrade to NCR"
+    const submitBtn = screen.getByRole('button', { name: /Upgrade to NCR/i });
+    expect(submitBtn).toBeDefined();
+
+    // Click submit
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(postBody).not.toBeNull();
+    expect(postBody.upgrade_from_defect_id).toBe('defect-123');
+    expect(postBody.machine_id).toBe('m-2');
+    expect(postBody.description).toBe('Misaligned sensor bracket');
+    expect(postBody.root_cause).toBe('Sensor bracket was bent during transport');
+    expect(onSaved).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+  });
 });
 

@@ -1135,22 +1135,23 @@ func handleGetNextNCRNumber(w http.ResponseWriter, r *http.Request) {
 // handleCreateNCR creates a full Non-Conformance Report tied to a machine
 func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		MachineID          string  `json:"machine_id"`
-		NCRNumber          *string `json:"ncr_number"`
-		Assembler          string  `json:"assembler"`
-		Location           string  `json:"location"`
-		Description        string  `json:"description"`
-		Severity           string  `json:"severity"`
-		SourceDepartment   string  `json:"source_department"`
-		AssignedDepartment string  `json:"assigned_department"`
-		AssignedUserID     *string `json:"assigned_user_id"`
-		Notes              *string `json:"notes"`
-		DueDate            *string `json:"due_date"`
-		RootCause          *string `json:"root_cause"`
-		CorrectiveAction   *string `json:"corrective_action"`
-		CloseoutDate       *string `json:"closeout_date"`
-		TeamLeadSignature  *string `json:"team_lead_signature"`
-		SendNotification   bool    `json:"send_notification"`
+		MachineID           string  `json:"machine_id"`
+		NCRNumber           *string `json:"ncr_number"`
+		Assembler           string  `json:"assembler"`
+		Location            string  `json:"location"`
+		Description         string  `json:"description"`
+		Severity            string  `json:"severity"`
+		SourceDepartment    string  `json:"source_department"`
+		AssignedDepartment  string  `json:"assigned_department"`
+		AssignedUserID      *string `json:"assigned_user_id"`
+		Notes               *string `json:"notes"`
+		DueDate             *string `json:"due_date"`
+		RootCause           *string `json:"root_cause"`
+		CorrectiveAction    *string `json:"corrective_action"`
+		CloseoutDate        *string `json:"closeout_date"`
+		TeamLeadSignature   *string `json:"team_lead_signature"`
+		SendNotification    bool    `json:"send_notification"`
+		UpgradeFromDefectID *string `json:"upgrade_from_defect_id"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1225,12 +1226,21 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 		notesVal = *req.Notes
 	}
 
+	tx, err := db.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to start database transaction", err)
+		return
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
 	var assignedUserEmail *string
 	var machineOrderNumber string
 	var openedByName string
 	var ncr models.NCRDetail
 
-	err = db.DB.QueryRow(`
+	err = tx.QueryRowContext(r.Context(), `
 		WITH inserted AS (
 			INSERT INTO defects (
 				machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id,
@@ -1276,6 +1286,45 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ncr.OrderNumber = machineOrderNumber
+
+	var oldDefectID string
+	if req.UpgradeFromDefectID != nil && *req.UpgradeFromDefectID != "" {
+		oldDefectID = *req.UpgradeFromDefectID
+
+		// Re-link existing attachments to the newly created NCR
+		if _, err := tx.ExecContext(r.Context(), `UPDATE attachments SET issue_id = $1 WHERE issue_id = $2`, ncr.ID, oldDefectID); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to migrate attachments to NCR", err)
+			return
+		}
+
+		// Re-link machine_shop_tasks if any
+		if _, err := tx.ExecContext(r.Context(), `UPDATE machine_shop_tasks SET defect_id = $1 WHERE defect_id = $2`, ncr.ID, oldDefectID); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to migrate machine shop tasks to NCR", err)
+			return
+		}
+
+		// Re-link laser_tasks if any
+		if _, err := tx.ExecContext(r.Context(), `UPDATE laser_tasks SET defect_id = $1 WHERE defect_id = $2`, ncr.ID, oldDefectID); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to migrate laser tasks to NCR", err)
+			return
+		}
+
+		// Delete the original issue
+		if _, err := tx.ExecContext(r.Context(), `DELETE FROM defects WHERE id = $1`, oldDefectID); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to remove original defect", err)
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to commit NCR creation", err)
+		return
+	}
+
+	if oldDefectID != "" {
+		BroadcastEvent("defect_deleted", map[string]string{"id": oldDefectID})
+		slog.Info("Upgraded issue to NCR", "old_defect_id", oldDefectID, "new_ncr_id", ncr.ID, "ncr_number", ncr.NCRNumber)
+	}
 
 	BroadcastEvent("defect_added", ncr.Defect)
 	slog.Debug("NCR created", "defect_id", ncr.ID, "ncr_number", ncr.NCRNumber, "machine_id", req.MachineID)

@@ -22,12 +22,15 @@ import { ImageUploader } from "./ImageUploader";
 import { AttachmentViewer } from "./AttachmentViewer";
 import { useUsers } from "../hooks/useUsers";
 import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
+import { Authorize } from "./Authorize";
+import { NCRModal } from "./NCRModal";
 
 export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality', preselectedMachineId }: IssueModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [uploadCount, setUploadCount] = useState(0);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNCRModalOpen, setIsNCRModalOpen] = useState(false);
   const defaultRoutedDept = defaultAssignedDept === 'quality' ? '' : defaultAssignedDept;
   const { users } = useUsers();
   const [sendNotification, setSendNotification] = useState(false);
@@ -44,10 +47,16 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   });
 
   useAppHotkeys('escape', () => {
-    if (isOpen) {
+    if (isOpen && !isNCRModalOpen) {
       onClose();
     }
-  }, { enableOnFormTags: true }, [isOpen, onClose]);
+  }, { enableOnFormTags: true }, [isOpen, isNCRModalOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsNCRModalOpen(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -142,18 +151,23 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
 
   // Smart form submission
   useAppHotkeys('ctrl+enter, meta+enter', () => {
-    if (isOpen) {
+    if (isOpen && !isNCRModalOpen) {
       const submitEvent = { preventDefault: () => {} } as React.FormEvent;
       handleFormSubmit(submitEvent);
     }
-  }, { enableOnFormTags: true }, [isOpen, formData, editingDefect]);
+  }, { enableOnFormTags: true }, [isOpen, isNCRModalOpen, formData, editingDefect]);
 
   const assignedUser = users.find(u => u.id === formData.assigned_user_id);
 
   if (!isOpen) return null;
 
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
+    <>
+      <div 
+        className={styles.modalOverlay} 
+        onClick={onClose}
+        style={{ display: isNCRModalOpen ? 'none' : undefined }}
+      >
       <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <h2 style={{ color: 'var(--vtr-theme-primary)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '1.5rem', borderBottom: '1px solid var(--vtr-theme-primary)', paddingBottom: '0.5rem' }}>
           {editingDefect ? 'Edit Issue' : 'Log New Issue'}
@@ -364,7 +378,24 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           )}
 
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', alignItems: 'center' }}>
+            <Authorize roles={['admin', 'manager']}>
+              {editingDefect && !editingDefect.is_ncr && (
+                <button
+                  type="button"
+                  className="vtr-btn"
+                  onClick={() => setIsNCRModalOpen(true)}
+                  style={{
+                    backgroundColor: "rgba(239, 68, 68, 0.15)",
+                    color: "var(--accent-red, #ff3366)",
+                    borderColor: "var(--accent-red, #ff3366)",
+                  }}
+                  title="Upgrade this issue into a formal Non-Conformance Report"
+                >
+                  UPGRADE TO NCR
+                </button>
+              )}
+            </Authorize>
             <button type="submit" className="vtr-btn" style={{ flex: 1 }} disabled={isSubmitting}>
               {isSubmitting ? 'SAVING...' : (editingDefect ? 'SAVE CHANGES' : 'CREATE ISSUE')}
             </button>
@@ -373,5 +404,18 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         </form>
       </div>
     </div>
+
+    {editingDefect && isNCRModalOpen && (
+      <NCRModal
+        isOpen={isNCRModalOpen}
+        onClose={() => setIsNCRModalOpen(false)}
+        upgradeFromDefect={editingDefect}
+        onSaved={() => {
+          setIsNCRModalOpen(false);
+          onClose();
+        }}
+      />
+    )}
+  </>
   );
 }

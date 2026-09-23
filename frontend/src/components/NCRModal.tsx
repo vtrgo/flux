@@ -5,7 +5,7 @@ import { fetchApi } from "../lib/api";
 import styles from "./NCRModal.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { toast } from "sonner";
-import { Machine, NCR, User, NextNCRNumberResponse } from "../types";
+import { Machine, NCR, User, NextNCRNumberResponse, Defect } from "../types";
 import { ImageUploader } from "./ImageUploader";
 import { AttachmentViewer } from "./AttachmentViewer";
 import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
@@ -18,6 +18,7 @@ interface NCRModalProps {
   isOpen: boolean;
   onClose: () => void;
   editingNCR?: NCR | null;
+  upgradeFromDefect?: Defect | null;
   preselectedMachineId?: string;
   onSaved?: () => void;
   autoPrint?: boolean;
@@ -27,6 +28,7 @@ export function NCRModal({
   isOpen,
   onClose,
   editingNCR,
+  upgradeFromDefect,
   preselectedMachineId,
   onSaved,
   autoPrint,
@@ -71,23 +73,23 @@ export function NCRModal({
       .catch((err) => console.error("Failed to fetch managers", err));
   }, [isOpen]);
 
-  const editingNCRId = editingNCR?.id;
+  const targetIssueId = editingNCR?.id || upgradeFromDefect?.id;
 
   // Load attachments for viewing and printing
   const loadAttachments = useCallback(async () => {
-    if (!editingNCRId) {
+    if (!targetIssueId) {
       setAttachments([]);
       return;
     }
     try {
       const data = await fetchApi<{ id: string; filename: string; mime_type?: string }[]>(
-        `issues/${editingNCRId}/attachments`
+        `issues/${targetIssueId}/attachments`
       );
       setAttachments(data || []);
     } catch (err) {
       console.error("Failed to load attachments", err);
     }
-  }, [editingNCRId]);
+  }, [targetIssueId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,7 +109,7 @@ export function NCRModal({
     fetchApi<Machine[]>("machines")
       .then((data) => {
         setMachines(data || []);
-        if (!editingNCR && data && data.length > 0 && !preselectedMachineId) {
+        if (!editingNCR && !upgradeFromDefect && data && data.length > 0 && !preselectedMachineId) {
           setFormData((prev) => ({
             ...prev,
             machine_id: prev.machine_id || data[0].id,
@@ -131,6 +133,34 @@ export function NCRModal({
         closeout_date: toCalendarDateInput(editingNCR.closeout_date),
         team_lead_signature: editingNCR.team_lead_signature || "",
         status: editingNCR.status || "open",
+      });
+    } else if (upgradeFromDefect) {
+      // Fetch predicted next NCR number
+      fetchApi<NextNCRNumberResponse>("ncrs/next-number")
+        .then((resp) => {
+          if (resp?.next_number) {
+            setFormData((prev) => ({
+              ...prev,
+              ncr_number: prev.ncr_number || resp.next_number,
+            }));
+          }
+        })
+        .catch((err) => console.error("Failed to fetch next NCR number", err));
+
+      setFormData({
+        machine_id: upgradeFromDefect.machine_id || preselectedMachineId || "",
+        ncr_number: "",
+        date: upgradeFromDefect.created_at
+          ? toCalendarDateInput(upgradeFromDefect.created_at)
+          : new Date().toISOString().split("T")[0],
+        assembler: upgradeFromDefect.assembler || upgradeFromDefect.created_by_user_name || "",
+        location: upgradeFromDefect.location || "",
+        description: upgradeFromDefect.description || "",
+        root_cause: upgradeFromDefect.root_cause || upgradeFromDefect.notes || "",
+        corrective_action: upgradeFromDefect.corrective_action || "",
+        closeout_date: toCalendarDateInput(upgradeFromDefect.closeout_date),
+        team_lead_signature: upgradeFromDefect.team_lead_signature || "",
+        status: upgradeFromDefect.status || "open",
       });
     } else {
       // Fetch predicted next NCR number
@@ -159,7 +189,7 @@ export function NCRModal({
         status: "open",
       });
     }
-  }, [isOpen, editingNCR, preselectedMachineId]);
+  }, [isOpen, editingNCR, upgradeFromDefect, preselectedMachineId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,13 +214,14 @@ export function NCRModal({
 
     const payload = {
       ...formData,
-      severity: editingNCR?.severity || "moderate",
-      source_department: editingNCR?.source_department || "quality",
-      assigned_department: editingNCR?.assigned_department || "assembly",
+      severity: editingNCR?.severity || upgradeFromDefect?.severity || "moderate",
+      source_department: editingNCR?.source_department || upgradeFromDefect?.source_department || "quality",
+      assigned_department: editingNCR?.assigned_department || upgradeFromDefect?.assigned_department || "assembly",
       closeout_date: formData.closeout_date
         ? calendarDateToUtcNoon(formData.closeout_date)
         : undefined,
       send_notification: sendNotification,
+      upgrade_from_defect_id: upgradeFromDefect?.id,
     };
 
     try {
@@ -223,7 +254,7 @@ export function NCRModal({
             toast.error("NCR saved, but failed to upload some images", { id: toastId });
           }
         } else {
-          toast.success("NCR created successfully!");
+          toast.success(upgradeFromDefect ? "Issue upgraded to NCR successfully!" : "NCR created successfully!");
         }
       }
 
@@ -508,6 +539,11 @@ export function NCRModal({
                 </>
               ) : (
                 <div>
+                  {upgradeFromDefect?.id && (
+                    <div style={{ marginBottom: "0.5rem" }}>
+                      <AttachmentViewer issueId={upgradeFromDefect.id} editable={false} />
+                    </div>
+                  )}
                   <input
                     type="file"
                     accept="image/*"
@@ -526,7 +562,7 @@ export function NCRModal({
                     className="vtr-btn vtr-btn-secondary"
                     style={{ cursor: "pointer", display: "inline-block", fontSize: "0.8rem" }}
                   >
-                    + ADD PHOTO
+                    {upgradeFromDefect ? "+ ADD ADDITIONAL PHOTO" : "+ ADD PHOTO"}
                   </label>
                   {pendingFiles.length > 0 && (
                     <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
@@ -790,6 +826,8 @@ export function NCRModal({
                 ? "Saving..."
                 : editingNCR
                 ? "Save Changes"
+                : upgradeFromDefect
+                ? "Upgrade to NCR"
                 : "Create NCR"}
             </button>
           </div>

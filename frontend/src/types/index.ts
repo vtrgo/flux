@@ -95,6 +95,7 @@ export interface CreateNCRRequest {
   closeout_date?: string;
   team_lead_signature?: string;
   send_notification?: boolean;
+  upgrade_from_defect_id?: string;
 }
 
 export interface UpdateNCRRequest {
