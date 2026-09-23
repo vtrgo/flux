@@ -32,46 +32,6 @@ func parseDueDate(dateStr *string) (*time.Time, error) {
 }
 
 
-// handleGetQuality gets all inspections and their defects for a machine
-func handleGetQuality(w http.ResponseWriter, r *http.Request) {
-	machineID := r.PathValue("id")
-	if machineID == "" {
-		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
-		return
-	}
-
-	// Fetch inspections
-	rows, err := db.DB.Query(`
-		SELECT id, machine_id, inspection_type, inspector_name, status, completed_at
-		FROM quality_inspections
-		WHERE machine_id = $1
-		ORDER BY status ASC
-	`, machineID)
-
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error", err)
-		return
-	}
-	defer rows.Close()
-
-	inspections := []models.QualityInspection{}
-	for rows.Next() {
-		var i models.QualityInspection
-		if err := rows.Scan(
-			&i.ID, &i.MachineID, &i.InspectionType, &i.InspectorName, &i.Status, &i.CompletedAt,
-		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning inspection", err)
-			return
-		}
-		inspections = append(inspections, i)
-	}
-
-	// We could also fetch defects here and bundle them, or leave it as a separate endpoint.
-	// For simplicity, we just return the inspections in this endpoint.
-
-	respondJSON(w, http.StatusOK, inspections)
-}
-
 // handleGetMachineDefects fetches defects for a specific machine with optional department filtering
 func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
