@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useSSE } from "../../../components/SSEProvider";
 import { fetchApi } from "../../../lib/api";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import { Machine, Defect, NCR } from "../../../types";
 
 import { IssueModal } from "../../../components/IssueModal";
 import { NCRModal } from "../../../components/NCRModal";
-import { IssueCard } from "../../../components/IssueCard";
+import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
@@ -87,21 +87,21 @@ export default function QualityResolutionHub() {
     openNewModal();
   });
 
-  const openEditModal = (defect: Defect) => {
+  const openEditModal = useCallback((defect: Defect) => {
     setEditingDefect(defect);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleCardClick = (defect: Defect) => {
+  const handleCardClick = useCallback((defect: Defect) => {
     if (defect.is_ncr) {
       setEditingNCR(defect as NCR);
       setIsNCRModalOpen(true);
     } else {
       openEditModal(defect);
     }
-  };
+  }, [openEditModal]);
 
-  const handleDelete = async (e: React.MouseEvent, defectId: string) => {
+  const handleDelete = useCallback(async (e: React.MouseEvent, defectId: string) => {
     e.stopPropagation();
     if (!window.confirm("Are you sure you want to permanently delete this issue?")) return;
     try {
@@ -109,9 +109,9 @@ export default function QualityResolutionHub() {
     } catch (err) {
       console.error("Failed to delete defect", err);
     }
-  };
+  }, []);
 
-  const handleStatusChange = async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
+  const handleStatusChange = useCallback(async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
     try {
       await fetchApi(`defects/${defect.id}`, {
@@ -124,7 +124,7 @@ export default function QualityResolutionHub() {
     } catch (err) {
       console.error("Failed to update status", err);
     }
-  };
+  }, []);
 
   const uniqueAssignedDepts = Array.from(new Set(defects.map(d => d.assigned_department))).filter(Boolean);
   const uniqueSeverities = Array.from(new Set(defects.map(d => d.severity))).filter(Boolean);
@@ -211,16 +211,12 @@ export default function QualityResolutionHub() {
             {openDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No open issues.</p>
             ) : openDefects.map(defect => (
-              <IssueCard
+              <IssueCardItem
                 key={defect.id}
                 issue={defect}
-                onClick={() => handleCardClick(defect)}
-                actions={
-                  <>
-                    <button className="vtr-btn" style={{ flex: 1, padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'fixed')}>MARK FIXED</button>
-                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                  </>
-                }
+                onCardClick={handleCardClick}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -236,17 +232,12 @@ export default function QualityResolutionHub() {
             {fixedDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No fixes pending verification.</p>
             ) : fixedDefects.map(defect => (
-              <IssueCard
+              <IssueCardItem
                 key={defect.id}
                 issue={defect}
-                onClick={() => handleCardClick(defect)}
-                actions={
-                  <>
-                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-green)', color: 'var(--accent-green)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'verified')}>SIGN OFF</button>
-                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>REJECT</button>
-                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                  </>
-                }
+                onCardClick={handleCardClick}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -262,17 +253,12 @@ export default function QualityResolutionHub() {
             {verifiedDefects.length === 0 ? (
               <p style={{ color: 'var(--vtr-theme-neutral)', fontFamily: 'var(--font-mono)' }}>No cleared issues.</p>
             ) : verifiedDefects.map(defect => (
-              <IssueCard
+              <IssueCardItem
                 key={defect.id}
                 issue={defect}
-                onClick={() => handleCardClick(defect)}
-                cardStyle={{ opacity: 0.6 }}
-                actions={
-                  <>
-                    <button className="vtr-btn" style={{ flex: 1, borderColor: 'var(--accent-amber)', color: 'var(--accent-amber)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleStatusChange(e, defect, 'open')}>RE-OPEN</button>
-                    <button className="vtr-btn" style={{ borderColor: 'var(--accent-red)', color: 'var(--accent-red)', padding: '0.25rem', fontSize: '0.75rem' }} onClick={(e) => handleDelete(e, defect.id)}>🗑️</button>
-                  </>
-                }
+                onCardClick={handleCardClick}
+                onStatusChange={handleStatusChange}
+                onDelete={handleDelete}
               />
             ))}
           </div>
