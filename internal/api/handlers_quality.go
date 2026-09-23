@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -1274,13 +1276,53 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 	ncr.OrderNumber = machineOrderNumber
 
 	var oldDefectID string
+	var updatedOldDefect models.Defect
 	if req.UpgradeFromDefectID != nil && *req.UpgradeFromDefectID != "" {
 		oldDefectID = *req.UpgradeFromDefectID
 
-		// Re-link existing attachments to the newly created NCR
-		if _, err := tx.ExecContext(r.Context(), `UPDATE attachments SET issue_id = $1 WHERE issue_id = $2`, ncr.ID, oldDefectID); err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to migrate attachments to NCR", err)
+		// Copy existing attachments from original issue to the newly created NCR
+		attRows, err := tx.QueryContext(r.Context(), `SELECT id, filename, mime_type, byte_size, metadata FROM attachments WHERE issue_id = $1`, oldDefectID)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to query attachments for NCR", err)
 			return
+		}
+		type attCopyItem struct {
+			oldID    string
+			filename string
+			mimeType string
+			byteSize int64
+			metadata []byte
+		}
+		var attsToCopy []attCopyItem
+		for attRows.Next() {
+			var item attCopyItem
+			if err := attRows.Scan(&item.oldID, &item.filename, &item.mimeType, &item.byteSize, &item.metadata); err == nil {
+				attsToCopy = append(attsToCopy, item)
+			}
+		}
+		attRows.Close()
+
+		storageDir := getAttachmentsDir()
+		dstDir := filepath.Join(storageDir, ncr.ID.String())
+
+		for _, item := range attsToCopy {
+			newID := uuid.New().String()
+			ext := filepath.Ext(item.filename)
+			srcFile := filepath.Join(storageDir, oldDefectID, item.oldID+ext)
+			dstFile := filepath.Join(dstDir, newID+ext)
+
+			if srcBytes, err := os.ReadFile(srcFile); err == nil {
+				_ = os.MkdirAll(dstDir, 0755)
+				_ = os.WriteFile(dstFile, srcBytes, 0644)
+			}
+
+			if _, err := tx.ExecContext(r.Context(), `
+				INSERT INTO attachments (id, issue_id, filename, mime_type, byte_size, metadata)
+				VALUES ($1, $2, $3, $4, $5, $6)
+			`, newID, ncr.ID, item.filename, item.mimeType, item.byteSize, item.metadata); err != nil {
+				respondError(w, http.StatusInternalServerError, "Failed to copy attachment to NCR", err)
+				return
+			}
 		}
 
 		// Re-link machine_shop_tasks if any
@@ -1295,9 +1337,49 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Delete the original issue
-		if _, err := tx.ExecContext(r.Context(), `DELETE FROM defects WHERE id = $1`, oldDefectID); err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to remove original defect", err)
+		// Mark the original issue as signed off and Verified/Cleared
+		ncrNumDisplay := "NCR"
+		if ncr.NCRNumber != nil && *ncr.NCRNumber != "" {
+			ncrNumDisplay = *ncr.NCRNumber
+		}
+		auditNote := fmt.Sprintf("[Verified/Cleared: Upgraded to %s]", ncrNumDisplay)
+
+		err = tx.QueryRowContext(r.Context(), `
+			WITH updated AS (
+				UPDATE defects
+				SET status = 'verified',
+				    resolved_at = NOW(),
+				    resolved_by = COALESCE(
+				        (SELECT NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), '') FROM users WHERE id = NULLIF($2, '')::uuid),
+				        (SELECT username FROM users WHERE id = NULLIF($2, '')::uuid),
+				        'Manager'
+				    ),
+				    verified_by_user_id = NULLIF($2, '')::uuid,
+				    notes = CASE 
+				        WHEN notes IS NULL OR TRIM(notes) = '' THEN $3
+				        ELSE notes || E'\n\n' || $3
+				    END
+				WHERE id = $1
+				RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
+				          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+			)
+			SELECT u_tbl.*, 
+			       COALESCE(m.order_number, '') as order_number,
+			       u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name
+			FROM updated u_tbl
+			LEFT JOIN machines m ON u_tbl.machine_id = m.id
+			LEFT JOIN users u ON u_tbl.assigned_user_id = u.id
+			LEFT JOIN users c ON u_tbl.created_by_user_id = c.id
+			LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
+			LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
+		`, oldDefectID, authUserID, auditNote).Scan(
+			&updatedOldDefect.ID, &updatedOldDefect.MachineID, &updatedOldDefect.SourceDepartment, &updatedOldDefect.AssignedDepartment, &updatedOldDefect.AssignedUserID, &updatedOldDefect.CreatedByUserID, &updatedOldDefect.FixedByUserID, &updatedOldDefect.VerifiedByUserID, &updatedOldDefect.Description, &updatedOldDefect.Severity, &updatedOldDefect.Status, &updatedOldDefect.Notes, &updatedOldDefect.ResolvedBy, &updatedOldDefect.ResolvedAt, &updatedOldDefect.CreatedAt, &updatedOldDefect.DueDate,
+			&updatedOldDefect.IsNCR, &updatedOldDefect.NCRNumber, &updatedOldDefect.Assembler, &updatedOldDefect.Location, &updatedOldDefect.RootCause, &updatedOldDefect.CorrectiveAction, &updatedOldDefect.CloseoutDate, &updatedOldDefect.TeamLeadSignature,
+			&updatedOldDefect.OrderNumber,
+			&updatedOldDefect.AssignedUserName, &updatedOldDefect.CreatedByUserName, &updatedOldDefect.FixedByUserName, &updatedOldDefect.VerifiedByUserName,
+		)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to sign off and verify original defect", err)
 			return
 		}
 	}
@@ -1308,8 +1390,8 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if oldDefectID != "" {
-		BroadcastEvent("defect_deleted", map[string]string{"id": oldDefectID})
-		slog.Info("Upgraded issue to NCR", "old_defect_id", oldDefectID, "new_ncr_id", ncr.ID, "ncr_number", ncr.NCRNumber)
+		BroadcastEvent("defect_updated", updatedOldDefect)
+		slog.Info("Upgraded issue to NCR and marked original issue verified", "old_defect_id", oldDefectID, "new_ncr_id", ncr.ID, "ncr_number", ncr.NCRNumber)
 	}
 
 	BroadcastEvent("defect_added", ncr.Defect)

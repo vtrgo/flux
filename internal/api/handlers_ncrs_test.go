@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -272,24 +273,34 @@ func TestNCRs(t *testing.T) {
 			t.Errorf("expected assigned_user_id to be %s, got %v", mgrID, upgradedNCR.AssignedUserID)
 		}
 
-		// 4. Verify old defect was removed
-		var oldDefectCount int
-		err = db.DB.QueryRow("SELECT count(*) FROM defects WHERE id = $1", oldDefectID).Scan(&oldDefectCount)
+		// 4. Verify old defect was signed off and marked as verified
+		var oldStatus, oldNotes string
+		var oldResolvedAt *time.Time
+		err = db.DB.QueryRow("SELECT status, notes, resolved_at FROM defects WHERE id = $1", oldDefectID).Scan(&oldStatus, &oldNotes, &oldResolvedAt)
 		if err != nil {
 			t.Fatalf("failed to query old defect: %v", err)
 		}
-		if oldDefectCount != 0 {
-			t.Errorf("expected old defect to be deleted, count was %d", oldDefectCount)
+		if oldStatus != "verified" {
+			t.Errorf("expected old defect status to be 'verified', got '%s'", oldStatus)
+		}
+		if oldResolvedAt == nil {
+			t.Errorf("expected old defect resolved_at timestamp to be set")
+		}
+		if !strings.Contains(oldNotes, "Verified/Cleared: Upgraded to") {
+			t.Errorf("expected audit note in old defect, got: %s", oldNotes)
 		}
 
-		// 5. Verify attachment was migrated to new NCR ID
-		var currentIssueID uuid.UUID
-		err = db.DB.QueryRow("SELECT issue_id FROM attachments WHERE id = $1", attachmentID).Scan(&currentIssueID)
-		if err != nil {
-			t.Fatalf("failed to query attachment: %v", err)
+		// 5. Verify attachments: original issue retains attachment, new NCR receives copy
+		var origAttachmentCount int
+		_ = db.DB.QueryRow("SELECT count(*) FROM attachments WHERE issue_id = $1", oldDefectID).Scan(&origAttachmentCount)
+		if origAttachmentCount != 1 {
+			t.Errorf("expected original defect to retain attachment, count was %d", origAttachmentCount)
 		}
-		if currentIssueID != upgradedNCR.ID {
-			t.Errorf("expected attachment to be linked to new NCR %s, got %s", upgradedNCR.ID, currentIssueID)
+
+		var ncrAttachmentCount int
+		_ = db.DB.QueryRow("SELECT count(*) FROM attachments WHERE issue_id = $1", upgradedNCR.ID).Scan(&ncrAttachmentCount)
+		if ncrAttachmentCount != 1 {
+			t.Errorf("expected new NCR to receive copied attachment, count was %d", ncrAttachmentCount)
 		}
 	})
 
