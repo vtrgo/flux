@@ -78,6 +78,15 @@ export interface NCR extends Defect {
   customer_name?: string;
 }
 
+export interface Attachment {
+  id: string;
+  issue_id: string;
+  filename: string;
+  mime_type: string;
+  byte_size: number;
+  created_at: string;
+}
+
 export interface CreateNCRRequest {
   machine_id: string;
   ncr_number?: string;

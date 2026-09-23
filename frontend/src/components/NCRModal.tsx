@@ -5,7 +5,7 @@ import { fetchApi } from "../lib/api";
 import styles from "./NCRModal.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { toast } from "sonner";
-import { Machine, NCR, User, NextNCRNumberResponse, Defect } from "../types";
+import { Machine, NCR, User, NextNCRNumberResponse, Defect, Attachment } from "../types";
 import { ImageUploader } from "./ImageUploader";
 import { AttachmentViewer } from "./AttachmentViewer";
 import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
@@ -35,7 +35,7 @@ export function NCRModal({
 }: NCRModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [managers, setManagers] = useState<User[]>([]);
-  const [attachments, setAttachments] = useState<{ id: string; filename: string; mime_type?: string }[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [sendNotification, setSendNotification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +82,7 @@ export function NCRModal({
       return;
     }
     try {
-      const data = await fetchApi<{ id: string; filename: string; mime_type?: string }[]>(
+      const data = await fetchApi<Attachment[]>(
         `issues/${targetIssueId}/attachments`
       );
       setAttachments(data || []);

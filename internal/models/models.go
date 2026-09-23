@@ -261,13 +261,6 @@ type DesignFeedback struct {
 	CreatedAt        time.Time  `json:"created_at"`
 }
 
-// SystemSetting represents a key-value configuration setting stored in the database
-type SystemSetting struct {
-	Key       string    `json:"key"`
-	Value     string    `json:"value"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
 // TimezoneResponse represents the response containing the current site timezone
 type TimezoneResponse struct {
 	Timezone string `json:"timezone"`
