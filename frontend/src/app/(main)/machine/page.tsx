@@ -56,19 +56,17 @@ function MachineDetailContent() {
 
     const fetchData = async () => {
       try {
-        const [machines, defects] = await Promise.all([
-          fetchApi<Machine[]>(`machines`), 
+        const [machineData, defects] = await Promise.all([
+          fetchApi<Machine>(`machines/${id}`), 
           fetchApi<Defect[]>(`machines/${id}/defects`)
         ]);
 
-        const found = machines.find(m => m.id === id);
-        if (found) {
-          setMachine(found);
-          if (found.sales_order_id) {
+        if (machineData) {
+          setMachine(machineData);
+          if (machineData.sales_order_id) {
             try {
-              const orders = await fetchApi<SalesOrder[]>(`sales_orders`);
-              const foundOrder = orders.find(o => o.id === found.sales_order_id);
-              if (foundOrder) setSalesOrder(foundOrder);
+              const order = await fetchApi<SalesOrder>(`sales_orders/${machineData.sales_order_id}`);
+              if (order) setSalesOrder(order);
             } catch (err) {
               console.error("Failed to load sales order data", err);
             }

@@ -91,6 +91,37 @@ func TestMachines(t *testing.T) {
 		}
 	})
 
+	t.Run("Get Machine By ID - Success", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/machines/"+createdMachineID, nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", status, rr.Body.String())
+		}
+
+		var resp models.Machine
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp.ID.String() != createdMachineID {
+			t.Errorf("expected machine ID %v, got %v", createdMachineID, resp.ID)
+		}
+		if resp.OrderNumber != uniqueOrderNumber {
+			t.Errorf("expected order number %v, got %v", uniqueOrderNumber, resp.OrderNumber)
+		}
+	})
+
+	t.Run("Get Machine By ID - 404 Not Found", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/machines/00000000-0000-0000-0000-000000000000", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusNotFound {
+			t.Errorf("expected 404, got %d", status)
+		}
+	})
+
 	t.Run("Update Machine FAT Date and Lead - Success", func(t *testing.T) {
 		newFat := time.Now().AddDate(0, 0, 7).Truncate(time.Second)
 		payload := map[string]interface{}{

@@ -126,6 +126,7 @@ type User struct {
 type Defect struct {
 	ID                 uuid.UUID  `json:"id"`
 	MachineID          uuid.UUID  `json:"machine_id"`
+	OrderNumber        string     `json:"order_number"`
 	InspectionID       *uuid.UUID `json:"inspection_id,omitempty"`
 	SourceDepartment   string     `json:"source_department"`
 	AssignedDepartment string     `json:"assigned_department"`
@@ -160,7 +161,6 @@ type Defect struct {
 // NCRDetail represents a rich Non-Conformance Report with machine and sales order context
 type NCRDetail struct {
 	Defect
-	OrderNumber           string  `json:"order_number"`
 	InternalProjectNumber *string `json:"internal_project_number,omitempty"`
 	ProjectName           *string `json:"project_name,omitempty"`
 	CustomerName          *string `json:"customer_name,omitempty"`

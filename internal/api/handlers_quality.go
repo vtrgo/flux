@@ -73,7 +73,7 @@ func handleGetQuality(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, inspections)
 }
 
-// handleGetMachineDefects fetches defects for a specific machine
+// handleGetMachineDefects fetches defects for a specific machine with optional department filtering
 func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 	machineID := r.PathValue("id")
 	if machineID == "" {
@@ -81,22 +81,31 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := db.DB.Query(`
-		SELECT d.id, d.machine_id, d.inspection_id, d.source_department, d.assigned_department, d.assigned_user_id, u.username as assigned_user_name, 
+	department := r.URL.Query().Get("department")
+
+	query := `
+		SELECT d.id, d.machine_id, COALESCE(m.order_number, '') as order_number, d.inspection_id, d.source_department, d.assigned_department, d.assigned_user_id, u.username as assigned_user_name, 
               d.created_by_user_id, c.username as created_by_user_name, 
               d.fixed_by_user_id, f.username as fixed_by_user_name, 
               d.verified_by_user_id, v.username as verified_by_user_name,
               d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at, d.due_date,
               d.is_ncr, d.ncr_number, d.assembler, d.location, d.root_cause, d.corrective_action, d.closeout_date, d.team_lead_signature
 		FROM defects d
+		LEFT JOIN machines m ON d.machine_id = m.id
 		LEFT JOIN users u ON d.assigned_user_id = u.id
 		LEFT JOIN users c ON d.created_by_user_id = c.id
 		LEFT JOIN users f ON d.fixed_by_user_id = f.id
 		LEFT JOIN users v ON d.verified_by_user_id = v.id
 		WHERE d.machine_id = $1
-		ORDER BY d.status ASC
-	`, machineID)
+	`
+	args := []interface{}{machineID}
+	if department != "" {
+		query += " AND (d.assigned_department = $2 OR ($2 = 'electrical_controls' AND d.assigned_department = 'controls'))"
+		args = append(args, department)
+	}
+	query += " ORDER BY d.status ASC"
 
+	rows, err := db.DB.Query(query, args...)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Database error: ", err)
 		return
@@ -108,7 +117,7 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		var d models.Defect
 		var assigned sql.NullString
 		if err := rows.Scan(
-			&d.ID, &d.MachineID, &d.InspectionID, &d.SourceDepartment, &assigned, &d.AssignedUserID, &d.AssignedUserName, &d.CreatedByUserID, &d.CreatedByUserName, &d.FixedByUserID, &d.FixedByUserName, &d.VerifiedByUserID, &d.VerifiedByUserName, &d.Description,
+			&d.ID, &d.MachineID, &d.OrderNumber, &d.InspectionID, &d.SourceDepartment, &assigned, &d.AssignedUserID, &d.AssignedUserName, &d.CreatedByUserID, &d.CreatedByUserName, &d.FixedByUserID, &d.FixedByUserName, &d.VerifiedByUserID, &d.VerifiedByUserName, &d.Description,
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt, &d.DueDate,
 			&d.IsNCR, &d.NCRNumber, &d.Assembler, &d.Location, &d.RootCause, &d.CorrectiveAction, &d.CloseoutDate, &d.TeamLeadSignature,
 		); err != nil {
@@ -273,6 +282,8 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newDefect.OrderNumber = machineOrderNumber
+
 	BroadcastEvent("defect_added", newDefect)
 	slog.Debug("Defect logged", "defect_id", newDefect.ID, "machine_id", machineID, "is_ncr", newDefect.IsNCR)
 
@@ -411,15 +422,9 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	// Use an extended struct to include the order_number for context in the UI
-	type DefectWithMachine struct {
-		models.Defect
-		OrderNumber string `json:"order_number"`
-	}
-
-	defects := []DefectWithMachine{}
+	defects := []models.Defect{}
 	for rows.Next() {
-		var d DefectWithMachine
+		var d models.Defect
 		// Coalesce NULL assigned_department to empty string to avoid scan errors if we don't use pointers
 		var assigned sql.NullString
 		if err := rows.Scan(
@@ -494,8 +499,11 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
 			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
 		)
-		SELECT u_tbl.*, u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name
+		SELECT u_tbl.*, 
+		       COALESCE(m.order_number, '') as order_number,
+		       u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name
 		FROM updated u_tbl
+		LEFT JOIN machines m ON u_tbl.machine_id = m.id
 		LEFT JOIN users u ON u_tbl.assigned_user_id = u.id
 		LEFT JOIN users c ON u_tbl.created_by_user_id = c.id
 		LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
@@ -503,11 +511,12 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 	`, defectID, req.Status, req.AssignedDepartment, req.Notes, authUserID).Scan(
 		&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment, &updatedDefect.AssignedUserID, &updatedDefect.CreatedByUserID, &updatedDefect.FixedByUserID, &updatedDefect.VerifiedByUserID, &updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes, &updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt, &updatedDefect.DueDate,
 		&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature,
+		&updatedDefect.OrderNumber,
 		&updatedDefect.AssignedUserName, &updatedDefect.CreatedByUserName, &updatedDefect.FixedByUserName, &updatedDefect.VerifiedByUserName,
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update defect: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update defect", err)
 		return
 	}
 
@@ -1003,8 +1012,11 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
 			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
 		)
-		SELECT u_tbl.*, u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name 
+		SELECT u_tbl.*, 
+		       COALESCE(m.order_number, '') as order_number,
+		       u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name 
 		FROM updated u_tbl 
+		LEFT JOIN machines m ON u_tbl.machine_id = m.id
 		LEFT JOIN users u ON u_tbl.assigned_user_id = u.id
 		LEFT JOIN users c ON u_tbl.created_by_user_id = c.id
 		LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
@@ -1015,11 +1027,12 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 		&updated.ID, &updated.MachineID, &updated.SourceDepartment, &updated.AssignedDepartment, &updated.AssignedUserID, &updated.CreatedByUserID, &updated.FixedByUserID, &updated.VerifiedByUserID,
 		&updated.Description, &updated.Severity, &updated.Status, &updated.Notes, &updated.ResolvedBy, &updated.ResolvedAt, &updated.CreatedAt, &updated.DueDate,
 		&updated.IsNCR, &updated.NCRNumber, &updated.Assembler, &updated.Location, &updated.RootCause, &updated.CorrectiveAction, &updated.CloseoutDate, &updated.TeamLeadSignature,
+		&updated.OrderNumber,
 		&updated.AssignedUserName, &updated.CreatedByUserName, &updated.FixedByUserName, &updated.VerifiedByUserName,
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update defect: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update defect", err)
 		return
 	}
 
@@ -1282,7 +1295,7 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to create NCR: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to create NCR", err)
 		return
 	}
 	ncr.OrderNumber = machineOrderNumber
@@ -1473,7 +1486,7 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update NCR: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update NCR", err)
 		return
 	}
 

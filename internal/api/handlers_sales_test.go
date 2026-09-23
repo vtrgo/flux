@@ -108,6 +108,48 @@ func TestSalesOrders(t *testing.T) {
 		}
 	})
 
+	t.Run("Get Sales Order By ID - Success and 404", func(t *testing.T) {
+		var createdOrder models.SalesOrder
+		err := db.DB.QueryRow(`
+			INSERT INTO sales_orders (customer_name, po_number, status) 
+			VALUES ('Fetch Test', 'PO-FETCH-1', 'open') 
+			RETURNING id, customer_name, po_number, status
+		`).Scan(&createdOrder.ID, &createdOrder.CustomerName, &createdOrder.PONumber, &createdOrder.Status)
+		if err != nil {
+			t.Fatalf("failed to create test order: %v", err)
+		}
+		defer func() {
+			_, _ = db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", createdOrder.ID)
+		}()
+
+		// 1. Success
+		req := httptest.NewRequest(http.MethodGet, "/api/sales_orders/"+createdOrder.ID.String(), nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", status, rr.Body.String())
+		}
+		var resp models.SalesOrder
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if resp.ID != createdOrder.ID {
+			t.Errorf("expected sales order ID %v, got %v", createdOrder.ID, resp.ID)
+		}
+		if resp.CustomerName != "Fetch Test" {
+			t.Errorf("expected customer name 'Fetch Test', got %v", resp.CustomerName)
+		}
+
+		// 2. 404
+		req404 := httptest.NewRequest(http.MethodGet, "/api/sales_orders/00000000-0000-0000-0000-000000000000", nil)
+		rr404 := httptest.NewRecorder()
+		mux.ServeHTTP(rr404, req404)
+		if rr404.Code != http.StatusNotFound {
+			t.Errorf("expected 404, got %d", rr404.Code)
+		}
+	})
+
 	t.Run("Create Sales Order - Missing Fields (Failure)", func(t *testing.T) {
 		payload := map[string]interface{}{
 			// Missing customer_name and po_number

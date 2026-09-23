@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/logger"
 	"github.com/vtrgo/flux/internal/models"
@@ -32,6 +33,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 
 func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/machines", handleMachines)
+	mux.HandleFunc("GET /api/machines/{id}", handleGetMachineByID)
 	mux.HandleFunc("PUT /api/machines/{id}", handleUpdateMachine)
 	mux.Handle("DELETE /api/machines/{id}", RequireRole("admin", "manager")(http.HandlerFunc(handleDeleteMachine)))
 
@@ -52,6 +54,7 @@ func RegisterRoutes(mux *http.ServeMux) {
 
 	// Sales Orders
 	mux.HandleFunc("GET /api/sales_orders", getSalesOrders)
+	mux.HandleFunc("GET /api/sales_orders/{id}", getSalesOrderByID)
 	mux.HandleFunc("POST /api/sales_orders", createSalesOrder)
 	mux.HandleFunc("PUT /api/sales_orders/{id}", updateSalesOrder)
 	mux.HandleFunc("POST /api/sales_orders/{id}/close", handleCloseSalesOrder)
@@ -216,6 +219,51 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, http.StatusOK, machines)
+}
+
+func handleGetMachineByID(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		respondError(w, http.StatusBadRequest, "Machine ID is required", nil)
+		return
+	}
+	if _, err := uuid.Parse(id); err != nil {
+		respondError(w, http.StatusNotFound, "Machine not found", nil)
+		return
+	}
+
+	var m models.Machine
+	err := db.DB.QueryRow(`
+		SELECT 
+			m.id, m.sales_order_id, m.order_number, m.model_type, m.status, m.actual_ship_date, m.fat_date, m.lead, m.created_at, m.created_by,
+			COUNT(DISTINCT k.id) as kitting_count,
+			COUNT(DISTINCT a.id) as assembly_count,
+			COUNT(DISTINCT c.id) as controls_count,
+			COUNT(DISTINCT d.id) as quality_count,
+			u.username as created_by_user_name
+		FROM machines m
+		LEFT JOIN kitting_parts k ON m.id = k.machine_id
+		LEFT JOIN assembly_tasks a ON m.id = a.machine_id
+		LEFT JOIN controls_checkpoints c ON m.id = c.machine_id
+		LEFT JOIN defects d ON m.id = d.machine_id
+		LEFT JOIN users u ON m.created_by = u.id
+		WHERE m.id = $1
+		GROUP BY m.id, u.username
+	`, id).Scan(
+		&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.ActualShipDate, &m.FATDate, &m.Lead, &m.CreatedAt, &m.CreatedBy,
+		&m.KittingCount, &m.AssemblyCount, &m.ControlsCount, &m.QualityCount, &m.CreatedByUserName,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondError(w, http.StatusNotFound, "Machine not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Database error", err)
+		return
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	respondJSON(w, http.StatusOK, m)
 }
 
 func createMachine(w http.ResponseWriter, r *http.Request) {
