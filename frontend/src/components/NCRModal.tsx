@@ -65,10 +65,10 @@ export function NCRModal({
     [isOpen, onClose]
   );
 
-  // Load managers from database for Team Lead Signature selection
+  // Load managers and admins from database for Assigned Responsible Person selection
   useEffect(() => {
     if (!isOpen) return;
-    fetchApi<User[]>("users?role=manager")
+    fetchApi<User[]>("users?role=manager,admin")
       .then((data) => {
         const mgrs = data || [];
         setManagers(mgrs);
@@ -737,7 +737,7 @@ export function NCRModal({
 
             <div className={styles.formGroup}>
               <label htmlFor="signature" className={styles.label}>
-                Assigned Responsible Person (Manager Sign-off)
+                Assigned Responsible Person (Manager / Admin Sign-off)
               </label>
               <select
                 id="signature"

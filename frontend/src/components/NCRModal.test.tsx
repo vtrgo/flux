@@ -37,7 +37,8 @@ describe('NCRModal Component', () => {
 
   const mockManagers = [
     { id: 'usr-1', username: 'enda', first_name: 'Enda', last_name: 'McNamara', role: 'manager', department: 'assembly', email: 'enda@example.com' },
-    { id: 'usr-2', username: 'lucas', first_name: 'Lucas', last_name: 'Sinclair', role: 'manager', department: 'quality', email: 'lucas@example.com' }
+    { id: 'usr-2', username: 'lucas', first_name: 'Lucas', last_name: 'Sinclair', role: 'manager', department: 'quality', email: 'lucas@example.com' },
+    { id: 'usr-3', username: 'justin', first_name: 'Justin', last_name: 'Wood', role: 'admin', department: 'quality', email: 'justin@vtrfeedersolutions.com' },
   ];
 
   const mockAttachments = [
@@ -64,7 +65,7 @@ describe('NCRModal Component', () => {
       if (url === 'ncrs/next-number') {
         return Promise.resolve({ next_number: 'NCR-2026-042' });
       }
-      if (url === 'users?role=manager') {
+      if (url === 'users?role=manager,admin' || url === 'users?role=manager') {
         return Promise.resolve(mockManagers);
       }
       if (url === 'issues/ncr-99/attachments') {
@@ -115,7 +116,7 @@ describe('NCRModal Component', () => {
     expect(ncrInput.value).toBe('NCR-2026-042');
   });
 
-  it('loads managers from database into Assigned Responsible Person dropdown', async () => {
+  it('loads managers and admins from database into Assigned Responsible Person dropdown', async () => {
     await act(async () => {
       render(
         <NCRModal
@@ -125,20 +126,21 @@ describe('NCRModal Component', () => {
       );
     });
 
-    expect(fetchApi).toHaveBeenCalledWith('users?role=manager');
+    expect(fetchApi).toHaveBeenCalledWith('users?role=manager,admin');
     const signatureSelect = screen.getByLabelText(/Assigned Responsible Person/i) as HTMLSelectElement;
     expect(signatureSelect).toBeDefined();
 
     // Check placeholder option
     expect(screen.getByRole('option', { name: /-- Select Assigned Responsible Person --/i })).toBeDefined();
 
-    // Check that manager options are rendered
+    // Check that manager and admin options are rendered
     expect(screen.getByRole('option', { name: /Enda McNamara \(Assembly\)/i })).toBeDefined();
     expect(screen.getByRole('option', { name: /Lucas Sinclair \(Quality/i })).toBeDefined();
+    expect(screen.getByRole('option', { name: /Justin Wood \(Quality/i })).toBeDefined();
 
-    // Select a manager
-    fireEvent.change(signatureSelect, { target: { value: 'Enda McNamara' } });
-    expect(signatureSelect.value).toBe('Enda McNamara');
+    // Select an admin
+    fireEvent.change(signatureSelect, { target: { value: 'Justin Wood' } });
+    expect(signatureSelect.value).toBe('Justin Wood');
   });
 
   it('submits valid NCR data with default severity and routing department', async () => {
@@ -473,7 +475,7 @@ describe('NCRModal Component', () => {
     let postBody: any = null;
     (fetchApi as any).mockImplementation((url: string, opts?: any) => {
       if (url === 'machines') return Promise.resolve(mockMachines);
-      if (url === 'users?role=manager') return Promise.resolve(mockManagers);
+      if (url.startsWith('users?role=')) return Promise.resolve(mockManagers);
       if (url === 'ncrs/next-number') return Promise.resolve({ next_number: 'NCR-2026-105' });
       if (url === 'issues/defect-123/attachments') return Promise.resolve(mockAttachments);
       if (url === 'ncrs' && opts?.method === 'POST') {
@@ -540,7 +542,7 @@ describe('NCRModal Component', () => {
     let postBody: any = null;
     (fetchApi as any).mockImplementation((url: string, opts?: any) => {
       if (url === 'machines') return Promise.resolve(mockMachines);
-      if (url === 'users?role=manager') return Promise.resolve(mockManagers);
+      if (url.startsWith('users?role=')) return Promise.resolve(mockManagers);
       if (url === 'ncrs/next-number') return Promise.resolve({ next_number: 'NCR-2026-106' });
       if (url.includes('attachments')) return Promise.resolve([]);
       if (url === 'ncrs' && opts?.method === 'POST') {
@@ -608,6 +610,55 @@ describe('NCRModal Component', () => {
     });
 
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it('allows selecting an admin as assigned responsible person and routes notification to admin', async () => {
+    let postBody: any = null;
+    (fetchApi as any).mockImplementation((url: string, opts?: any) => {
+      if (url === 'machines') return Promise.resolve(mockMachines);
+      if (url.startsWith('users?role=')) return Promise.resolve(mockManagers);
+      if (url === 'ncrs/next-number') return Promise.resolve({ next_number: 'NCR-2026-107' });
+      if (url.includes('attachments')) return Promise.resolve([]);
+      if (url === 'ncrs' && opts?.method === 'POST') {
+        postBody = JSON.parse(opts.body);
+        return Promise.resolve({ id: 'ncr-new-107', ncr_number: 'NCR-2026-107', ...postBody });
+      }
+      return Promise.resolve([]);
+    });
+
+    await act(async () => {
+      render(
+        <NCRModal
+          isOpen={true}
+          onClose={() => {}}
+        />
+      );
+    });
+
+    const assemblerInput = screen.getByLabelText(/Assembler/i);
+    const locationInput = screen.getByLabelText(/Location of NC/i);
+    const descInput = screen.getByPlaceholderText(/Provide a detailed description of the non-conformance/i);
+    const signatureSelect = screen.getByLabelText(/Assigned Responsible Person/i);
+
+    fireEvent.change(assemblerInput, { target: { value: 'Sam Tech' } });
+    fireEvent.change(locationInput, { target: { value: 'Station 1' } });
+    fireEvent.change(descInput, { target: { value: 'Admin test issue' } });
+    fireEvent.change(signatureSelect, { target: { value: 'Justin Wood' } });
+
+    const notifCheckbox = screen.getByLabelText(/ROUTE TO NOTIFICATIONS/i) as HTMLInputElement;
+    fireEvent.click(notifCheckbox);
+
+    expect(screen.getByText(/Justin Wood \(justin@vtrfeedersolutions.com\)/i)).toBeDefined();
+
+    const submitBtn = screen.getByRole('button', { name: /Create NCR/i });
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(postBody).not.toBeNull();
+    expect(postBody.team_lead_signature).toBe('Justin Wood');
+    expect(postBody.assigned_user_id).toBe('usr-3');
+    expect(postBody.send_notification).toBe(true);
   });
 });
 

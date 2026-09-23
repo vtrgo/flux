@@ -122,6 +122,31 @@ func TestUsersEndpoints(t *testing.T) {
 		}
 	})
 
+	t.Run("Get Users - Filtered by Multiple Roles", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/users?role=manager,admin", nil)
+		rr := httptest.NewRecorder()
+		req.AddCookie(createTestRoleCookie(t, "admin"))
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected 200 OK, got %d", rr.Code)
+		}
+
+		var users []models.User
+		if err := json.NewDecoder(rr.Body).Decode(&users); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if len(users) == 0 {
+			t.Errorf("Expected at least 1 user, got 0")
+		}
+		for _, u := range users {
+			if u.Role == nil || (*u.Role != "manager" && *u.Role != "admin") {
+				t.Errorf("Expected role manager or admin, got %v", u.Role)
+			}
+		}
+	})
+
 	t.Run("Create and Update User with Email - Success", func(t *testing.T) {
 		email := fmt.Sprintf("tech_%d@vtrfeedersolutions.com", uniqueSuffix)
 		userPayload := map[string]interface{}{
