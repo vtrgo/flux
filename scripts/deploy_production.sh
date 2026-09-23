@@ -15,6 +15,19 @@
 
 set -euo pipefail
 
+# Re-execute from /tmp if invoked from disk to avoid bash buffer offset skew when self-overwriting
+if [ "${FLUX_DEPLOY_DETACHED:-}" != "1" ]; then
+  RUNNER=$(mktemp /tmp/deploy_flux_runner_XXXXXX.sh)
+  cp "$0" "$RUNNER"
+  chmod 700 "$RUNNER"
+  export FLUX_DEPLOY_DETACHED=1
+  exec "$RUNNER" "$@"
+fi
+
+case "$0" in
+  /tmp/deploy_flux_runner_*.sh) trap 'rm -f "$0"' EXIT ;;
+esac
+
 # Ensure script is run with sudo
 if [ "$(id -u)" -ne 0 ]; then
   echo "[Error] deploy_production.sh must be executed with sudo privileges." >&2
