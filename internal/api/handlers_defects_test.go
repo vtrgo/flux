@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
 
@@ -37,6 +38,14 @@ func TestDefects(t *testing.T) {
 	if err := json.NewDecoder(machRr.Body).Decode(&createdMachine); err != nil {
 		t.Fatalf("Failed to decode machine: %v", err)
 	}
+
+	t.Cleanup(func() {
+		if db.DB != nil && createdMachine.ID.String() != "" {
+			if _, err := db.DB.Exec("DELETE FROM machines WHERE id = $1", createdMachine.ID); err != nil {
+				t.Logf("Failed to clean up test machine %s: %v", createdMachine.ID, err)
+			}
+		}
+	})
 
 	var defectID string
 
