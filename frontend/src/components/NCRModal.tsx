@@ -69,9 +69,26 @@ export function NCRModal({
   useEffect(() => {
     if (!isOpen) return;
     fetchApi<User[]>("users?role=manager")
-      .then((data) => setManagers(data || []))
+      .then((data) => {
+        const mgrs = data || [];
+        setManagers(mgrs);
+        const targetUserId = upgradeFromDefect?.assigned_user_id || editingNCR?.assigned_user_id;
+        if (targetUserId) {
+          const matchingMgr = mgrs.find((m) => m.id === targetUserId);
+          if (matchingMgr) {
+            const fullName =
+              matchingMgr.first_name && matchingMgr.last_name
+                ? `${matchingMgr.first_name} ${matchingMgr.last_name}`
+                : matchingMgr.username;
+            setFormData((prev) => ({
+              ...prev,
+              team_lead_signature: prev.team_lead_signature || fullName,
+            }));
+          }
+        }
+      })
       .catch((err) => console.error("Failed to fetch managers", err));
-  }, [isOpen]);
+  }, [isOpen, upgradeFromDefect, editingNCR]);
 
   const targetIssueId = editingNCR?.id || upgradeFromDefect?.id;
 
@@ -212,8 +229,16 @@ export function NCRModal({
 
     setIsSubmitting(true);
 
+    const resolvedAssignedUserId =
+      selectedManagerUser?.id ||
+      (formData.team_lead_signature
+        ? editingNCR?.assigned_user_id || upgradeFromDefect?.assigned_user_id
+        : undefined) ||
+      undefined;
+
     const payload = {
       ...formData,
+      assigned_user_id: resolvedAssignedUserId,
       severity: editingNCR?.severity || upgradeFromDefect?.severity || "moderate",
       source_department: editingNCR?.source_department || upgradeFromDefect?.source_department || "quality",
       assigned_department: editingNCR?.assigned_department || upgradeFromDefect?.assigned_department || "assembly",

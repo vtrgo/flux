@@ -521,5 +521,72 @@ describe('NCRModal Component', () => {
     expect(onSaved).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('routes notification and sends assigned_user_id when manager is selected as responsible person during upgrade', async () => {
+    const mockDefect = {
+      id: 'defect-999',
+      machine_id: 'm-2',
+      order_number: 'VTR-1002',
+      description: 'Chute angle incorrect',
+      location: 'Chute Base',
+      assembler: 'Tyler Wortley',
+      severity: 'moderate',
+      status: 'open',
+      source_department: 'assembly',
+      assigned_department: 'quality',
+      created_at: '2026-09-20T12:00:00Z',
+    };
+
+    let postBody: any = null;
+    (fetchApi as any).mockImplementation((url: string, opts?: any) => {
+      if (url === 'machines') return Promise.resolve(mockMachines);
+      if (url === 'users?role=manager') return Promise.resolve(mockManagers);
+      if (url === 'ncrs/next-number') return Promise.resolve({ next_number: 'NCR-2026-106' });
+      if (url.includes('attachments')) return Promise.resolve([]);
+      if (url === 'ncrs' && opts?.method === 'POST') {
+        postBody = JSON.parse(opts.body);
+        return Promise.resolve({ id: 'ncr-new-106', ncr_number: 'NCR-2026-106', ...postBody });
+      }
+      return Promise.resolve([]);
+    });
+
+    await act(async () => {
+      render(
+        <NCRModal
+          isOpen={true}
+          onClose={() => {}}
+          onSaved={() => {}}
+          upgradeFromDefect={mockDefect as any}
+        />
+      );
+    });
+
+    // Select manager "Enda McNamara" in Assigned Responsible Person dropdown
+    const signatureSelect = screen.getByLabelText(/Assigned Responsible Person/i) as HTMLSelectElement;
+    await act(async () => {
+      fireEvent.change(signatureSelect, { target: { value: 'Enda McNamara' } });
+    });
+
+    // Check "ROUTE TO NOTIFICATIONS"
+    const notifCheckbox = screen.getByLabelText(/ROUTE TO NOTIFICATIONS/i) as HTMLInputElement;
+    await act(async () => {
+      fireEvent.click(notifCheckbox);
+    });
+
+    expect(notifCheckbox.checked).toBe(true);
+    expect(screen.getByText(/Enda McNamara \(enda@example.com\)/i)).toBeDefined();
+
+    // Submit upgrade
+    const submitBtn = screen.getByRole('button', { name: /Upgrade to NCR/i });
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(postBody).not.toBeNull();
+    expect(postBody.upgrade_from_defect_id).toBe('defect-999');
+    expect(postBody.team_lead_signature).toBe('Enda McNamara');
+    expect(postBody.assigned_user_id).toBe('usr-1');
+    expect(postBody.send_notification).toBe(true);
+  });
 });
 

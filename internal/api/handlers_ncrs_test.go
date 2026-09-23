@@ -216,7 +216,21 @@ func TestNCRs(t *testing.T) {
 			t.Fatalf("failed to insert attachment: %v", err)
 		}
 
-		// 3. Post create NCR with upgrade_from_defect_id
+		// 3. Insert a manager user to test responsible person routing
+		var mgrID uuid.UUID
+		err = db.DB.QueryRow(`
+			INSERT INTO users (username, first_name, last_name, email, role, password_hash)
+			VALUES ($1, 'Enda', 'McNamara', 'enda@vtrfeedersolutions.com', 'manager', 'hash')
+			RETURNING id
+		`, fmt.Sprintf("enda_mgr_%d", time.Now().UnixNano())).Scan(&mgrID)
+		if err != nil {
+			t.Fatalf("failed to insert test manager: %v", err)
+		}
+		defer func() {
+			_, _ = db.DB.Exec("DELETE FROM users WHERE id = $1", mgrID)
+		}()
+
+		// 4. Post create NCR with upgrade_from_defect_id
 		upgradePayload := map[string]interface{}{
 			"machine_id":             machineID.String(),
 			"assembler":              "Alex Technician",
@@ -225,9 +239,11 @@ func TestNCRs(t *testing.T) {
 			"severity":               "critical",
 			"source_department":      "quality",
 			"assigned_department":    "assembly",
+			"assigned_user_id":       mgrID.String(),
 			"root_cause":             "Root cause identified during review",
 			"corrective_action":      "Corrective action scheduled",
 			"team_lead_signature":    "Enda McNamara",
+			"send_notification":      true,
 			"upgrade_from_defect_id": oldDefectID.String(),
 		}
 
@@ -252,6 +268,9 @@ func TestNCRs(t *testing.T) {
 		if upgradedNCR.NCRNumber == nil || *upgradedNCR.NCRNumber == "" {
 			t.Errorf("expected generated NCR number")
 		}
+		if upgradedNCR.AssignedUserID == nil || *upgradedNCR.AssignedUserID != mgrID {
+			t.Errorf("expected assigned_user_id to be %s, got %v", mgrID, upgradedNCR.AssignedUserID)
+		}
 
 		// 4. Verify old defect was removed
 		var oldDefectCount int
@@ -271,6 +290,52 @@ func TestNCRs(t *testing.T) {
 		}
 		if currentIssueID != upgradedNCR.ID {
 			t.Errorf("expected attachment to be linked to new NCR %s, got %s", upgradedNCR.ID, currentIssueID)
+		}
+	})
+
+	t.Run("Create_NCR_With_Signature_Fallback_Resolves_Manager", func(t *testing.T) {
+		var testMgrID uuid.UUID
+		err := db.DB.QueryRow(`
+			INSERT INTO users (username, first_name, last_name, email, role, password_hash)
+			VALUES ($1, 'Lucas', 'Sinclair', 'lucas_test@vtrfeedersolutions.com', 'manager', 'hash')
+			RETURNING id
+		`, fmt.Sprintf("lucas_mgr_%d", time.Now().UnixNano())).Scan(&testMgrID)
+		if err != nil {
+			t.Fatalf("failed to insert test manager: %v", err)
+		}
+		defer func() {
+			_, _ = db.DB.Exec("DELETE FROM users WHERE id = $1", testMgrID)
+		}()
+
+		payload := map[string]interface{}{
+			"machine_id":          machineID.String(),
+			"ncr_number":          fmt.Sprintf("NCR-%s-SIG-%d", time.Now().Format("2006"), time.Now().UnixNano()),
+			"assembler":           "Dave Tech",
+			"location":            "Station 1",
+			"description":         "Signature fallback notification test",
+			"severity":            "minor",
+			"source_department":   "quality",
+			"assigned_department": "assembly",
+			"team_lead_signature": "Lucas Sinclair",
+			"send_notification":   true,
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, "/api/ncrs", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("expected status 201, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var createdNCR models.NCRDetail
+		if err := json.NewDecoder(rr.Body).Decode(&createdNCR); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if createdNCR.AssignedUserID == nil || *createdNCR.AssignedUserID != testMgrID {
+			t.Errorf("expected assigned_user_id to fallback to %s, got %v", testMgrID, createdNCR.AssignedUserID)
 		}
 	})
 }

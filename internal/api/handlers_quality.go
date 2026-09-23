@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -257,6 +258,20 @@ func dispatchDefectNotification(ctx context.Context, defect models.Defect, assig
 	recipientEmail := ""
 	if assignedUserEmail != nil {
 		recipientEmail = *assignedUserEmail
+	}
+
+	// Fallback: If recipient email is empty and TeamLeadSignature is provided, lookup manager email
+	if recipientEmail == "" && defect.TeamLeadSignature != nil && strings.TrimSpace(*defect.TeamLeadSignature) != "" {
+		sig := strings.TrimSpace(*defect.TeamLeadSignature)
+		var matchedEmail string
+		if err := db.DB.QueryRowContext(ctx, `
+			SELECT email FROM users
+			WHERE (TRIM(CONCAT(first_name, ' ', last_name)) = $1 OR username = $1 OR email = $1)
+			  AND email IS NOT NULL AND email != ''
+			LIMIT 1
+		`, sig).Scan(&matchedEmail); err == nil && matchedEmail != "" {
+			recipientEmail = matchedEmail
+		}
 	}
 
 	siteTz := DefaultFallbackTimezone
@@ -1173,6 +1188,23 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 	var assignedUserID interface{}
 	if req.AssignedUserID != nil && *req.AssignedUserID != "" {
 		assignedUserID = *req.AssignedUserID
+	} else if req.TeamLeadSignature != nil && strings.TrimSpace(*req.TeamLeadSignature) != "" {
+		sig := strings.TrimSpace(*req.TeamLeadSignature)
+		var matchedID string
+		if err := db.DB.QueryRowContext(r.Context(), `
+			SELECT id FROM users
+			WHERE TRIM(CONCAT(first_name, ' ', last_name)) = $1
+			   OR username = $1
+			   OR email = $1
+			LIMIT 1
+		`, sig).Scan(&matchedID); err == nil && matchedID != "" {
+			assignedUserID = matchedID
+		}
+	} else if req.UpgradeFromDefectID != nil && strings.TrimSpace(*req.UpgradeFromDefectID) != "" {
+		var origAssignedID sql.NullString
+		if err := db.DB.QueryRowContext(r.Context(), `SELECT assigned_user_id FROM defects WHERE id = $1`, strings.TrimSpace(*req.UpgradeFromDefectID)).Scan(&origAssignedID); err == nil && origAssignedID.Valid && origAssignedID.String != "" {
+			assignedUserID = origAssignedID.String
+		}
 	}
 
 	var notesVal string
@@ -1341,6 +1373,18 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 	var assignedUserID interface{}
 	if req.AssignedUserID != nil && *req.AssignedUserID != "" {
 		assignedUserID = *req.AssignedUserID
+	} else if req.TeamLeadSignature != nil && strings.TrimSpace(*req.TeamLeadSignature) != "" {
+		sig := strings.TrimSpace(*req.TeamLeadSignature)
+		var matchedID string
+		if err := db.DB.QueryRowContext(r.Context(), `
+			SELECT id FROM users
+			WHERE TRIM(CONCAT(first_name, ' ', last_name)) = $1
+			   OR username = $1
+			   OR email = $1
+			LIMIT 1
+		`, sig).Scan(&matchedID); err == nil && matchedID != "" {
+			assignedUserID = matchedID
+		}
 	}
 
 	var statusVal string
