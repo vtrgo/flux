@@ -431,4 +431,26 @@ describe('IssueModal Assignee Department Filtering', () => {
     );
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('provides a top-right close button in the header that invokes onClose', async () => {
+    const onClose = vi.fn();
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={onClose}
+          editingDefect={null}
+        />
+      );
+    });
+
+    const closeBtn = screen.getByRole('button', { name: /Close modal/i });
+    expect(closeBtn).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(closeBtn);
+    });
+
+    expect(onClose).toHaveBeenCalled();
+  });
 });

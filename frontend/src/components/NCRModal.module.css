@@ -1,10 +1,11 @@
 .overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -18,16 +19,26 @@
   border: 1px solid var(--border-color, #333);
   border-radius: 8px;
   width: 100%;
-  max-width: 860px;
-  max-height: 92vh;
-  overflow-y: auto;
+  max-width: 880px;
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  margin: auto;
 }
 
 .formContainer {
-  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
   background: var(--bg-surface, #1e1e1e);
   color: var(--text-primary, #fff);
 }
@@ -37,8 +48,46 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid var(--border-color, #333);
-  padding-bottom: 1rem;
-  margin-bottom: 1.5rem;
+  padding: 1.25rem 2rem 1rem 2rem;
+  margin-bottom: 0;
+  flex-shrink: 0;
+  background: var(--bg-surface, #1e1e1e);
+  position: relative;
+}
+
+.headerRightArea {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #aaa);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: color 0.15s, background-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary, #fff);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.scrollableBody {
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .logoArea {
@@ -139,13 +188,34 @@
 }
 
 .actions {
-  margin-top: 2rem;
+  margin-top: 0;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
   border-top: 1px solid var(--border-color, #333);
-  padding-top: 1.25rem;
+  padding: 1rem 1.5rem;
+  background: var(--bg-surface, #1e1e1e);
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.leftActions {
+  margin-right: auto;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.rightActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .printPreview {
@@ -362,5 +432,111 @@
 
   .actions {
     display: none !important;
+  }
+
+  .scrollableBody {
+    padding: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+}
+
+/* Responsive adjustments for screens with smaller resolutions */
+@media screen and (max-width: 768px) {
+  .overlay {
+    padding: 0.5rem;
+  }
+
+  .modal {
+    max-height: calc(100dvh - 1rem);
+    border-radius: 6px;
+  }
+
+  .formHeader {
+    padding: 1rem 1.25rem 0.75rem 1.25rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .headerRightArea {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .headerText {
+    text-align: left;
+  }
+
+  .scrollableBody {
+    padding: 1rem 1.25rem;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .formGroup.fullWidth {
+    grid-column: span 1;
+  }
+
+  .actions {
+    padding: 0.75rem 1.25rem;
+    gap: 0.5rem;
+  }
+
+  .leftActions {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  .rightActions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .rightActions button,
+  .rightActions :global(.vtr-btn) {
+    flex: 1 1 auto;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+@media screen and (max-height: 700px) {
+  .formHeader {
+    padding: 0.75rem 1.5rem 0.5rem 1.5rem;
+  }
+
+  .logoImage {
+    max-width: 150px;
+  }
+
+  .headerTitle {
+    font-size: 1.2rem;
+  }
+
+  .headerSubtitle {
+    font-size: 0.95rem;
+  }
+
+  .sectionTitle {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+  }
+
+  .scrollableBody {
+    padding: 1rem 1.5rem;
+  }
+
+  .actions {
+    padding: 0.65rem 1.5rem;
+    gap: 0.5rem;
   }
 }

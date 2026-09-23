@@ -588,5 +588,26 @@ describe('NCRModal Component', () => {
     expect(postBody.assigned_user_id).toBe('usr-1');
     expect(postBody.send_notification).toBe(true);
   });
+
+  it('provides a top-right close button in the header that invokes onClose', async () => {
+    const onClose = vi.fn();
+    await act(async () => {
+      render(
+        <NCRModal
+          isOpen={true}
+          onClose={onClose}
+        />
+      );
+    });
+
+    const closeBtn = screen.getByRole('button', { name: /Close modal/i });
+    expect(closeBtn).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(closeBtn);
+    });
+
+    expect(onClose).toHaveBeenCalled();
+  });
 });
 
