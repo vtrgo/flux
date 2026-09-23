@@ -13,18 +13,6 @@ import (
 	"github.com/vtrgo/flux/internal/models"
 )
 
-func handleSalesOrders(w http.ResponseWriter, r *http.Request) {
-
-	switch r.Method {
-	case http.MethodGet:
-		getSalesOrders(w, r)
-	case http.MethodPost:
-		createSalesOrder(w, r)
-	default:
-		respondError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
-	}
-}
-
 func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	statusNeq := r.URL.Query().Get("status_neq")
@@ -55,7 +43,7 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -66,7 +54,7 @@ func getSalesOrders(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&o.ID, &o.CustomerName, &o.PONumber, &o.InternalProjectNumber, &o.ProjectName, &o.ResponsiblePerson, &o.SalesRep, &o.TargetShipDate, &o.ActualShipDate, &o.Status, &o.CreatedAt, &o.CreatedBy, &o.CreatedByUserName,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning row", err)
 			return
 		}
 		orders = append(orders, o)
@@ -111,7 +99,6 @@ func getSalesOrderByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, o)
 }
 
@@ -152,7 +139,7 @@ func createSalesOrder(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to insert sales order: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to insert sales order", err)
 		return
 	}
 
@@ -181,7 +168,7 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid input: ", err)
+		respondError(w, http.StatusBadRequest, "Invalid input", err)
 		return
 	}
 
@@ -200,7 +187,7 @@ func updateSalesOrder(w http.ResponseWriter, r *http.Request) {
 	`, req.CustomerName, req.PONumber, req.InternalProjectNumber, req.ProjectName, req.ResponsiblePerson, req.SalesRep, req.TargetShipDate, req.Status, id, actualShipDate)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 
@@ -230,7 +217,7 @@ func handleCloseSalesOrder(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusNotFound, "Sales order not found", nil)
 			return
 		}
-		respondError(w, http.StatusInternalServerError, "Failed to close sales order: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to close sales order", err)
 		return
 	}
 
@@ -260,7 +247,7 @@ func handleReopenSalesOrder(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusNotFound, "Sales order not found", nil)
 			return
 		}
-		respondError(w, http.StatusInternalServerError, "Failed to reopen sales order: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to reopen sales order", err)
 		return
 	}
 
@@ -278,11 +265,11 @@ func deleteSalesOrder(w http.ResponseWriter, r *http.Request) {
 
 	_, err := db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", id)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 
 	BroadcastEvent("sales_order_deleted", map[string]string{"id": id})
-	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	w.WriteHeader(http.StatusNoContent)
 }
 

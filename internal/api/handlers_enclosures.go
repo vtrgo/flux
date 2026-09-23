@@ -24,7 +24,7 @@ func handleGetEnclosures(w http.ResponseWriter, r *http.Request) {
 	`, machineID)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -42,7 +42,6 @@ func handleGetEnclosures(w http.ResponseWriter, r *http.Request) {
 		tasks = append(tasks, t)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, tasks)
 }
 
@@ -58,7 +57,7 @@ func handleGetAllEnclosures(w http.ResponseWriter, r *http.Request) {
 	`)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -75,13 +74,12 @@ func handleGetAllEnclosures(w http.ResponseWriter, r *http.Request) {
 			&t.ID, &t.MachineID, &t.OrderNumber, &t.TaskName, &t.Status,
 			&t.StartedAt, &t.CompletedAt, &t.SignedOffBy, &t.Notes,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning task: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning task", err)
 			return
 		}
 		tasks = append(tasks, t)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, tasks)
 }
 
@@ -112,13 +110,12 @@ func handleAddEnclosuresTask(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to insert task: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to insert task", err)
 		return
 	}
 
 	BroadcastEvent("enclosures_task_added", newTask)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newTask)
 }
 
@@ -157,12 +154,11 @@ func handleUpdateEnclosuresTask(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update task: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update task", err)
 		return
 	}
 
 	BroadcastEvent("enclosures_task_updated", updatedTask)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updatedTask)
 }

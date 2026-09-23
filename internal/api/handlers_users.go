@@ -36,7 +36,7 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(query, args...)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -47,13 +47,12 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&u.ID, &u.Username, &u.Email, &u.FirstName, &u.LastName, &u.Department, &u.Role, &u.AuthProvider, &u.ExternalID, &u.CreatedAt,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning user: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning user", err)
 			return
 		}
 		users = append(users, u)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, users)
 }
 
@@ -102,13 +101,12 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to create user: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to create user", err)
 		return
 	}
 
 	slog.Debug("User created", "user_id", newUser.ID)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newUser)
 }
 
@@ -171,13 +169,12 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update user: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update user", err)
 		return
 	}
 
 	slog.Debug("User updated", "user_id", userID)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updatedUser)
 }
 
@@ -197,6 +194,5 @@ func handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	slog.Debug("User deleted", "user_id", userID)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusNoContent)
 }

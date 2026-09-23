@@ -24,7 +24,7 @@ func handleGetControls(w http.ResponseWriter, r *http.Request) {
 	`, machineID)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -36,13 +36,12 @@ func handleGetControls(w http.ResponseWriter, r *http.Request) {
 			&c.ID, &c.MachineID, &c.CheckpointType, &c.Description,
 			&c.ExpectedValue, &c.ActualValue, &c.Status, &c.SignedOffBy, &c.SignedOffAt,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning row", err)
 			return
 		}
 		checkpoints = append(checkpoints, c)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, checkpoints)
 }
 
@@ -58,7 +57,7 @@ func handleGetAllControls(w http.ResponseWriter, r *http.Request) {
 	`)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -75,13 +74,12 @@ func handleGetAllControls(w http.ResponseWriter, r *http.Request) {
 			&c.ID, &c.MachineID, &c.OrderNumber, &c.CheckpointType, &c.Description,
 			&c.ExpectedValue, &c.ActualValue, &c.Status, &c.SignedOffBy, &c.SignedOffAt,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning checkpoint: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning checkpoint", err)
 			return
 		}
 		checks = append(checks, c)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, checks)
 }
 
@@ -115,13 +113,12 @@ func handleAddControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to insert checkpoint: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to insert checkpoint", err)
 		return
 	}
 
 	BroadcastEvent("controls_checkpoint_added", newCheckpoint)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newCheckpoint)
 }
 
@@ -155,12 +152,11 @@ func handleUpdateControlsCheckpoint(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update checkpoint: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update checkpoint", err)
 		return
 	}
 
 	BroadcastEvent("controls_checkpoint_updated", updatedCheck)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updatedCheck)
 }

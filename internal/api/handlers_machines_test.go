@@ -199,8 +199,8 @@ func TestMachines(t *testing.T) {
 		rrAuth := httptest.NewRecorder()
 		AuthMiddleware(mux).ServeHTTP(rrAuth, reqAuth)
 
-		if status := rrAuth.Code; status != http.StatusOK {
-			t.Errorf("handler returned wrong status code for admin: got %v want %v", status, http.StatusOK)
+		if status := rrAuth.Code; status != http.StatusNoContent {
+			t.Errorf("handler returned wrong status code for admin: got %v want %v", status, http.StatusNoContent)
 		}
 	})
 }

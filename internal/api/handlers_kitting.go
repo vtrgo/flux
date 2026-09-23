@@ -24,7 +24,7 @@ func handleGetKitting(w http.ResponseWriter, r *http.Request) {
 	`, machineID)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -42,7 +42,6 @@ func handleGetKitting(w http.ResponseWriter, r *http.Request) {
 		parts = append(parts, p)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, parts)
 }
 
@@ -58,7 +57,7 @@ func handleGetAllKitting(w http.ResponseWriter, r *http.Request) {
 	`)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -75,13 +74,12 @@ func handleGetAllKitting(w http.ResponseWriter, r *http.Request) {
 			&p.ID, &p.MachineID, &p.OrderNumber, &p.Department, &p.PartNumber, &p.Description,
 			&p.QtyRequired, &p.QtyPicked, &p.Status, &p.FulfilledAt, &p.FulfilledBy,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning part: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning part", err)
 			return
 		}
 		parts = append(parts, p)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, parts)
 }
 
@@ -116,13 +114,12 @@ func handleAddKittingPart(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to insert part: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to insert part", err)
 		return
 	}
 
 	BroadcastEvent("kitting_part_added", newPart)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newPart)
 }
 
@@ -160,13 +157,12 @@ func handleUpdateKittingPart(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update part: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update part", err)
 		return
 	}
 
 	// This is the communications hub: Broadcast the update so Assembly knows immediately!
 	BroadcastEvent("kitting_part_updated", updatedPart)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updatedPart)
 }

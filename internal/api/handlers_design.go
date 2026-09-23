@@ -24,7 +24,7 @@ func handleGetDesign(w http.ResponseWriter, r *http.Request) {
 	`, machineID)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -36,13 +36,12 @@ func handleGetDesign(w http.ResponseWriter, r *http.Request) {
 			&d.ID, &d.MachineID, &d.DocumentType, &d.Version, &d.FileURL,
 			&d.Status, &d.UploadedBy, &d.UploadedAt,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning row", err)
 			return
 		}
 		documents = append(documents, d)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, documents)
 }
 
@@ -77,13 +76,12 @@ func handleAddDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to insert feedback: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to insert feedback", err)
 		return
 	}
 
 	BroadcastEvent("design_feedback_added", newFeedback)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newFeedback)
 }
 
@@ -97,7 +95,7 @@ func handleGetAllDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	`)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -114,13 +112,12 @@ func handleGetAllDesignFeedback(w http.ResponseWriter, r *http.Request) {
 			&f.ID, &f.MachineID, &f.OrderNumber, &f.DocumentID, &f.SourceDepartment,
 			&f.FeedbackType, &f.Description, &f.Status, &f.ReviewedBy, &f.ReviewedAt, &f.CreatedAt,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning feedback: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning feedback", err)
 			return
 		}
 		feedbacks = append(feedbacks, f)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, feedbacks)
 }
 
@@ -154,12 +151,11 @@ func handleUpdateDesignFeedback(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update feedback: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update feedback", err)
 		return
 	}
 
 	BroadcastEvent("design_feedback_updated", updated)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updated)
 }

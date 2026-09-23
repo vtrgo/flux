@@ -270,6 +270,5 @@ func handleDeleteAttachment(w http.ResponseWriter, r *http.Request) {
 		"attachment_id": attachmentID,
 	})
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusNoContent)
 }

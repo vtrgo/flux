@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -32,13 +31,11 @@ func CorsMiddleware(next http.Handler) http.Handler {
 }
 
 func RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/machines", handleMachines)
+	mux.HandleFunc("GET /api/machines", getMachines)
+	mux.HandleFunc("POST /api/machines", createMachine)
 	mux.HandleFunc("GET /api/machines/{id}", handleGetMachineByID)
 	mux.HandleFunc("PUT /api/machines/{id}", handleUpdateMachine)
 	mux.Handle("DELETE /api/machines/{id}", RequireRole("admin", "manager")(http.HandlerFunc(handleDeleteMachine)))
-
-	// Sales endpoints
-	mux.HandleFunc("/api/sales_orders", handleSalesOrders)
 
 	// Kitting endpoints
 	mux.HandleFunc("GET /api/kitting", handleGetAllKitting)
@@ -146,26 +143,6 @@ func handleGetLogs(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]string{"logs": logs})
 }
 
-func handleMachines(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	if r.Method == http.MethodOptions {
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		getMachines(w, r)
-	case http.MethodPost:
-		createMachine(w, r)
-	default:
-		respondError(w, http.StatusMethodNotAllowed, "Method not allowed", nil)
-	}
-}
-
 func getMachines(w http.ResponseWriter, r *http.Request) {
 	soStatusNeq := r.URL.Query().Get("sales_order_status_neq")
 
@@ -200,7 +177,7 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -212,7 +189,7 @@ func getMachines(w http.ResponseWriter, r *http.Request) {
 			&m.ID, &m.SalesOrderID, &m.OrderNumber, &m.ModelType, &m.Status, &m.ActualShipDate, &m.FATDate, &m.Lead, &m.CreatedAt, &m.CreatedBy,
 			&m.KittingCount, &m.AssemblyCount, &m.ControlsCount, &m.QualityCount, &m.CreatedByUserName,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning row: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning row", err)
 			return
 		}
 		machines = append(machines, m)
@@ -262,7 +239,6 @@ func handleGetMachineByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, m)
 }
 
@@ -311,7 +287,7 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to insert machine: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to insert machine", err)
 		return
 	}
 
@@ -322,7 +298,7 @@ func createMachine(w http.ResponseWriter, r *http.Request) {
 	`, newMachine.ID)
 	if seedErr != nil {
 		// Log but don't fail the request since this is just seed data
-		fmt.Printf("Failed to seed relational data for machine %s: %v\n", newMachine.ID, seedErr)
+		slog.Warn("Failed to seed relational data for machine", "machine_id", newMachine.ID, "error", seedErr)
 	}
 
 	BroadcastEvent("machine_created", newMachine)
@@ -376,7 +352,7 @@ func handleUpdateMachine(w http.ResponseWriter, r *http.Request) {
 			respondError(w, http.StatusNotFound, "Machine not found", nil)
 			return
 		}
-		respondError(w, http.StatusInternalServerError, "Failed to update machine: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update machine", err)
 		return
 	}
 
@@ -411,11 +387,11 @@ func handleDeleteMachine(w http.ResponseWriter, r *http.Request) {
 
 	_, err = db.DB.Exec("DELETE FROM machines WHERE id = $1", id)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to delete machine: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to delete machine", err)
 		return
 	}
 
 	BroadcastEvent("machine_deleted", map[string]string{"id": id})
 	slog.Debug("Machine deleted", "machine_id", id)
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }

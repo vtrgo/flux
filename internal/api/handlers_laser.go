@@ -20,7 +20,7 @@ func handleGetAllLaserTasks(w http.ResponseWriter, r *http.Request) {
 	`)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -32,13 +32,12 @@ func handleGetAllLaserTasks(w http.ResponseWriter, r *http.Request) {
 			&t.ID, &t.MachineID, &t.DefectID, &t.PartName, &t.Material,
 			&t.Status, &t.CutBy, &t.CompletedAt, &t.CreatedAt,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning task: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning task", err)
 			return
 		}
 		tasks = append(tasks, t)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, tasks)
 }
 
@@ -67,13 +66,12 @@ func handleAddLaserTask(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to create task: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to create task", err)
 		return
 	}
 
 	BroadcastEvent("laser_task_added", newTask)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newTask)
 }
 
@@ -109,12 +107,11 @@ func handleUpdateLaserTask(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to update task: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to update task", err)
 		return
 	}
 
 	BroadcastEvent("laser_task_updated", updatedTask)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updatedTask)
 }

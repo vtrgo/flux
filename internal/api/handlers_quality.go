@@ -49,7 +49,7 @@ func handleGetQuality(w http.ResponseWriter, r *http.Request) {
 	`, machineID)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -60,7 +60,7 @@ func handleGetQuality(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&i.ID, &i.MachineID, &i.InspectionType, &i.InspectorName, &i.Status, &i.CompletedAt,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning inspection: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning inspection", err)
 			return
 		}
 		inspections = append(inspections, i)
@@ -69,7 +69,6 @@ func handleGetQuality(w http.ResponseWriter, r *http.Request) {
 	// We could also fetch defects here and bundle them, or leave it as a separate endpoint.
 	// For simplicity, we just return the inspections in this endpoint.
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, inspections)
 }
 
@@ -107,7 +106,7 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -121,7 +120,7 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt, &d.DueDate,
 			&d.IsNCR, &d.NCRNumber, &d.Assembler, &d.Location, &d.RootCause, &d.CorrectiveAction, &d.CloseoutDate, &d.TeamLeadSignature,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning defect: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning defect", err)
 			return
 		}
 		if assigned.Valid {
@@ -130,7 +129,6 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		defects = append(defects, d)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, defects)
 }
 
@@ -278,7 +276,7 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to log defect: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to log defect", err)
 		return
 	}
 
@@ -291,7 +289,6 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		dispatchDefectNotification(r.Context(), newDefect, assignedUserEmail, machineOrderNumber, openedByName)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, newDefect)
 }
 
@@ -417,7 +414,7 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.DB.Query(query, args...)
 
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Database error: ", err)
+		respondError(w, http.StatusInternalServerError, "Database error", err)
 		return
 	}
 	defer rows.Close()
@@ -432,7 +429,7 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt, &d.DueDate,
 			&d.IsNCR, &d.NCRNumber, &d.Assembler, &d.Location, &d.RootCause, &d.CorrectiveAction, &d.CloseoutDate, &d.TeamLeadSignature,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Error scanning defect: ", err)
+			respondError(w, http.StatusInternalServerError, "Error scanning defect", err)
 			return
 		}
 		if assigned.Valid {
@@ -441,7 +438,6 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 		defects = append(defects, d)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, defects)
 }
 
@@ -523,7 +519,6 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("defect_updated", updatedDefect)
 	slog.Debug("Defect updated", "defect_id", defectID, "status", updatedDefect.Status)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updatedDefect)
 }
 
@@ -552,7 +547,6 @@ func handleDeleteDefect(w http.ResponseWriter, r *http.Request) {
 	// We can broadcast a delete event so the UI can remove it
 	BroadcastEvent("defect_deleted", map[string]string{"id": defectID})
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -571,7 +565,7 @@ func handleGetMachineDefectsSummary(w http.ResponseWriter, r *http.Request) {
 		GROUP BY assigned_department, status, severity
 	`, machineID)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to query defect summary: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to query defect summary", err)
 		return
 	}
 	defer rows.Close()
@@ -585,7 +579,7 @@ func handleGetMachineDefectsSummary(w http.ResponseWriter, r *http.Request) {
 		var count int
 
 		if err := rows.Scan(&assigned, &status, &severity, &count); err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to scan summary row: ", err)
+			respondError(w, http.StatusInternalServerError, "Failed to scan summary row", err)
 			return
 		}
 
@@ -637,7 +631,6 @@ func handleGetMachineDefectsSummary(w http.ResponseWriter, r *http.Request) {
 		summaries = append(summaries, *v)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, summaries)
 }
 
@@ -652,7 +645,7 @@ func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 		GROUP BY d.machine_id, d.assigned_department, d.status, d.severity
 	`)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to query all defect summaries: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to query all defect summaries", err)
 		return
 	}
 	defer rows.Close()
@@ -671,7 +664,7 @@ func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 		var count int
 
 		if err := rows.Scan(&machineID, &assigned, &status, &severity, &count); err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to scan summary row: ", err)
+			respondError(w, http.StatusInternalServerError, "Failed to scan summary row", err)
 			return
 		}
 
@@ -724,7 +717,6 @@ func handleGetAllDefectsSummary(w http.ResponseWriter, r *http.Request) {
 		summaries = append(summaries, *v)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, summaries)
 }
 
@@ -750,7 +742,7 @@ func handleGetMachineDefectSummaries(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to query machine defect summaries: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to query machine defect summaries", err)
 		return
 	}
 	defer rows.Close()
@@ -763,7 +755,7 @@ func handleGetMachineDefectSummaries(w http.ResponseWriter, r *http.Request) {
 		var count int
 
 		if err := rows.Scan(&machineID, &status, &count); err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to scan machine summary row: ", err)
+			respondError(w, http.StatusInternalServerError, "Failed to scan machine summary row", err)
 			return
 		}
 
@@ -789,7 +781,6 @@ func handleGetMachineDefectSummaries(w http.ResponseWriter, r *http.Request) {
 		summaries = append(summaries, *v)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, summaries)
 }
 
@@ -812,7 +803,7 @@ func handleGetProjectDefectSummaries(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to query project defect summaries: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to query project defect summaries", err)
 		return
 	}
 	defer rows.Close()
@@ -825,7 +816,7 @@ func handleGetProjectDefectSummaries(w http.ResponseWriter, r *http.Request) {
 		var count int
 
 		if err := rows.Scan(&salesOrderID, &status, &count); err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to scan project summary row: ", err)
+			respondError(w, http.StatusInternalServerError, "Failed to scan project summary row", err)
 			return
 		}
 
@@ -855,7 +846,6 @@ func handleGetProjectDefectSummaries(w http.ResponseWriter, r *http.Request) {
 		summaries = []models.ProjectDefectSummary{}
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, summaries)
 }
 
@@ -878,7 +868,7 @@ func handleGetProjectDepartmentDefectSummaries(w http.ResponseWriter, r *http.Re
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to query project department defect summaries: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to query project department defect summaries", err)
 		return
 	}
 	defer rows.Close()
@@ -897,7 +887,7 @@ func handleGetProjectDepartmentDefectSummaries(w http.ResponseWriter, r *http.Re
 		var count int
 
 		if err := rows.Scan(&salesOrderID, &dept, &status, &count); err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to scan project department summary row: ", err)
+			respondError(w, http.StatusInternalServerError, "Failed to scan project department summary row", err)
 			return
 		}
 
@@ -929,7 +919,6 @@ func handleGetProjectDepartmentDefectSummaries(w http.ResponseWriter, r *http.Re
 		summaries = []models.ProjectDepartmentDefectSummary{}
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, summaries)
 }
 
@@ -1038,7 +1027,6 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 
 	BroadcastEvent("defect_updated", updated)
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, updated)
 }
 
@@ -1104,7 +1092,7 @@ func handleGetNCRs(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(query, args...)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to query NCRs: ", err)
+		respondError(w, http.StatusInternalServerError, "Failed to query NCRs", err)
 		return
 	}
 	defer rows.Close()
@@ -1121,7 +1109,7 @@ func handleGetNCRs(w http.ResponseWriter, r *http.Request) {
 			&ncr.AssignedUserName, &ncr.CreatedByUserName, &ncr.FixedByUserName, &ncr.VerifiedByUserName,
 			&ncr.OrderNumber, &ncr.InternalProjectNumber, &ncr.ProjectName, &ncr.CustomerName,
 		); err != nil {
-			respondError(w, http.StatusInternalServerError, "Failed to scan NCR: ", err)
+			respondError(w, http.StatusInternalServerError, "Failed to scan NCR", err)
 			return
 		}
 		if assigned.Valid {
@@ -1130,7 +1118,6 @@ func handleGetNCRs(w http.ResponseWriter, r *http.Request) {
 		ncrs = append(ncrs, ncr)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, ncrs)
 }
 
@@ -1141,7 +1128,6 @@ func handleGetNextNCRNumber(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to determine next NCR number", err)
 		return
 	}
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, models.NextNCRNumberResponse{NextNumber: nextNumber})
 }
 
@@ -1346,7 +1332,6 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 		dispatchDefectNotification(r.Context(), ncr.Defect, assignedUserEmail, machineOrderNumber, openedByName)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusCreated, ncr)
 }
 
@@ -1497,6 +1482,5 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 		dispatchDefectNotification(r.Context(), ncr.Defect, assignedUserEmail, ncr.OrderNumber, openedByName)
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	respondJSON(w, http.StatusOK, ncr)
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sync"
 )
@@ -62,7 +63,7 @@ func BroadcastEvent(eventType string, data interface{}) {
 	}
 	payload, err := json.Marshal(data)
 	if err != nil {
-		fmt.Printf("Error marshalling SSE event data: %v\n", err)
+		slog.Error("Failed to marshal SSE payload", "event_type", eventType, "error", err)
 		return
 	}
 	message := []byte(fmt.Sprintf("event: %s\ndata: %s\n\n", eventType, payload))
@@ -73,7 +74,6 @@ func SSEHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	clientChan := make(chan []byte, 10)
 	Hub.register <- clientChan
