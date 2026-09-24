@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { fetchApi } from "../lib/api";
 import { ACTIVE_DEPARTMENTS, formatDepartmentName } from "../lib/departments";
-import styles from "../app/(main)/quality/quality.module.css";
+import styles from "./IssueModal.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { toast } from "sonner";
 
@@ -168,12 +168,25 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         onClick={onClose}
         style={{ display: isNCRModalOpen ? 'none' : undefined }}
       >
-      <div className={styles.modal} onClick={e => e.stopPropagation()}>
-        <h2 style={{ color: 'var(--vtr-theme-primary)', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', marginBottom: '1.5rem', borderBottom: '1px solid var(--vtr-theme-primary)', paddingBottom: '0.5rem' }}>
-          {editingDefect ? 'Edit Issue' : 'Log New Issue'}
-        </h2>
-        <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        <div className={styles.modal} onClick={e => e.stopPropagation()}>
+          <form onSubmit={handleFormSubmit} className={styles.modalForm}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>
+                {editingDefect ? 'Edit Issue' : 'Log New Issue'}
+              </h2>
+              <button
+                type="button"
+                className={styles.closeBtn}
+                onClick={onClose}
+                aria-label="Close modal"
+                title="Close (Esc)"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>MACHINE / ORDER NUMBER</label>
             <select 
               value={formData.machine_id} 
@@ -187,7 +200,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </select>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+          <div className={styles.routingGrid}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SOURCE DEPT</label>
               <select 
@@ -263,7 +276,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className={styles.severityGrid}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SEVERITY</label>
               <select 
@@ -378,30 +391,47 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           )}
 
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', alignItems: 'center' }}>
-            <Authorize roles={['admin', 'manager']}>
-              {editingDefect && !editingDefect.is_ncr && (
+            </div>
+
+            <div className={styles.modalFooter}>
+              <div className={styles.footerLeft}>
+                <Authorize roles={['admin', 'manager']}>
+                  {editingDefect && !editingDefect.is_ncr && (
+                    <button
+                      type="button"
+                      className="vtr-btn"
+                      onClick={() => setIsNCRModalOpen(true)}
+                      style={{
+                        backgroundColor: "rgba(239, 68, 68, 0.15)",
+                        color: "var(--accent-red, #ff3366)",
+                        borderColor: "var(--accent-red, #ff3366)",
+                      }}
+                      title="Upgrade this issue into a formal Non-Conformance Report"
+                    >
+                      UPGRADE TO NCR
+                    </button>
+                  )}
+                </Authorize>
+              </div>
+              <div className={styles.footerRight}>
                 <button
                   type="button"
-                  className="vtr-btn"
-                  onClick={() => setIsNCRModalOpen(true)}
-                  style={{
-                    backgroundColor: "rgba(239, 68, 68, 0.15)",
-                    color: "var(--accent-red, #ff3366)",
-                    borderColor: "var(--accent-red, #ff3366)",
-                  }}
-                  title="Upgrade this issue into a formal Non-Conformance Report"
+                  className="vtr-btn vtr-btn-secondary"
+                  onClick={onClose}
+                  disabled={isSubmitting}
                 >
-                  UPGRADE TO NCR
+                  CANCEL
                 </button>
-              )}
-            </Authorize>
-            <button type="submit" className="vtr-btn" style={{ flex: 1 }} disabled={isSubmitting}>
-              {isSubmitting ? 'SAVING...' : (editingDefect ? 'SAVE CHANGES' : 'CREATE ISSUE')}
-            </button>
-            <button type="button" className="vtr-btn vtr-btn-secondary" onClick={onClose} disabled={isSubmitting}>CANCEL</button>
-          </div>
-        </form>
+                <button
+                  type="submit"
+                  className="vtr-btn vtr-btn-primary"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'SAVING...' : (editingDefect ? 'SAVE CHANGES' : 'CREATE ISSUE')}
+                </button>
+              </div>
+            </div>
+          </form>
       </div>
     </div>
 

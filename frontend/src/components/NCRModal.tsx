@@ -65,10 +65,10 @@ export function NCRModal({
     [isOpen, onClose]
   );
 
-  // Load managers from database for Team Lead Signature selection
+  // Load managers and admins from database for Assigned Responsible Person selection
   useEffect(() => {
     if (!isOpen) return;
-    fetchApi<User[]>("users?role=manager")
+    fetchApi<User[]>("users?role=manager,admin")
       .then((data) => {
         const mgrs = data || [];
         setManagers(mgrs);
@@ -403,14 +403,27 @@ export function NCRModal({
                 className={styles.logoImage}
               />
             </div>
-            <div className={styles.headerText}>
-              <h2 className={styles.headerTitle}>Fabricated Components</h2>
-              <h3 className={styles.headerSubtitle}>Non-Conformance Report</h3>
-              <div className={styles.printOnlyField} style={{ marginTop: "6px", fontWeight: 700, textTransform: "uppercase", color: "#006680" }}>
-                STATUS: {formData.status === "verified" ? "VERIFIED & CLEARED" : formData.status === "fixed" ? "FIXED / PENDING VERIFICATION" : "OPEN"}
+            <div className={styles.headerRightArea}>
+              <div className={styles.headerText}>
+                <h2 className={styles.headerTitle}>Fabricated Components</h2>
+                <h3 className={styles.headerSubtitle}>Non-Conformance Report</h3>
+                <div className={styles.printOnlyField} style={{ marginTop: "6px", fontWeight: 700, textTransform: "uppercase", color: "#006680" }}>
+                  STATUS: {formData.status === "verified" ? "VERIFIED & CLEARED" : formData.status === "fixed" ? "FIXED / PENDING VERIFICATION" : "OPEN"}
+                </div>
               </div>
+              <button
+                type="button"
+                className={`${styles.closeBtn} ${styles.screenOnlyField}`}
+                onClick={onClose}
+                aria-label="Close modal"
+                title="Close (Esc)"
+              >
+                &times;
+              </button>
             </div>
           </div>
+
+          <div className={styles.scrollableBody}>
 
           {/* Core Identification Fields */}
           <div className={styles.formGrid}>
@@ -724,7 +737,7 @@ export function NCRModal({
 
             <div className={styles.formGroup}>
               <label htmlFor="signature" className={styles.label}>
-                Assigned Responsible Person (Manager Sign-off)
+                Assigned Responsible Person (Manager / Admin Sign-off)
               </label>
               <select
                 id="signature"
@@ -772,10 +785,11 @@ export function NCRModal({
               assignedUser={selectedManagerUser}
             />
           </div>
+          </div>
 
           {/* Actions */}
-          <div className={`${styles.actions} no-print`}>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginRight: "auto" }}>
+          <div className={`${styles.actions} ${styles.screenOnlyField} no-print`}>
+            <div className={styles.leftActions}>
               <Authorize roles={['admin', 'manager']}>
                 {editingNCR && formData.status !== "fixed" && formData.status !== "verified" && (
                   <button
@@ -820,41 +834,43 @@ export function NCRModal({
               )}
             </div>
 
-            <button
-              type="button"
-              className="vtr-btn vtr-btn-secondary"
-              onClick={handleResetForm}
-            >
-              Reset Form
-            </button>
-            <button
-              type="button"
-              className="vtr-btn"
-              onClick={handlePrint}
-              title="Print standard PDF report"
-            >
-              🖨️ Print / Save to PDF
-            </button>
-            <button
-              type="button"
-              className="vtr-btn vtr-btn-secondary"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="vtr-btn vtr-btn-primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting
-                ? "Saving..."
-                : editingNCR
-                ? "Save Changes"
-                : upgradeFromDefect
-                ? "Upgrade to NCR"
-                : "Create NCR"}
-            </button>
+            <div className={styles.rightActions}>
+              <button
+                type="button"
+                className="vtr-btn vtr-btn-secondary"
+                onClick={handleResetForm}
+              >
+                Reset Form
+              </button>
+              <button
+                type="button"
+                className="vtr-btn"
+                onClick={handlePrint}
+                title="Print standard PDF report"
+              >
+                🖨️ Print / Save to PDF
+              </button>
+              <button
+                type="button"
+                className="vtr-btn vtr-btn-secondary"
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="vtr-btn vtr-btn-primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Saving..."
+                  : editingNCR
+                  ? "Save Changes"
+                  : upgradeFromDefect
+                  ? "Upgrade to NCR"
+                  : "Create NCR"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

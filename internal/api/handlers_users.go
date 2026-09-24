@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -14,8 +15,25 @@ import (
 
 // handleGetUsers fetches all active users, optionally filtered by department or role
 func handleGetUsers(w http.ResponseWriter, r *http.Request) {
-	deptFilter := r.URL.Query().Get("department")
-	roleFilter := r.URL.Query().Get("role")
+	var depts []string
+	for _, dVal := range r.URL.Query()["department"] {
+		for _, part := range strings.Split(dVal, ",") {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				depts = append(depts, part)
+			}
+		}
+	}
+
+	var roles []string
+	for _, rVal := range r.URL.Query()["role"] {
+		for _, part := range strings.Split(rVal, ",") {
+			part = strings.TrimSpace(part)
+			if part != "" {
+				roles = append(roles, part)
+			}
+		}
+	}
 
 	query := `
 		SELECT id, username, email, first_name, last_name, department, role, auth_provider, external_id, created_at
@@ -23,13 +41,28 @@ func handleGetUsers(w http.ResponseWriter, r *http.Request) {
 		WHERE 1=1
 	`
 	var args []interface{}
-	if deptFilter != "" {
-		args = append(args, deptFilter)
-		query += fmt.Sprintf(" AND LOWER(department) = LOWER($%d)", len(args))
+	if len(depts) == 1 {
+		args = append(args, strings.ToLower(depts[0]))
+		query += fmt.Sprintf(" AND LOWER(department) = $%d", len(args))
+	} else if len(depts) > 1 {
+		var placeholders []string
+		for _, d := range depts {
+			args = append(args, strings.ToLower(d))
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+		}
+		query += fmt.Sprintf(" AND LOWER(department) IN (%s)", strings.Join(placeholders, ", "))
 	}
-	if roleFilter != "" {
-		args = append(args, roleFilter)
-		query += fmt.Sprintf(" AND LOWER(role) = LOWER($%d)", len(args))
+
+	if len(roles) == 1 {
+		args = append(args, strings.ToLower(roles[0]))
+		query += fmt.Sprintf(" AND LOWER(role) = $%d", len(args))
+	} else if len(roles) > 1 {
+		var placeholders []string
+		for _, ro := range roles {
+			args = append(args, strings.ToLower(ro))
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)))
+		}
+		query += fmt.Sprintf(" AND LOWER(role) IN (%s)", strings.Join(placeholders, ", "))
 	}
 	query += " ORDER BY first_name ASC, last_name ASC, username ASC"
 

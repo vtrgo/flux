@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/models"
 )
 
@@ -20,6 +21,12 @@ func TestUsersEndpoints(t *testing.T) {
 
 	// Create test users in different departments
 	uniqueSuffix := time.Now().UnixNano()
+	t.Cleanup(func() {
+		_, _ = db.DB.Exec("DELETE FROM users WHERE username LIKE $1 OR username LIKE $2 OR username LIKE $3",
+			fmt.Sprintf("asm_tech_%d", uniqueSuffix),
+			fmt.Sprintf("ctrl_tech_%d", uniqueSuffix),
+			fmt.Sprintf("user_email_%d", uniqueSuffix))
+	})
 	userAssembly := map[string]interface{}{
 		"username":   fmt.Sprintf("asm_tech_%d", uniqueSuffix),
 		"first_name": "Assembly",
@@ -111,6 +118,31 @@ func TestUsersEndpoints(t *testing.T) {
 		for _, u := range users {
 			if u.Role == nil || *u.Role != "technician" {
 				t.Errorf("Expected role technician, got %v", u.Role)
+			}
+		}
+	})
+
+	t.Run("Get Users - Filtered by Multiple Roles", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/users?role=manager,admin", nil)
+		rr := httptest.NewRecorder()
+		req.AddCookie(createTestRoleCookie(t, "admin"))
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("Expected 200 OK, got %d", rr.Code)
+		}
+
+		var users []models.User
+		if err := json.NewDecoder(rr.Body).Decode(&users); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if len(users) == 0 {
+			t.Errorf("Expected at least 1 user, got 0")
+		}
+		for _, u := range users {
+			if u.Role == nil || (*u.Role != "manager" && *u.Role != "admin") {
+				t.Errorf("Expected role manager or admin, got %v", u.Role)
 			}
 		}
 	})
