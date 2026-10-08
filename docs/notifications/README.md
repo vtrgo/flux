@@ -6,10 +6,10 @@ This document outlines the architecture, payload specification, configuration, a
 
 ## 1. Overview
 
-Flux includes a real-time notification engine designed to alert shop-floor personnel and departmental leads when quality defects and machine issues are logged. 
+Flux includes a real-time notification engine designed to alert shop-floor personnel, departmental leads, and management when quality defects, shop-floor issues, or formal Non-Conformance Reports (NCRs) are logged. 
 
 The notification system consists of two primary delivery pathways:
-1. **Microsoft Power Automate (Adaptive Cards):** External webhook dispatch that posts formatted Microsoft Adaptive Cards (v1.2) to Microsoft Teams channels, Outlook inboxes, or mobile Power Automate workflows.
+1. **Microsoft Power Automate (Adaptive Cards):** External webhook dispatch that posts formatted Microsoft Adaptive Cards (v1.2) to Microsoft Teams channels, Outlook inboxes, or mobile Power Automate workflows for both standard defects and formal Non-Conformance Reports (NCRs).
 2. **In-App Real-Time Notification Center:** Live bell icon and notification tray in the Flux global header, driven by Server-Sent Events (SSE) with persistent client-side history.
 
 ---
@@ -17,9 +17,9 @@ The notification system consists of two primary delivery pathways:
 ## 2. Architecture & Delivery Pipeline
 
 ```
-[ Frontend: IssueModal ]
+[ Frontend: IssueModal / NCRModal ]
          │
-         │ POST /api/machines/{id}/defects
+         │ POST /api/machines/{id}/defects (or POST /api/ncrs)
          │ { send_notification: true, ... }
          ▼
 [ Go Backend: handlers_quality.go ]
@@ -27,7 +27,7 @@ The notification system consists of two primary delivery pathways:
          ├──────────────────────────────────┐
          ▼                                  ▼
 [ SSE Broadcaster ]               [ Notification Dispatcher ]
-(event: defect_added)             (internal/notifications/dispatcher.go)
+(event: defect_added / ncr_added) (internal/notifications/dispatcher.go)
          │                                  │
          ▼                                  ▼
 [ Active Browsers ]                 Worker Pool Queue
@@ -71,11 +71,13 @@ Adaptive Cards format reported timestamps using the facility's local timezone. T
 
 ## 4. Adaptive Card Payload Format
 
-When an issue is dispatched, an Adaptive Card (v1.2) payload is constructed and transmitted via HTTP POST.
+When an issue or Non-Conformance Report (NCR) is dispatched, an Adaptive Card (v1.2) payload is constructed and transmitted via HTTP POST.
 
-A complete sample payload is available in [issue_notification_payload.json](file:///home/justin/code/vtr/flux/docs/notifications/issue_notification_payload.json).
+Sample payloads are provided for both types:
+* Standard Issue Alert: [issue_notification_payload.json](file:///home/justin/code/vtr/flux/docs/notifications/issue_notification_payload.json)
+* Non-Conformance Report Alert: [ncr_notification_payload.json](file:///home/justin/code/vtr/flux/docs/notifications/ncr_notification_payload.json)
 
-### Core Fields
+### Standard Defect Card Fields
 
 * **`recipient_email`**: Target email address for the notification (resolved from the assigned technician or the default fallback).
 * **`body[0]` (Header TextBlock)**: Prominent title styled with severity color accents (e.g., `Attention` for critical issues).
@@ -85,24 +87,47 @@ A complete sample payload is available in [issue_notification_payload.json](file
   * Status (`Open`)
   * Target Resolution (Due Date)
   * Machine Order Number & Model
-  * Source Department & Assigned Department
+  * Source Department & Assigned Department (e.g., `Quality / PM`, `Machine Shop`, `Assembly`)
   * Assigned Technician & Reporter
   * Local Date/Time Reported
 * **`body[3..4]` (Containers)**: Formatted description and detailed notes/context blocks.
 * **`actions` (Action.OpenUrl)**: Deep-links directly to the machine detail view and the Quality Inspection Hub in Flux.
 * **`metadata`**: Machine-readable JSON metadata block for automated parsing in downstream Power Automate flows.
 
+### Non-Conformance Report (NCR) Card Fields
+
+When `IsNCR` is true, the payload is formatted specifically for formal quality escalation:
+* **`recipient_email`**: Target email address (routed to the assigned responsible person or administrator).
+* **`body[0]` (Header TextBlock)**: High-visibility warning title: `⚠️ NON-CONFORMANCE REPORT: {NCRNumber} (Machine: {MachineNumber})`.
+* **`body[1]` (TextBlock)**: Non-conformance details and problem description.
+* **`body[2]` (FactSet)**: Formal NCR tracking metadata including:
+  * Notification Type: `Non-Conformance Report (NCR)`
+  * NCR Identification #: e.g., `NCR-2026-003`
+  * Machine ID
+  * Opened By & Date Opened
+  * NCR Status: `OPEN`, `IN REVIEW`, `RESOLVED`, `CLOSED`
+  * Location of NC: Physical feeder or station location
+  * Assembler: Responsible or reporting assembler
+  * Assigned Responsible: Manager, admin, or team lead assigned to remediate
+  * Target Due Date
+  * Root Cause
+  * Corrective Action
+
 ---
 
 ## 5. Shop Floor & Frontend Workflows
 
-### Issue Logging & Notification Routing
+### Standard Defect Logging & Routing
 When submitting an issue via `IssueModal`:
 * Technicians can toggle the **"Send notification to assignee & department"** checkbox (`NotificationRoutingCheckbox.tsx`).
 * Hotkey **`C`** (or **`+ ADD ISSUE`** on the Active Pipeline dashboard) immediately opens the issue submission modal with notification routing enabled by default.
 
+### Non-Conformance Report (NCR) Logging & Upgrading
+* Direct creation via `/ncrs` or upgrading from `IssueModal`: Managers and Admins can upgrade any defect to an official NCR.
+* When submitting or updating an NCR with notification enabled, notifications route directly to the designated **Assigned Responsible Person** (including managers and admins).
+
 ### In-App Notification Center (`NotificationBell`)
-* Displays an unread badge with the count of incoming defects in real time.
+* Displays an unread badge with the count of incoming defects and NCRs in real time.
 * Audio/visual cues upon receiving real-time SSE broadcasts.
 * Dropdown drawer with:
   * Time-ago relative timestamps (using shop timezone).

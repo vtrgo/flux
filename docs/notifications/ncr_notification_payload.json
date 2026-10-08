@@ -1,0 +1,72 @@
+{
+  "recipient_email": "enda@vtrfeedersolutions.com",
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.2",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "⚠️ NON-CONFORMANCE REPORT: NCR-2026-003 (Machine: 25-115G)",
+      "weight": "Bolder",
+      "size": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "**NCR Non-Conformance Details:**\nDrive mount misaligned by 3.5mm resulting in track binding during vibration cycle testing.",
+      "wrap": true
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Notification Type:",
+          "value": "Non-Conformance Report (NCR)"
+        },
+        {
+          "title": "NCR Identification #:",
+          "value": "NCR-2026-003"
+        },
+        {
+          "title": "Machine ID:",
+          "value": "25-115G"
+        },
+        {
+          "title": "Opened By:",
+          "value": "Sam Technician"
+        },
+        {
+          "title": "Date Opened:",
+          "value": "2026-09-23 10:15 EDT"
+        },
+        {
+          "title": "NCR Status:",
+          "value": "OPEN"
+        },
+        {
+          "title": "Location of NC:",
+          "value": "Station 2 Feed Rail"
+        },
+        {
+          "title": "Assembler:",
+          "value": "Sam Technician"
+        },
+        {
+          "title": "Assigned Responsible:",
+          "value": "Enda McNamara"
+        },
+        {
+          "title": "Target Due Date:",
+          "value": "2026-09-28 17:00 EDT"
+        },
+        {
+          "title": "Root Cause:",
+          "value": "Guide fixture clamp loosened during vibration cycle"
+        },
+        {
+          "title": "Corrective Action:",
+          "value": "Re-machined slot, torqued clamp bolts to spec, and verified clearance with dial indicator"
+        }
+      ]
+    }
+  ]
+}
