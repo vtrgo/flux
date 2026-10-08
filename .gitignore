@@ -56,3 +56,4 @@ data/
 logs/
 
 *.json
+!docs/**/*.json

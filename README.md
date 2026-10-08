@@ -16,14 +16,18 @@ Flux is built on a high-performance, single-executable paradigm. The modern Next
 ## Key Features
 
 *   **Active Pipeline Dashboard:** A nested-grid executive dashboard displaying active sales orders, project machines, and aggregated deficiency totals horizontally across all operational departments.
-*   **Real-Time Department Hubs:** Dedicated Kanban-style hubs for Design, Kitting, Machine Shop, Laser, Assembly, Electrical Controls, and Enclosures. 
+*   **Real-Time Department Hubs:** Dedicated Kanban-style hubs for Design, Kitting, Machine Shop, Laser, Assembly, Electrical Controls, Enclosures, and Quality / PM. 
 *   **Quality Resolution Hub:** A global triage center for all quality issues, allowing cross-departmental coordination to clear defects.
-*   **Automated Notifications & Power Automate Integration:** Outbound webhook dispatch sending rich Microsoft Adaptive Cards (v1.2) to Power Automate workflows, triggering instant Microsoft Teams or Outlook alerts when defects are logged or assigned.
+*   **Non-Conformance Reporting (NCR) System:** A dedicated quality hub (`/ncrs`) for tracking formal non-conformances with unique NCR identifiers, location tracking, root cause analysis, corrective actions, role-gated manager sign-offs, and print-ready formal reports.
+*   **Issue-to-NCR Upgrade Pipeline:** Managers and administrators can seamlessly upgrade standard shop-floor defects into formal NCRs directly from the issue modal, automatically transferring photo attachments and audit trails.
+*   **Automated Notifications & Power Automate Integration:** Outbound webhook dispatch sending rich Microsoft Adaptive Cards (v1.2) to Power Automate workflows, triggering instant Microsoft Teams or Outlook alerts when defects or NCRs are logged or assigned.
 *   **In-App Notification Center:** A real-time notification bell in the global header with unread badge counters, live SSE event reception, customizable filters, and persistent local history.
 *   **Shop Floor Hotkeys & Fast Issue Intake:** Rapid issue logging via global keyboard shortcuts (`C` to open the issue modal, `/` to focus search) and a dedicated `+ ADD ISSUE` dashboard action.
+*   **Responsive Modals & Sticky Action Footers:** Viewport-bounded scrollable modals (`IssueModal`, `NCRModal`) with sticky footers designed for touchscreens, mobile tablets, and laptop screens on the factory floor.
 *   **Unified Defect Tracking & Attachments:** All deficiencies are strictly typed and displayed via uniform `IssueCard` components with consistent severity tagging and direct photo/attachment inspection.
-*   **Server-Side Aggregation & Filtering:** Highly optimized data pipelines that filter defects and aggregate project/machine totals via SQL `GROUP BY` before ever reaching the client.
+*   **Server-Side Aggregation & Single-Resource APIs:** Highly optimized data pipelines that filter defects and aggregate project/machine totals via SQL `GROUP BY`, complemented by first-class single-entity REST endpoints (`/api/machines/{id}`, `/api/sales_orders/{id}`, `/api/defects/{id}`).
 *   **Live Telemetry (SSE):** Seamless state patching across all active clients. When a task status changes on the floor, the dashboard and department hubs update instantly without page reloads.
+*   **Administrative & Release Management Portal:** A centralized admin suite (`/admin`) for managing user permissions, system timezones, and viewing live build telemetry and git release milestones (`/admin/releases`).
 *   **Project Kickoff Pipeline:** A centralized routing interface for initializing new projects and machine configurations into the production environment.
 
 ## Configuration & Environment Variables
@@ -85,10 +89,11 @@ This script will automatically generate the Next.js static export, embed it into
 *   `/cmd/flux`: The Go application entry point, middleware chaining, and graceful shutdown orchestration.
 *   `/internal/api`: Go HTTP handlers, SSE broadcaster hub, unified JSON responses, and route definitions.
 *   `/internal/notifications`: Notification dispatcher worker pool, Power Automate Adaptive Card builder, and transport channels.
-*   `/internal/models`: Go structs reflecting the PostgreSQL schema.
+*   `/internal/models`: Go structs reflecting the PostgreSQL schema (defects, NCRs, machines, sales orders).
 *   `/internal/db`: Database connection pool initialization and migration routines.
 *   `/internal/logger`: Structured `slog` logging configuration and SSE log broadcasting.
+*   `/internal/version`: Embedded release and runtime version telemetry.
 *   `/docs/notifications`: Payload schema, Adaptive Card specifications, and integration documentation.
-*   `/frontend/src/app`: Next.js page router (Dashboard, Departments, Quality, Kickoff).
-*   `/frontend/src/components`: Reusable, heavily memoized UI modules (e.g., `IssueCard`, `MachineCard`, `NotificationBell`, `IssueModal`).
+*   `/frontend/src/app/(main)`: Next.js page router (Dashboard, Departments, Quality, NCRs, Kickoff, Admin).
+*   `/frontend/src/components`: Reusable, heavily memoized UI modules (e.g., `IssueCard`, `MachineCard`, `NotificationBell`, `IssueModal`, `NCRModal`).
 *   `/frontend/src/hooks`: Decoupled data-fetching, keyboard hotkeys, in-app alerts, and SSE state orchestration.
