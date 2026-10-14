@@ -13,13 +13,17 @@ export function useReworkData(filters?: UseReworkDataFilters) {
   const [items, setItems] = useState<ReworkItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const salesOrderId = filters?.salesOrderId;
+  const machineId = filters?.machineId;
+  const view = filters?.view;
+
   const fetchItems = useCallback(async () => {
     try {
       setLoading(true);
       const params: Record<string, string> = {};
-      if (filters?.salesOrderId) params.sales_order_id = filters.salesOrderId;
-      if (filters?.machineId) params.machine_id = filters.machineId;
-      if (filters?.view && filters.view !== 'all') params.view = filters.view;
+      if (salesOrderId) params.sales_order_id = salesOrderId;
+      if (machineId) params.machine_id = machineId;
+      if (view && view !== 'all') params.view = view;
 
       const data = await fetchApi<ReworkItem[]>('rework/items', { params });
       setItems(data || []);
@@ -28,7 +32,7 @@ export function useReworkData(filters?: UseReworkDataFilters) {
     } finally {
       setLoading(false);
     }
-  }, [filters?.salesOrderId, filters?.machineId, filters?.view]);
+  }, [salesOrderId, machineId, view]);
 
   useEffect(() => {
     fetchItems();

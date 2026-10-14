@@ -1,0 +1,228 @@
+.container {
+  padding: 1.5rem 2rem;
+  max-width: 1750px;
+  margin: 0 auto;
+  min-height: calc(100vh - 80px);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--vtr-theme-primary, #00e5ff);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #888);
+  font-family: var(--font-mono);
+  margin: 0;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metricCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metricValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--vtr-theme-primary, #00e5ff);
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #888);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, #333);
+  padding-bottom: 0.5rem;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: var(--text-primary, #fff);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.activeTab {
+  color: var(--vtr-theme-primary, #00e5ff);
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid var(--vtr-theme-primary, #00e5ff);
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 250px;
+  max-width: 450px;
+  background: var(--vtr-theme-surface, #1e1e1e);
+  border: 1px solid var(--border-color, #333);
+  color: var(--text-primary, #fff);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--vtr-theme-primary, #00e5ff);
+}
+
+.tableWrapper {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.table thead tr {
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 2px solid var(--border-color, #333);
+}
+
+.table th {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--text-secondary, #aaa);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--border-color, #222);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.table td {
+  padding: 0.75rem 1rem;
+}
+
+.badgeNew {
+  background: rgba(0, 229, 255, 0.15);
+  border: 1px solid var(--vtr-theme-primary, #00e5ff);
+  color: var(--vtr-theme-primary, #00e5ff);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.badgeMod {
+  background: rgba(255, 170, 0, 0.15);
+  border: 1px solid #ffaa00;
+  color: #ffaa00;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.badgeDraft {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid #666;
+  color: #aaa;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.badgeMfg {
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid #9333ea;
+  color: #c084fc;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.badgeOutside {
+  background: rgba(234, 88, 12, 0.15);
+  border: 1px solid #ea580c;
+  color: #fb923c;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.badgeComplete {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid #22c55e;
+  color: #4ade80;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
