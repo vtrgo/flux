@@ -78,7 +78,6 @@ func handleGetReworkItems(w http.ResponseWriter, r *http.Request) {
 	if status != "" {
 		query += fmt.Sprintf(" AND r.status = $%d", argIdx)
 		args = append(args, status)
-		argIdx++
 	} else if view == "active" {
 		query += " AND r.status != 'complete' AND r.status != 'cancelled'"
 	} else if view == "complete" {
@@ -887,7 +886,6 @@ func handleGetControlsSchematicReworks(w http.ResponseWriter, r *http.Request) {
 	if machineID != "" {
 		query += fmt.Sprintf(" AND c.machine_id = $%d", argIdx)
 		args = append(args, machineID)
-		argIdx++
 	}
 
 	query += " ORDER BY c.created_at DESC"
