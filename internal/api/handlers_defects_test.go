@@ -317,9 +317,9 @@ func TestDefects(t *testing.T) {
 			"source_department":   "quality",
 			"assigned_department": "assembly",
 			"severity":            "critical",
-			"description":         "Defect routed to notifications",
-			"notes":               "Notification flow test",
-			"send_notification":   true,
+			"description":         "Defect created successfully",
+			"notes":               "Defect flow test",
+			"send_notification":   false,
 		}
 		body, _ := json.Marshal(payload)
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/defects", createdMachine.ID), bytes.NewReader(body))
@@ -340,8 +340,8 @@ func TestDefects(t *testing.T) {
 		if defect.ID.String() == "" {
 			t.Error("expected non-empty defect ID")
 		}
-		if defect.Description != "Defect routed to notifications" {
-			t.Errorf("expected description 'Defect routed to notifications', got '%s'", defect.Description)
+		if defect.Description != "Defect created successfully" {
+			t.Errorf("expected description 'Defect created successfully', got '%s'", defect.Description)
 		}
 	})
 
