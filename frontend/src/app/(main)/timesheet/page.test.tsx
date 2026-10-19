@@ -184,15 +184,17 @@ describe('TimesheetPage', () => {
     entries: mockTimeEntries,
   };
 
-  it('renders Timesheet page with header, KPIs, and logged entries', async () => {
+  it('renders Timesheet page with header, weekly grid, and logged tasks', async () => {
     await act(async () => {
       render(<TimesheetPage />);
     });
 
     expect(screen.getByText('Timesheet & Quoting Hub')).toBeInTheDocument();
-    expect(screen.getAllByText('4.50h').length).toBeGreaterThan(0);
-    expect(screen.getByText('Aligned frame guides and torque checked bolts')).toBeInTheDocument();
-    expect(screen.getByText('PRODUCTION')).toBeInTheDocument();
+    expect(screen.getByText('Mechanical Assembly')).toBeInTheDocument();
+    expect(screen.getAllByText('production').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('4.5h').length).toBeGreaterThan(0);
+    expect(screen.getByText('Total Logged This Week:')).toBeInTheDocument();
+    expect(screen.getByText('4.50 hrs')).toBeInTheDocument();
   });
 
   it('toggles to Quoting & Variance tab and displays task quoting metrics', async () => {
@@ -254,19 +256,45 @@ describe('TimesheetPage', () => {
     );
   });
 
-  it('opens TimesheetLogModal when + LOG TIME is clicked', async () => {
+  it('allows adding a new row to weekly timesheet matrix with allocated machine tasks', async () => {
     await act(async () => {
       render(<TimesheetPage />);
     });
 
-    const logTimeBtn = screen.getByText('+ LOG TIME');
+    const addRowBtn = screen.getByText('➕ Add Row');
     await act(async () => {
-      fireEvent.click(logTimeBtn);
+      fireEvent.click(addRowBtn);
     });
 
-    expect(screen.getByText('Log Shop Floor Time')).toBeInTheDocument();
-    expect(screen.getByText('⚙️ Production Task')).toBeInTheDocument();
-    expect(screen.getByText('🔄 Rework (SOP 1-003)')).toBeInTheDocument();
+    // Form inputs should be visible
+    expect(screen.getByText('Machine / Order #')).toBeInTheDocument();
+    expect(screen.getByText('Task / Allocation Target')).toBeInTheDocument();
+
+    // Ensure machines are loaded
+    expect(await screen.findByText(/M-1001 \(Centrifugal Feeder\)/i)).toBeInTheDocument();
+
+    // Select Machine M-1001
+    const machineSelect = screen.getByLabelText(/Machine \/ Order #/i);
+    await act(async () => {
+      fireEvent.change(machineSelect, { target: { value: 'm-1' } });
+    });
+
+    // Machine tasks should be loaded asynchronously and displayed
+    expect(await screen.findByText(/\[assembly\] Mechanical Assembly \(Quoted: 40h\)/i)).toBeInTheDocument();
+
+    // Select the task and click Add to Grid
+    const taskSelect = screen.getByLabelText(/Task \/ Allocation Target/i);
+    await act(async () => {
+      fireEvent.change(taskSelect, { target: { value: 'task:task-1' } });
+    });
+
+    const addToGridBtn = screen.getByText('Add to Grid');
+    await act(async () => {
+      fireEvent.click(addToGridBtn);
+    });
+
+    // Should now have Mechanical Assembly rows in the grid
+    expect(screen.getAllByText('Mechanical Assembly').length).toBeGreaterThan(0);
   });
 
   it('supports project-level department scope and distills task options', async () => {

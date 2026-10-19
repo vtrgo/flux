@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useId } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useTimesheetData } from "../../../hooks/useTimesheetData";
-import { TimesheetLogModal } from "../../../components/TimesheetLogModal";
 import { WeeklyTimesheetGrid } from "../../../components/WeeklyTimesheetGrid";
 import { TimesheetApprovalsTable } from "../../../components/TimesheetApprovalsTable";
 import { Machine, CreateProjectTaskRequest, CreateDepartmentTaskRequest } from "../../../types";
@@ -38,7 +37,6 @@ export default function TimesheetPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedMachineId, setSelectedMachineId] = useState<string>("");
 
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   // Unified Department Scope across Project Quoting View
@@ -115,45 +113,6 @@ export default function TimesheetPage() {
     }
   }, [selectedCatalogTaskId, departmentTasks]);
 
-  // Hotkey T
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
-        return;
-      }
-      if (e.key === "t" || e.key === "T") {
-        e.preventDefault();
-        setIsLogModalOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  // Worker metrics
-  const workerMetrics = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
-    const todayHours = myEntries
-      .filter((e) => e.work_date === today)
-      .reduce((acc, e) => acc + e.hours_spent, 0);
-
-    const totalWeekHours = myEntries.reduce((acc, e) => acc + e.hours_spent, 0);
-
-    const prodHours = myEntries
-      .filter((e) => e.entry_type === "production")
-      .reduce((acc, e) => acc + e.hours_spent, 0);
-
-    const reworkHours = myEntries
-      .filter((e) => e.entry_type === "rework")
-      .reduce((acc, e) => acc + e.hours_spent, 0);
-
-    const issueHours = myEntries
-      .filter((e) => e.entry_type === "issue_fix")
-      .reduce((acc, e) => acc + e.hours_spent, 0);
-
-    return { todayHours, totalWeekHours, prodHours, reworkHours, issueHours };
-  }, [myEntries]);
-
   // Distilled core tasks for the effective quoting department
   const distilledQuotingTasks = useMemo(() => {
     return departmentTasks.filter(t => t.department === effectiveQuotingDept && t.is_active);
@@ -170,17 +129,6 @@ export default function TimesheetPage() {
   const filteredDeptTasks = useMemo(() => {
     return departmentTasks.filter(t => t.department === selectedCatalogDept);
   }, [departmentTasks, selectedCatalogDept]);
-
-  const handleDeleteEntry = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this time entry?")) return;
-    try {
-      await deleteEntry(id);
-      toast.success("Time entry deleted");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to delete entry";
-      toast.error(message);
-    }
-  };
 
   const handleAddTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -393,113 +341,15 @@ export default function TimesheetPage() {
               </>
             )}
           </div>
-
-          <button
-            className="vtr-btn vtr-btn-primary"
-            onClick={() => setIsLogModalOpen(true)}
-            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-          >
-            <span>+ LOG TIME</span>
-            <kbd style={{ background: "rgba(0,0,0,0.3)", padding: "2px 6px", borderRadius: "3px", fontSize: "0.75rem" }}>T</kbd>
-          </button>
         </div>
       </div>
 
       {/* TAB 1: WEEKLY TIMESHEET (Worker View) */}
       {activeTab === "my_time" && (
-        <>
-          <WeeklyTimesheetGrid
-            machines={machines}
-            departmentTasks={departmentTasks}
-            onOpenSingleLogModal={() => setIsLogModalOpen(true)}
-          />
-
-          {/* Time Ledger Table */}
-          <div className={styles.contentCard} style={{ marginTop: "1.25rem" }}>
-            <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>
-                <span>📋</span> Your Logged Time Entries
-              </h2>
-              <span style={{ fontSize: "0.85rem", color: "var(--text-secondary, #888)" }}>
-                Logged as: <strong>{user?.username || "Worker"}</strong>
-              </span>
-            </div>
-
-            <div className={styles.tableWrapper}>
-              {loading ? (
-                <div className={styles.emptyState}>Loading your time logs...</div>
-              ) : myEntries.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <p>No time entries recorded for this period.</p>
-                  <button className="vtr-btn vtr-btn-primary" onClick={() => setIsLogModalOpen(true)}>
-                    + Record Your First Entry (Press T)
-                  </button>
-                </div>
-              ) : (
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Category</th>
-                      <th>Machine / Order</th>
-                      <th>Allocation Target</th>
-                      <th>Hours</th>
-                      <th>Work Notes</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {myEntries.map((e) => {
-                      let badgeClass = styles.badgeProduction;
-                      let badgeText = "PRODUCTION";
-                      let targetText = e.task_name || "Task";
-
-                      if (e.entry_type === "rework") {
-                        badgeClass = styles.badgeRework;
-                        badgeText = "REWORK";
-                        targetText = e.rework_part_number ? `Traveler: ${e.rework_part_number}` : "Rework Item";
-                      } else if (e.entry_type === "issue_fix") {
-                        badgeClass = styles.badgeIssueFix;
-                        badgeText = "ISSUE FIX";
-                        targetText = "Defect Repair";
-                      } else if (e.entry_type === "indirect") {
-                        badgeClass = styles.badgeIndirect;
-                        badgeText = "INDIRECT";
-                        targetText = "General Shop";
-                      }
-
-                      return (
-                        <tr key={e.id}>
-                          <td style={{ fontWeight: 600 }}>{e.work_date}</td>
-                          <td>
-                            <span className={`${styles.categoryBadge} ${badgeClass}`}>{badgeText}</span>
-                          </td>
-                          <td>
-                            <strong>{e.order_number || "—"}</strong>
-                          </td>
-                          <td>{targetText}</td>
-                          <td style={{ fontWeight: 700, fontSize: "1rem" }}>{e.hours_spent.toFixed(2)}h</td>
-                          <td style={{ maxWidth: "350px", color: "var(--text-secondary, #ccc)" }}>
-                            {e.work_description || "—"}
-                          </td>
-                          <td>
-                            <button
-                              className="vtr-btn vtr-btn-danger"
-                              style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                              onClick={() => handleDeleteEntry(e.id)}
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </>
+        <WeeklyTimesheetGrid
+          machines={machines}
+          departmentTasks={departmentTasks}
+        />
       )}
 
       {/* TAB 2: PROJECT QUOTING & VARIANCE (Lead / PM View) */}
@@ -1128,13 +978,6 @@ export default function TimesheetPage() {
           departmentTasks={departmentTasks}
         />
       )}
-
-      {/* Global Time Logging Modal */}
-      <TimesheetLogModal
-        isOpen={isLogModalOpen}
-        onClose={() => setIsLogModalOpen(false)}
-        defaultMachineId={selectedMachineId}
-      />
     </div>
   );
 }

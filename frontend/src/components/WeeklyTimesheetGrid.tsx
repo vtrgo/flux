@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
+import { fetchApi } from '../lib/api';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { getMondayOfWeek, addWeeks, getWeekDays, formatWeekRange } from '../lib/dateUtils';
 import {
   Machine,
   DepartmentTask,
+  ProjectTask,
   TimeEntryType,
   WeeklyTimesheetSaveItem,
 } from '../types';
@@ -15,7 +17,6 @@ import styles from './WeeklyTimesheetGrid.module.css';
 interface WeeklyTimesheetGridProps {
   machines: Machine[];
   departmentTasks: DepartmentTask[];
-  onOpenSingleLogModal?: () => void;
   initialWeekStart?: string;
   readOnlyUserView?: boolean;
 }
@@ -32,10 +33,18 @@ interface GridRow {
   descriptions: Record<string, string>; // dateStr -> description
 }
 
+const INDIRECT_TASKS = [
+  'General Shop Maintenance',
+  'Safety / 5S Cleaning',
+  'Team Meeting / Training',
+  'Tooling & Equipment Care',
+  'Material Handling & Staging',
+  'Shop Floor Support',
+];
+
 export function WeeklyTimesheetGrid({
   machines,
   departmentTasks,
-  onOpenSingleLogModal,
   initialWeekStart,
   readOnlyUserView = false,
 }: WeeklyTimesheetGridProps) {
@@ -61,8 +70,12 @@ export function WeeklyTimesheetGrid({
   // Add row bar state
   const [showAddRow, setShowAddRow] = useState<boolean>(false);
   const [newRowMachineId, setNewRowMachineId] = useState<string>('');
-  const [newRowTaskCode, setNewRowTaskCode] = useState<string>('');
+  const [newRowTaskIdentifier, setNewRowTaskIdentifier] = useState<string>('');
   const [newRowEntryType, setNewRowEntryType] = useState<TimeEntryType>('production');
+
+  // Machine-specific allocated tasks quoted by team lead
+  const [machineTasks, setMachineTasks] = useState<ProjectTask[]>([]);
+  const [loadingMachineTasks, setLoadingMachineTasks] = useState<boolean>(false);
 
   const weekDays = useMemo(() => getWeekDays(currentWeekMonday), [currentWeekMonday]);
   const isCurrentWeek = useMemo(() => getMondayOfWeek() === currentWeekMonday, [currentWeekMonday]);
@@ -71,6 +84,30 @@ export function WeeklyTimesheetGrid({
   useEffect(() => {
     fetchWeeklyTimesheet(currentWeekMonday);
   }, [currentWeekMonday, fetchWeeklyTimesheet]);
+
+  // Fetch machine allocated tasks when a machine is selected in Add Row
+  useEffect(() => {
+    if (!newRowMachineId) {
+      setMachineTasks([]);
+      setNewRowTaskIdentifier(INDIRECT_TASKS[0]);
+      return;
+    }
+    setLoadingMachineTasks(true);
+    fetchApi<ProjectTask[]>(`machines/${newRowMachineId}/tasks`)
+      .then(tasks => {
+        setMachineTasks(tasks || []);
+        if (tasks && tasks.length > 0) {
+          setNewRowTaskIdentifier(`task:${tasks[0].id}`);
+        } else {
+          setNewRowTaskIdentifier('');
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load tasks for machine', err);
+        setMachineTasks([]);
+      })
+      .finally(() => setLoadingMachineTasks(false));
+  }, [newRowMachineId]);
 
   // Sync state when weeklyTimesheet loads
   useEffect(() => {
@@ -169,17 +206,39 @@ export function WeeklyTimesheetGrid({
       selectedMachine = machines.find(m => m.id === newRowMachineId);
     }
 
-    const selectedDeptTask = departmentTasks.find(t => t.task_code === newRowTaskCode);
-    const taskName = selectedDeptTask?.task_name || (newRowEntryType === 'indirect' ? 'General Shop Indirect' : 'General Labor');
-    const department = selectedDeptTask?.department || 'assembly';
+    let projectTaskId: string | undefined;
+    let taskName = 'General Labor';
+    let department = 'assembly';
 
-    const rowKey = `${newRowMachineId || 'none'}:${selectedDeptTask?.id || taskName}:${newRowEntryType}-${Date.now()}`;
+    if (!newRowMachineId) {
+      taskName = newRowTaskIdentifier || INDIRECT_TASKS[0];
+      department = 'shop';
+    } else if (newRowTaskIdentifier.startsWith('task:')) {
+      const taskId = newRowTaskIdentifier.replace('task:', '');
+      const found = machineTasks.find(t => t.id === taskId);
+      if (found) {
+        projectTaskId = found.id;
+        taskName = found.task_name;
+        department = found.department;
+      }
+    } else if (newRowTaskIdentifier.startsWith('dept:')) {
+      const code = newRowTaskIdentifier.replace('dept:', '');
+      const found = departmentTasks.find(t => t.task_code === code);
+      if (found) {
+        taskName = found.task_name;
+        department = found.department;
+      }
+    } else if (newRowTaskIdentifier) {
+      taskName = newRowTaskIdentifier;
+    }
+
+    const rowKey = `${newRowMachineId || 'none'}:${projectTaskId || taskName}:${newRowEntryType}-${Date.now()}`;
 
     const newRow: GridRow = {
       rowKey,
       machine_id: newRowMachineId || undefined,
       order_number: selectedMachine?.order_number,
-      project_task_id: undefined, // Let backend resolve or link
+      project_task_id: projectTaskId,
       task_name: taskName,
       department,
       entry_type: newRowEntryType,
@@ -190,7 +249,7 @@ export function WeeklyTimesheetGrid({
     setRows(prev => [...prev, newRow]);
     setIsDirty(true);
     setShowAddRow(false);
-    setNewRowTaskCode('');
+    setNewRowTaskIdentifier('');
   };
 
   // Remove row handler
@@ -245,7 +304,6 @@ export function WeeklyTimesheetGrid({
   const handleSubmit = async () => {
     if (!weeklyTimesheet || isLocked) return;
 
-    // Check if there are any logged hours
     const totalHours = rows.reduce(
       (acc, r) => acc + Object.values(r.days).reduce((s, h) => s + (h || 0), 0),
       0
@@ -261,7 +319,6 @@ export function WeeklyTimesheetGrid({
 
     try {
       setSubmitting(true);
-      // Auto-save changes first
       const items = buildSavePayload();
       await saveWeeklyTimesheet(weeklyTimesheet.id, {
         notes,
@@ -358,16 +415,6 @@ export function WeeklyTimesheetGrid({
               >
                 {showAddRow ? 'Cancel' : '➕ Add Row'}
               </button>
-              {onOpenSingleLogModal && (
-                <button
-                  className={styles.btnSecondary}
-                  onClick={onOpenSingleLogModal}
-                  type="button"
-                  title="Open detailed single log modal"
-                >
-                  ⏱️ Single Log
-                </button>
-              )}
               <button
                 className={styles.btnPrimary}
                 onClick={handleSaveDraft}
@@ -436,8 +483,9 @@ export function WeeklyTimesheetGrid({
       {showAddRow && !isLocked && (
         <div className={styles.addRowModal}>
           <div className={styles.addRowField}>
-            <label>Machine / Order #</label>
+            <label htmlFor="new-row-machine">Machine / Order #</label>
             <select
+              id="new-row-machine"
               className={styles.addRowSelect}
               value={newRowMachineId}
               onChange={e => {
@@ -460,26 +508,55 @@ export function WeeklyTimesheetGrid({
           </div>
 
           <div className={styles.addRowField}>
-            <label>Core Task</label>
-            <select
-              className={styles.addRowSelect}
-              value={newRowTaskCode}
-              onChange={e => setNewRowTaskCode(e.target.value)}
-            >
-              <option value="">Select a task...</option>
-              {departmentTasks
-                .filter(t => t.is_active)
-                .map(t => (
-                  <option key={t.id} value={t.task_code}>
-                    [{t.department}] {t.task_name}
+            <label htmlFor="new-row-task">Task / Allocation Target</label>
+            {newRowMachineId ? (
+              <select
+                id="new-row-task"
+                className={styles.addRowSelect}
+                value={newRowTaskIdentifier}
+                onChange={e => setNewRowTaskIdentifier(e.target.value)}
+                disabled={loadingMachineTasks}
+              >
+                <option value="">Select a task...</option>
+                {machineTasks.length > 0 && (
+                  <optgroup label="📋 Quoted Tasks Allocated by Lead">
+                    {machineTasks.map(t => (
+                      <option key={t.id} value={`task:${t.id}`}>
+                        [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                <optgroup label="🏢 Core Department Tasks">
+                  {departmentTasks
+                    .filter(t => t.is_active)
+                    .map(t => (
+                      <option key={t.id} value={`dept:${t.task_code}`}>
+                        [{t.department}] {t.task_name} (Default: {t.default_quoted_hours}h)
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
+            ) : (
+              <select
+                id="new-row-task"
+                className={styles.addRowSelect}
+                value={newRowTaskIdentifier}
+                onChange={e => setNewRowTaskIdentifier(e.target.value)}
+              >
+                {INDIRECT_TASKS.map(task => (
+                  <option key={task} value={task}>
+                    {task}
                   </option>
                 ))}
-            </select>
+              </select>
+            )}
           </div>
 
           <div className={styles.addRowField}>
-            <label>Type</label>
+            <label htmlFor="new-row-type">Type</label>
             <select
+              id="new-row-type"
               className={styles.addRowSelect}
               value={newRowEntryType}
               onChange={e => setNewRowEntryType(e.target.value as TimeEntryType)}
@@ -494,7 +571,7 @@ export function WeeklyTimesheetGrid({
           <button
             className={styles.btnPrimary}
             onClick={handleAddRow}
-            disabled={!newRowTaskCode}
+            disabled={!newRowTaskIdentifier}
             type="button"
           >
             Add to Grid
@@ -534,7 +611,7 @@ export function WeeklyTimesheetGrid({
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
-                    No time logged for this week yet. Click <strong>➕ Add Row</strong> or <strong>⏱️ Single Log</strong> to begin.
+                    No time logged for this week yet. Click <strong>➕ Add Row</strong> to select a machine task and log hours.
                   </td>
                 </tr>
               ) : (

@@ -924,7 +924,7 @@ func fetchWeeklyTimesheet(ctx context.Context, timesheetID uuid.UUID) (*models.W
 	entriesQuery := `
 		SELECT 
 			te.id, te.user_id, u.username, te.weekly_timesheet_id, te.machine_id, COALESCE(m.order_number, ''),
-			te.entry_type, te.project_task_id, COALESCE(pt.task_name, ''),
+			te.entry_type, te.project_task_id, COALESCE(pt.task_name, te.work_description, 'General Task'),
 			COALESCE(pt.department, ''),
 			te.rework_item_id, COALESCE(rw.part_number, ''),
 			te.defect_id,
@@ -1163,6 +1163,18 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 			var mID uuid.UUID
 			if err := tx.QueryRowContext(r.Context(), `SELECT machine_id FROM project_tasks WHERE id = $1`, item.ProjectTaskID).Scan(&mID); err == nil {
 				machineID = &mID
+			}
+		}
+
+		// Resolve project_task_id from machine if missing but task description is provided
+		if item.ProjectTaskID == nil && machineID != nil && item.WorkDescription != "" {
+			var ptID uuid.UUID
+			if err := tx.QueryRowContext(r.Context(), `
+				SELECT id FROM project_tasks
+				WHERE machine_id = $1 AND (task_name = $2 OR task_code = $2)
+				LIMIT 1
+			`, *machineID, item.WorkDescription).Scan(&ptID); err == nil {
+				item.ProjectTaskID = &ptID
 			}
 		}
 
