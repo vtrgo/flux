@@ -233,10 +233,21 @@ export function TimesheetLogModal({
                 required
               >
                 <option value="">Select Quoted Task...</option>
-                {tasks.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.task_name} ({t.department}) - Quoted: {t.quoted_hours}h | Actual: {t.actual_hours}h
-                  </option>
+                {Object.entries(
+                  tasks.reduce((acc, t) => {
+                    const dept = t.department || 'general';
+                    if (!acc[dept]) acc[dept] = [];
+                    acc[dept].push(t);
+                    return acc;
+                  }, {} as Record<string, ProjectTask[]>)
+                ).map(([dept, deptTasks]) => (
+                  <optgroup key={dept} label={dept.toUpperCase()}>
+                    {deptTasks.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.task_name} — Quoted: {t.quoted_hours}h | Actual: {t.actual_hours}h
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>

@@ -76,6 +76,20 @@ describe('TimesheetPage', () => {
         created_at: '2026-10-15T00:00:00Z',
         updated_at: '2026-10-15T00:00:00Z',
       },
+      {
+        id: 'task-2',
+        machine_id: 'm-1',
+        order_number: 'M-1001',
+        task_code: 'panel_wiring',
+        task_name: 'Panel Wiring',
+        department: 'controls',
+        quoted_hours: 20.0,
+        actual_hours: 2.0,
+        variance: -18.0,
+        status: 'open' as const,
+        created_at: '2026-10-15T00:00:00Z',
+        updated_at: '2026-10-15T00:00:00Z',
+      },
     ],
   };
 
@@ -108,6 +122,16 @@ describe('TimesheetPage', () => {
             task_code: 'mech_assembly',
             task_name: 'Mechanical Assembly',
             default_quoted_hours: 40.0,
+            is_active: true,
+            created_at: '2026-10-19T00:00:00Z',
+            updated_at: '2026-10-19T00:00:00Z',
+          },
+          {
+            id: 'dt-2',
+            department: 'controls',
+            task_code: 'plc_programming',
+            task_name: 'PLC Programming',
+            default_quoted_hours: 25.0,
             is_active: true,
             created_at: '2026-10-19T00:00:00Z',
             updated_at: '2026-10-19T00:00:00Z',
@@ -172,6 +196,84 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('Log Shop Floor Time')).toBeInTheDocument();
     expect(screen.getByText('⚙️ Production Task')).toBeInTheDocument();
     expect(screen.getByText('🔄 Rework (SOP 1-003)')).toBeInTheDocument();
+  });
+
+  it('supports independent department selection distilling tasks to the selected department', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const varianceTabBtn = screen.getByText('📊 Quoting & Variance');
+    await act(async () => {
+      fireEvent.click(varianceTabBtn);
+    });
+
+    // Open task assignment panel
+    const assignBtn = screen.getByText('+ Define Quoted Task');
+    await act(async () => {
+      fireEvent.click(assignBtn);
+    });
+
+    // Verify independent department selection
+    expect(screen.getByText(/1\. Target Department \*/i)).toBeInTheDocument();
+    const deptSelect = screen.getByLabelText(/1\. Target Department \*/i);
+    expect(deptSelect).toHaveValue('assembly');
+
+    // Verify task options are distilled to assembly
+    expect(screen.getByText(/2\. Distilled Assembly Tasks \*/i)).toBeInTheDocument();
+    expect(screen.getByText('Mechanical Assembly (Default: 40h)')).toBeInTheDocument();
+    expect(screen.queryByText('PLC Programming (Default: 25h)')).not.toBeInTheDocument();
+
+    // Change department to controls
+    await act(async () => {
+      fireEvent.change(deptSelect, { target: { value: 'controls' } });
+    });
+
+    // Verify task options are distilled to controls
+    expect(screen.getByText(/2\. Distilled Electrical \/ Controls Tasks \*/i)).toBeInTheDocument();
+    expect(screen.getByText('PLC Programming (Default: 25h)')).toBeInTheDocument();
+    expect(screen.queryByText('Mechanical Assembly (Default: 40h)')).not.toBeInTheDocument();
+  });
+
+  it('filters machine variance tasks by department in the table', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const varianceTabBtn = screen.getByText('📊 Quoting & Variance');
+    await act(async () => {
+      fireEvent.click(varianceTabBtn);
+    });
+
+    // Both assembly and controls tasks exist initially
+    expect(screen.getByText('Mechanical Assembly')).toBeInTheDocument();
+    expect(screen.getByText('Panel Wiring')).toBeInTheDocument();
+
+    // Filter by Controls department
+    const filterSelect = screen.getByLabelText(/Department:/i);
+    await act(async () => {
+      fireEvent.change(filterSelect, { target: { value: 'controls' } });
+    });
+
+    expect(screen.getByText('Panel Wiring')).toBeInTheDocument();
+    expect(screen.queryByText('Mechanical Assembly')).not.toBeInTheDocument();
+
+    // Filter by Laser (empty)
+    await act(async () => {
+      fireEvent.change(filterSelect, { target: { value: 'laser' } });
+    });
+
+    expect(screen.getByText(/No tasks quoted for Laser\./i)).toBeInTheDocument();
+    expect(screen.queryByText('Panel Wiring')).not.toBeInTheDocument();
+
+    // Reset via Show All Departments button
+    const showAllBtn = screen.getByText('Show All Departments');
+    await act(async () => {
+      fireEvent.click(showAllBtn);
+    });
+
+    expect(screen.getByText('Mechanical Assembly')).toBeInTheDocument();
+    expect(screen.getByText('Panel Wiring')).toBeInTheDocument();
   });
 });
 

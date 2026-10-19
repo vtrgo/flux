@@ -28,6 +28,7 @@ export default function TimesheetPage() {
   const newCodeId = useId();
   const newNameId = useId();
   const newHoursId = useId();
+  const tableFilterId = useId();
   const { user, isAdmin, hasRole } = useAuth();
   const isLeadOrManager = isAdmin || hasRole(["manager", "lead"]);
 
@@ -39,9 +40,10 @@ export default function TimesheetPage() {
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
   // Machine Quoting Task Form State
+  const [quotingDept, setQuotingDept] = useState<string>("assembly");
+  const [tableDeptFilter, setTableDeptFilter] = useState<string>("all");
   const [selectedCatalogTaskId, setSelectedCatalogTaskId] = useState<string>("");
   const [customTaskName, setCustomTaskName] = useState("");
-  const [customDept, setCustomDept] = useState("assembly");
   const [taskQuotedHours, setTaskQuotedHours] = useState<string>("20.0");
   const [addingTask, setAddingTask] = useState(false);
 
@@ -142,6 +144,18 @@ export default function TimesheetPage() {
     return { todayHours, totalWeekHours, prodHours, reworkHours, issueHours };
   }, [myEntries]);
 
+  // Distilled core tasks for the currently selected quoting department
+  const distilledQuotingTasks = useMemo(() => {
+    return departmentTasks.filter(t => t.department === quotingDept && t.is_active);
+  }, [departmentTasks, quotingDept]);
+
+  // Filtered machine tasks for the active machine's variance table
+  const filteredMachineTasks = useMemo(() => {
+    if (!machineSummary || !machineSummary.tasks) return [];
+    if (tableDeptFilter === "all") return machineSummary.tasks;
+    return machineSummary.tasks.filter(t => t.department === tableDeptFilter);
+  }, [machineSummary, tableDeptFilter]);
+
   // Filtered department tasks for catalog view
   const filteredDeptTasks = useMemo(() => {
     return departmentTasks.filter(t => t.department === selectedCatalogDept);
@@ -173,7 +187,7 @@ export default function TimesheetPage() {
 
     let code = "";
     let name = "";
-    let dept = customDept;
+    const dept = quotingDept;
 
     if (selectedCatalogTaskId === "custom") {
       if (!customTaskName.trim()) {
@@ -187,9 +201,8 @@ export default function TimesheetPage() {
       if (item) {
         code = item.task_code;
         name = item.task_name;
-        dept = item.department;
       } else {
-        toast.error("Please select a task from the catalog or custom");
+        toast.error("Please select a task from the distilled catalog or choose custom");
         return;
       }
     }
@@ -203,7 +216,7 @@ export default function TimesheetPage() {
         quoted_hours: hours,
       };
       await createOrUpdateTask(selectedMachineId, req);
-      toast.success(`Task "${name}" added with ${hours} quoted hours!`);
+      toast.success(`Task "${name}" added to ${dept} with ${hours} quoted hours!`);
       setIsAddTaskOpen(false);
       setCustomTaskName("");
     } catch (err: unknown) {
@@ -497,25 +510,6 @@ export default function TimesheetPage() {
                   </option>
                 ))}
               </select>
-
-              {isLeadOrManager && (
-                <div style={{ display: "flex", gap: "0.5rem" }}>
-                  <button
-                    className="vtr-btn"
-                    style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
-                    onClick={() => handlePopulateDeptDefaults("assembly")}
-                  >
-                    + Auto-Populate Assembly Defaults
-                  </button>
-                  <button
-                    className="vtr-btn"
-                    style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
-                    onClick={() => handlePopulateDeptDefaults("controls")}
-                  >
-                    + Auto-Populate Controls Defaults
-                  </button>
-                </div>
-              )}
             </div>
 
             {isLeadOrManager && (
@@ -528,24 +522,70 @@ export default function TimesheetPage() {
             )}
           </div>
 
-          {/* Add Quoted Task Sub-panel */}
+          {/* Add Quoted Task Sub-panel with Independent Department & Distilled Tasks */}
           {isAddTaskOpen && isLeadOrManager && (
             <div className={styles.contentCard} style={{ border: "1px solid var(--vtr-theme-primary, #00e5ff)", padding: "1.25rem" }}>
-              <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.1rem", color: "var(--vtr-theme-primary, #00e5ff)" }}>
-                Establish Quoted Task for Machine {machineSummary?.order_number}
-              </h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--vtr-theme-primary, #00e5ff)" }}>
+                  Assign Quoted Tasks to Machine {machineSummary?.order_number}
+                </h3>
+                <span style={{ fontSize: "0.8rem", color: "var(--text-secondary, #aaa)" }}>
+                  Select department first to distill the core task catalog
+                </span>
+              </div>
+
               <form onSubmit={handleAddTaskSubmit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", alignItems: "flex-end" }}>
+                {/* 1. Independent Department Dropdown */}
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Pick from Department Catalog</label>
+                  <label htmlFor={customDeptId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem", fontWeight: 700 }}>
+                    1. Target Department *
+                  </label>
+                  <select
+                    id={customDeptId}
+                    style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
+                    value={quotingDept}
+                    onChange={(e) => {
+                      const nextDept = e.target.value;
+                      setQuotingDept(nextDept);
+                      const tasksInNextDept = departmentTasks.filter(t => t.department === nextDept && t.is_active);
+                      if (tasksInNextDept.length > 0) {
+                        setSelectedCatalogTaskId(tasksInNextDept[0].id);
+                        setTaskQuotedHours(tasksInNextDept[0].default_quoted_hours.toString());
+                      } else {
+                        setSelectedCatalogTaskId("");
+                        setTaskQuotedHours("10.0");
+                      }
+                      setCustomTaskName("");
+                    }}
+                  >
+                    {DEPARTMENTS.map(d => (
+                      <option key={d.id} value={d.id}>{d.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 2. Distilled Tasks for the Selected Department */}
+                <div>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem", fontWeight: 700 }}>
+                    2. Distilled {DEPARTMENTS.find(d => d.id === quotingDept)?.label} Tasks *
+                  </label>
                   <select
                     style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
                     value={selectedCatalogTaskId}
-                    onChange={(e) => setSelectedCatalogTaskId(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedCatalogTaskId(val);
+                      if (val && val !== "custom") {
+                        const found = departmentTasks.find(t => t.id === val);
+                        if (found) setTaskQuotedHours(found.default_quoted_hours.toString());
+                      }
+                    }}
+                    required
                   >
-                    <option value="">-- Select a Core Department Task --</option>
-                    {departmentTasks.filter(t => t.is_active).map((cat) => (
+                    <option value="">-- Choose a {DEPARTMENTS.find(d => d.id === quotingDept)?.label} Task --</option>
+                    {distilledQuotingTasks.map((cat) => (
                       <option key={cat.id} value={cat.id}>
-                        [{cat.department.toUpperCase()}] {cat.task_name} (Default: {cat.default_quoted_hours}h)
+                        {cat.task_name} (Default: {cat.default_quoted_hours}h)
                       </option>
                     ))}
                     <option value="custom">-- Custom One-Off Task --</option>
@@ -553,37 +593,26 @@ export default function TimesheetPage() {
                 </div>
 
                 {selectedCatalogTaskId === "custom" && (
-                  <>
-                    <div>
-                      <label htmlFor={customTaskNameId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Task Name *</label>
-                      <input
-                        id={customTaskNameId}
-                        type="text"
-                        placeholder="e.g. Special Tooling Alignment"
-                        style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
-                        value={customTaskName}
-                        onChange={(e) => setCustomTaskName(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor={customDeptId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Department *</label>
-                      <select
-                        id={customDeptId}
-                        style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
-                        value={customDept}
-                        onChange={(e) => setCustomDept(e.target.value)}
-                      >
-                        {DEPARTMENTS.map(d => (
-                          <option key={d.id} value={d.id}>{d.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
+                  <div>
+                    <label htmlFor={customTaskNameId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem", fontWeight: 700 }}>
+                      Custom Task Name *
+                    </label>
+                    <input
+                      id={customTaskNameId}
+                      type="text"
+                      placeholder="e.g. Special Fitment Operation"
+                      style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
+                      value={customTaskName}
+                      onChange={(e) => setCustomTaskName(e.target.value)}
+                      required
+                    />
+                  </div>
                 )}
 
                 <div>
-                  <label htmlFor={customQuoteId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Quoted Hours *</label>
+                  <label htmlFor={customQuoteId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem", fontWeight: 700 }}>
+                    Quoted Hours *
+                  </label>
                   <input
                     id={customQuoteId}
                     type="number"
@@ -596,9 +625,17 @@ export default function TimesheetPage() {
                   />
                 </div>
 
-                <div>
-                  <button type="submit" className="vtr-btn vtr-btn-primary" disabled={addingTask} style={{ width: "100%" }}>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button type="submit" className="vtr-btn vtr-btn-primary" disabled={addingTask} style={{ flex: 1 }}>
                     {addingTask ? "Saving..." : "Save Quoted Task"}
+                  </button>
+                  <button
+                    type="button"
+                    className="vtr-btn vtr-btn-secondary"
+                    onClick={() => handlePopulateDeptDefaults(quotingDept)}
+                    title={`Add all active core tasks from ${DEPARTMENTS.find(d => d.id === quotingDept)?.label} to machine`}
+                  >
+                    + Add All {DEPARTMENTS.find(d => d.id === quotingDept)?.label} Tasks
                   </button>
                 </div>
               </form>
@@ -654,13 +691,43 @@ export default function TimesheetPage() {
 
           {/* Quoted Tasks vs Actuals Table */}
           <div className={styles.contentCard}>
-            <div className={styles.cardHeader}>
-              <h2 className={styles.cardTitle}>
-                <span>⚙️</span> Task Allocation & Variance Breakdown: {machineSummary?.order_number}
-              </h2>
-              <span style={{ fontSize: "0.85rem", color: "var(--text-secondary, #aaa)" }}>
-                Model: <strong>{machineSummary?.model_type}</strong>
-              </span>
+            <div className={styles.cardHeader} style={{ flexWrap: "wrap", gap: "1rem" }}>
+              <div>
+                <h2 className={styles.cardTitle}>
+                  <span>⚙️</span> Task Allocation & Variance Breakdown: {machineSummary?.order_number}
+                </h2>
+                <span style={{ fontSize: "0.85rem", color: "var(--text-secondary, #aaa)" }}>
+                  Model: <strong>{machineSummary?.model_type}</strong>
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <label htmlFor={tableFilterId} style={{ fontSize: "0.85rem", color: "var(--text-secondary, #aaa)", fontWeight: 600 }}>
+                  Department:
+                </label>
+                <select
+                  id={tableFilterId}
+                  style={{
+                    padding: "0.35rem 0.6rem",
+                    background: "#000",
+                    border: "1px solid var(--border-color, #444)",
+                    borderRadius: "4px",
+                    color: "#fff",
+                    fontSize: "0.85rem",
+                  }}
+                  value={tableDeptFilter}
+                  onChange={(e) => setTableDeptFilter(e.target.value)}
+                >
+                  <option value="all">All Departments ({machineSummary?.tasks?.length || 0})</option>
+                  {DEPARTMENTS.map((d) => {
+                    const count = machineSummary?.tasks?.filter((t) => t.department === d.id).length || 0;
+                    return (
+                      <option key={d.id} value={d.id}>
+                        {d.label} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
             </div>
 
             <div className={styles.tableWrapper}>
@@ -672,6 +739,13 @@ export default function TimesheetPage() {
                       + Establish Quoted Tasks for this Machine
                     </button>
                   )}
+                </div>
+              ) : filteredMachineTasks.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <p>No tasks quoted for {DEPARTMENTS.find(d => d.id === tableDeptFilter)?.label || tableDeptFilter}.</p>
+                  <button className="vtr-btn vtr-btn-secondary" onClick={() => setTableDeptFilter("all")}>
+                    Show All Departments
+                  </button>
                 </div>
               ) : (
                 <table className={styles.table}>
@@ -688,7 +762,7 @@ export default function TimesheetPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {machineSummary.tasks.map((task) => {
+                    {filteredMachineTasks.map((task) => {
                       const pct = task.quoted_hours > 0 ? (task.actual_hours / task.quoted_hours) * 100 : 0;
                       let progressClass = styles.progressGreen;
                       if (pct >= 100) progressClass = styles.progressRed;
