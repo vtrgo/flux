@@ -645,3 +645,202 @@ func handleGetQuotingReviewReport(w http.ResponseWriter, r *http.Request) {
 
 	respondJSON(w, http.StatusOK, summaries)
 }
+
+// handleGetDepartmentTasks returns core catalog tasks, optionally filtered by department.
+func handleGetDepartmentTasks(w http.ResponseWriter, r *http.Request) {
+	dept := r.URL.Query().Get("department")
+	includeInactive := r.URL.Query().Get("include_inactive") == "true"
+
+	query := `
+		SELECT id, department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at
+		FROM department_tasks
+		WHERE 1=1
+	`
+	var args []interface{}
+	if dept != "" {
+		args = append(args, dept)
+		query += fmt.Sprintf(" AND department = $%d", len(args))
+	}
+	if !includeInactive {
+		query += " AND is_active = TRUE"
+	}
+	query += " ORDER BY department ASC, task_name ASC"
+
+	rows, err := db.DB.QueryContext(r.Context(), query, args...)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch department tasks", err)
+		return
+	}
+	defer rows.Close()
+
+	tasks := make([]models.DepartmentTask, 0)
+	for rows.Next() {
+		var t models.DepartmentTask
+		var createdBy uuid.NullUUID
+		err := rows.Scan(
+			&t.ID, &t.Department, &t.TaskCode, &t.TaskName,
+			&t.DefaultQuotedHours, &t.IsActive, &createdBy,
+			&t.CreatedAt, &t.UpdatedAt,
+		)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Error scanning department task", err)
+			return
+		}
+		if createdBy.Valid {
+			t.CreatedBy = &createdBy.UUID
+		}
+		tasks = append(tasks, t)
+	}
+
+	respondJSON(w, http.StatusOK, tasks)
+}
+
+// handleCreateDepartmentTask adds or reactivates a core department task in the catalog.
+func handleCreateDepartmentTask(w http.ResponseWriter, r *http.Request) {
+	var req models.CreateDepartmentTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	if req.Department == "" || req.TaskCode == "" || req.TaskName == "" {
+		respondError(w, http.StatusBadRequest, "department, task_code, and task_name are required", nil)
+		return
+	}
+	if req.DefaultQuotedHours < 0 {
+		respondError(w, http.StatusBadRequest, "default_quoted_hours cannot be negative", nil)
+		return
+	}
+
+	authUserID := getAuthenticatedUserID(r)
+	var creatorUUID *uuid.UUID
+	if authUserID != "" {
+		if uid, err := uuid.Parse(authUserID); err == nil {
+			creatorUUID = &uid
+		}
+	}
+
+	query := `
+		INSERT INTO department_tasks (department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, TRUE, $5, NOW(), NOW())
+		ON CONFLICT (department, task_code) DO UPDATE
+		SET task_name = EXCLUDED.task_name,
+		    default_quoted_hours = EXCLUDED.default_quoted_hours,
+		    is_active = TRUE,
+		    updated_at = NOW()
+		RETURNING id, department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at
+	`
+
+	var t models.DepartmentTask
+	var createdBy uuid.NullUUID
+	err := db.DB.QueryRowContext(r.Context(), query,
+		req.Department, req.TaskCode, req.TaskName, req.DefaultQuotedHours, creatorUUID,
+	).Scan(
+		&t.ID, &t.Department, &t.TaskCode, &t.TaskName,
+		&t.DefaultQuotedHours, &t.IsActive, &createdBy,
+		&t.CreatedAt, &t.UpdatedAt,
+	)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to create department task", err)
+		return
+	}
+	if createdBy.Valid {
+		t.CreatedBy = &createdBy.UUID
+	}
+
+	BroadcastEvent("department_task_created", t)
+	respondJSON(w, http.StatusCreated, t)
+}
+
+// handleUpdateDepartmentTask updates a core task's name, default quote, or active state.
+func handleUpdateDepartmentTask(w http.ResponseWriter, r *http.Request) {
+	taskIDStr := r.PathValue("id")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid task ID", err)
+		return
+	}
+
+	var req models.UpdateDepartmentTaskRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	if req.DefaultQuotedHours != nil && *req.DefaultQuotedHours < 0 {
+		respondError(w, http.StatusBadRequest, "default_quoted_hours cannot be negative", nil)
+		return
+	}
+
+	query := `
+		UPDATE department_tasks
+		SET 
+			task_name = COALESCE($1, task_name),
+			default_quoted_hours = COALESCE($2, default_quoted_hours),
+			is_active = COALESCE($3, is_active),
+			updated_at = NOW()
+		WHERE id = $4
+		RETURNING id, department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at
+	`
+
+	var t models.DepartmentTask
+	var createdBy uuid.NullUUID
+	err = db.DB.QueryRowContext(r.Context(), query, req.TaskName, req.DefaultQuotedHours, req.IsActive, taskID).Scan(
+		&t.ID, &t.Department, &t.TaskCode, &t.TaskName,
+		&t.DefaultQuotedHours, &t.IsActive, &createdBy,
+		&t.CreatedAt, &t.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondError(w, http.StatusNotFound, "Department task not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to update department task", err)
+		return
+	}
+	if createdBy.Valid {
+		t.CreatedBy = &createdBy.UUID
+	}
+
+	BroadcastEvent("department_task_updated", t)
+	respondJSON(w, http.StatusOK, t)
+}
+
+// handleDeleteDepartmentTask deactivates a task so it is retired from active rotation.
+func handleDeleteDepartmentTask(w http.ResponseWriter, r *http.Request) {
+	taskIDStr := r.PathValue("id")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid task ID", err)
+		return
+	}
+
+	query := `
+		UPDATE department_tasks
+		SET is_active = FALSE, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at
+	`
+
+	var t models.DepartmentTask
+	var createdBy uuid.NullUUID
+	err = db.DB.QueryRowContext(r.Context(), query, taskID).Scan(
+		&t.ID, &t.Department, &t.TaskCode, &t.TaskName,
+		&t.DefaultQuotedHours, &t.IsActive, &createdBy,
+		&t.CreatedAt, &t.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondError(w, http.StatusNotFound, "Department task not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to deactivate department task", err)
+		return
+	}
+	if createdBy.Valid {
+		t.CreatedBy = &createdBy.UUID
+	}
+
+	BroadcastEvent("department_task_deleted", map[string]string{"id": taskID.String(), "department": t.Department})
+	respondJSON(w, http.StatusOK, map[string]string{"message": "Department task deactivated successfully"})
+}

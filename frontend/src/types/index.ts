@@ -458,3 +458,28 @@ export interface CreateTimeEntryRequest {
   work_description?: string;
 }
 
+export interface DepartmentTask {
+  id: string;
+  department: string;
+  task_code: string;
+  task_name: string;
+  default_quoted_hours: number;
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateDepartmentTaskRequest {
+  department: string;
+  task_code: string;
+  task_name: string;
+  default_quoted_hours: number;
+}
+
+export interface UpdateDepartmentTaskRequest {
+  task_name?: string;
+  default_quoted_hours?: number;
+  is_active?: boolean;
+}
+

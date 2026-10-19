@@ -5,37 +5,41 @@ import { toast } from "sonner";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useTimesheetData } from "../../../hooks/useTimesheetData";
 import { TimesheetLogModal } from "../../../components/TimesheetLogModal";
-import { Machine, CreateProjectTaskRequest } from "../../../types";
+import { Machine, CreateProjectTaskRequest, CreateDepartmentTaskRequest } from "../../../types";
 import { fetchApi } from "../../../lib/api";
 import styles from "./timesheet.module.css";
 
-const STANDARD_TASK_CATALOG = [
-  { code: "mech_assembly", name: "Mechanical Assembly", dept: "assembly", defaultQuote: 40.0 },
-  { code: "elec_wiring", name: "Panel Build & Machine Wiring", dept: "controls", defaultQuote: 25.0 },
-  { code: "machining", name: "Machine Shop / Milling / Turning", dept: "machine-shop", defaultQuote: 30.0 },
-  { code: "mech_design", name: "Mechanical CAD & Detailing", dept: "design", defaultQuote: 20.0 },
-  { code: "controls_debug", name: "PLC / HMI Programming & Debug", dept: "controls", defaultQuote: 15.0 },
-  { code: "laser_cutting", name: "Laser Cutting & Sheet Metal", dept: "laser", defaultQuote: 10.0 },
-  { code: "enclosures", name: "Enclosure Fab & Prep", dept: "enclosures", defaultQuote: 12.0 },
-  { code: "testing_fat", name: "Quality Inspection & FAT Runoff", dept: "quality", defaultQuote: 8.0 },
+const DEPARTMENTS = [
+  { id: "assembly", label: "Assembly" },
+  { id: "controls", label: "Electrical / Controls" },
+  { id: "machine-shop", label: "Machine Shop" },
+  { id: "laser", label: "Laser" },
+  { id: "design", label: "Design" },
+  { id: "enclosures", label: "Enclosures" },
+  { id: "kitting", label: "Kitting" },
+  { id: "quality", label: "Quality / FAT" },
 ];
 
 export default function TimesheetPage() {
   const customTaskNameId = useId();
   const customDeptId = useId();
   const customQuoteId = useId();
+  const newDeptId = useId();
+  const newCodeId = useId();
+  const newNameId = useId();
+  const newHoursId = useId();
   const { user, isAdmin, hasRole } = useAuth();
   const isLeadOrManager = isAdmin || hasRole(["manager", "lead"]);
 
-  const [activeTab, setActiveTab] = useState<"my_time" | "project_variance" | "quoting_review">("my_time");
+  const [activeTab, setActiveTab] = useState<"my_time" | "project_variance" | "quoting_review" | "dept_catalog">("my_time");
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedMachineId, setSelectedMachineId] = useState<string>("");
 
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
 
-  // New task form state
-  const [selectedCatalogTask, setSelectedCatalogTask] = useState<string>(STANDARD_TASK_CATALOG[0].code);
+  // Machine Quoting Task Form State
+  const [selectedCatalogTaskId, setSelectedCatalogTaskId] = useState<string>("");
   const [customTaskName, setCustomTaskName] = useState("");
   const [customDept, setCustomDept] = useState("assembly");
   const [taskQuotedHours, setTaskQuotedHours] = useState<string>("20.0");
@@ -45,18 +49,29 @@ export default function TimesheetPage() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editQuoteVal, setEditQuoteVal] = useState<string>("");
 
+  // Department Catalog Management State
+  const [selectedCatalogDept, setSelectedCatalogDept] = useState<string>("assembly");
+  const [newDeptTaskCode, setNewDeptTaskCode] = useState("");
+  const [newDeptTaskName, setNewDeptTaskName] = useState("");
+  const [newDeptDefaultQuote, setNewDeptDefaultQuote] = useState("10.0");
+  const [addingDeptTask, setAddingDeptTask] = useState(false);
+
   const {
     myEntries,
     machineSummary,
     quotingReview,
+    departmentTasks,
     loading,
     deleteEntry,
     createOrUpdateTask,
     updateTaskQuote,
     fetchQuotingReview,
+    fetchDepartmentTasks,
+    createDepartmentTask,
+    deleteDepartmentTask,
   } = useTimesheetData(selectedMachineId);
 
-  // Load machines for dropdowns
+  // Load machines
   useEffect(() => {
     fetchApi<Machine[]>("machines")
       .then((data) => {
@@ -73,9 +88,22 @@ export default function TimesheetPage() {
     if (activeTab === "quoting_review") {
       fetchQuotingReview();
     }
-  }, [activeTab, fetchQuotingReview]);
+    if (activeTab === "dept_catalog") {
+      fetchDepartmentTasks();
+    }
+  }, [activeTab, fetchQuotingReview, fetchDepartmentTasks]);
 
-  // Global hotkey T to open log modal
+  // Sync selected catalog task default quote
+  useEffect(() => {
+    if (selectedCatalogTaskId && selectedCatalogTaskId !== "custom") {
+      const found = departmentTasks.find(t => t.id === selectedCatalogTaskId);
+      if (found) {
+        setTaskQuotedHours(found.default_quoted_hours.toString());
+      }
+    }
+  }, [selectedCatalogTaskId, departmentTasks]);
+
+  // Hotkey T
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
@@ -114,6 +142,11 @@ export default function TimesheetPage() {
     return { todayHours, totalWeekHours, prodHours, reworkHours, issueHours };
   }, [myEntries]);
 
+  // Filtered department tasks for catalog view
+  const filteredDeptTasks = useMemo(() => {
+    return departmentTasks.filter(t => t.department === selectedCatalogDept);
+  }, [departmentTasks, selectedCatalogDept]);
+
   const handleDeleteEntry = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this time entry?")) return;
     try {
@@ -138,11 +171,11 @@ export default function TimesheetPage() {
       return;
     }
 
-    let code = selectedCatalogTask;
+    let code = "";
     let name = "";
     let dept = customDept;
 
-    if (selectedCatalogTask === "custom") {
+    if (selectedCatalogTaskId === "custom") {
       if (!customTaskName.trim()) {
         toast.error("Please enter a custom task name");
         return;
@@ -150,10 +183,14 @@ export default function TimesheetPage() {
       name = customTaskName.trim();
       code = name.toLowerCase().replace(/[^a-z0-9]/g, "_");
     } else {
-      const item = STANDARD_TASK_CATALOG.find((c) => c.code === selectedCatalogTask);
+      const item = departmentTasks.find(t => t.id === selectedCatalogTaskId);
       if (item) {
-        name = item.name;
-        dept = item.dept;
+        code = item.task_code;
+        name = item.task_name;
+        dept = item.department;
+      } else {
+        toast.error("Please select a task from the catalog or custom");
+        return;
       }
     }
 
@@ -177,6 +214,33 @@ export default function TimesheetPage() {
     }
   };
 
+  const handlePopulateDeptDefaults = async (dept: string) => {
+    if (!selectedMachineId) {
+      toast.error("Please select a machine first");
+      return;
+    }
+    const deptItems = departmentTasks.filter(t => t.department === dept && t.is_active);
+    if (deptItems.length === 0) {
+      toast.error(`No core tasks found for department ${dept}`);
+      return;
+    }
+
+    try {
+      for (const t of deptItems) {
+        await createOrUpdateTask(selectedMachineId, {
+          task_code: t.task_code,
+          task_name: t.task_name,
+          department: t.department,
+          quoted_hours: t.default_quoted_hours,
+        });
+      }
+      toast.success(`Populated ${deptItems.length} default tasks for ${dept}!`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to populate default tasks";
+      toast.error(message);
+    }
+  };
+
   const handleSaveQuoteEdit = async (taskId: string) => {
     const hours = parseFloat(editQuoteVal);
     if (isNaN(hours) || hours < 0) {
@@ -190,6 +254,52 @@ export default function TimesheetPage() {
       setEditingTaskId(null);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to update quote";
+      toast.error(message);
+    }
+  };
+
+  const handleAddDeptTaskSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const hours = parseFloat(newDeptDefaultQuote);
+    if (isNaN(hours) || hours < 0) {
+      toast.error("Default quoted hours cannot be negative");
+      return;
+    }
+    if (!newDeptTaskCode.trim() || !newDeptTaskName.trim()) {
+      toast.error("Task code and task name are required");
+      return;
+    }
+
+    try {
+      setAddingDeptTask(true);
+      const req: CreateDepartmentTaskRequest = {
+        department: selectedCatalogDept,
+        task_code: newDeptTaskCode.trim().toLowerCase().replace(/[^a-z0-9]/g, "_"),
+        task_name: newDeptTaskName.trim(),
+        default_quoted_hours: hours,
+      };
+      await createDepartmentTask(req);
+      toast.success(`Core task "${req.task_name}" added to ${selectedCatalogDept}`);
+      setNewDeptTaskCode("");
+      setNewDeptTaskName("");
+      setNewDeptDefaultQuote("10.0");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to add department task";
+      toast.error(message);
+    } finally {
+      setAddingDeptTask(false);
+    }
+  };
+
+  const handleRetireDeptTask = async (id: string, name: string) => {
+    if (!window.confirm(`Retire core task "${name}"? It will no longer appear for future quotes, but historical records will be preserved.`)) {
+      return;
+    }
+    try {
+      await deleteDepartmentTask(id);
+      toast.success(`Task "${name}" retired from catalog`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to retire task";
       toast.error(message);
     }
   };
@@ -221,12 +331,20 @@ export default function TimesheetPage() {
               📊 Quoting & Variance
             </button>
             {isLeadOrManager && (
-              <button
-                className={`${styles.toggleBtn} ${activeTab === "quoting_review" ? styles.toggleBtnActive : ""}`}
-                onClick={() => setActiveTab("quoting_review")}
-              >
-                📑 Quoting Audit
-              </button>
+              <>
+                <button
+                  className={`${styles.toggleBtn} ${activeTab === "dept_catalog" ? styles.toggleBtnActive : ""}`}
+                  onClick={() => setActiveTab("dept_catalog")}
+                >
+                  🏢 Department Tasks
+                </button>
+                <button
+                  className={`${styles.toggleBtn} ${activeTab === "quoting_review" ? styles.toggleBtnActive : ""}`}
+                  onClick={() => setActiveTab("quoting_review")}
+                >
+                  📑 Quoting Audit
+                </button>
+              </>
             )}
           </div>
 
@@ -244,7 +362,6 @@ export default function TimesheetPage() {
       {/* TAB 1: MY TIME (Worker View) */}
       {activeTab === "my_time" && (
         <>
-          {/* Worker KPIs */}
           <div className={styles.kpiGrid}>
             <div className={styles.kpiCard}>
               <div className={styles.kpiLabel}>Today&apos;s Hours</div>
@@ -380,6 +497,25 @@ export default function TimesheetPage() {
                   </option>
                 ))}
               </select>
+
+              {isLeadOrManager && (
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    className="vtr-btn"
+                    style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
+                    onClick={() => handlePopulateDeptDefaults("assembly")}
+                  >
+                    + Auto-Populate Assembly Defaults
+                  </button>
+                  <button
+                    className="vtr-btn"
+                    style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem" }}
+                    onClick={() => handlePopulateDeptDefaults("controls")}
+                  >
+                    + Auto-Populate Controls Defaults
+                  </button>
+                </div>
+              )}
             </div>
 
             {isLeadOrManager && (
@@ -400,26 +536,23 @@ export default function TimesheetPage() {
               </h3>
               <form onSubmit={handleAddTaskSubmit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", alignItems: "flex-end" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Task Template</label>
+                  <label style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Pick from Department Catalog</label>
                   <select
                     style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
-                    value={selectedCatalogTask}
-                    onChange={(e) => {
-                      setSelectedCatalogTask(e.target.value);
-                      const item = STANDARD_TASK_CATALOG.find((c) => c.code === e.target.value);
-                      if (item) setTaskQuotedHours(item.defaultQuote.toString());
-                    }}
+                    value={selectedCatalogTaskId}
+                    onChange={(e) => setSelectedCatalogTaskId(e.target.value)}
                   >
-                    {STANDARD_TASK_CATALOG.map((cat) => (
-                      <option key={cat.code} value={cat.code}>
-                        {cat.name} ({cat.dept})
+                    <option value="">-- Select a Core Department Task --</option>
+                    {departmentTasks.filter(t => t.is_active).map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        [{cat.department.toUpperCase()}] {cat.task_name} (Default: {cat.default_quoted_hours}h)
                       </option>
                     ))}
-                    <option value="custom">-- Custom Task --</option>
+                    <option value="custom">-- Custom One-Off Task --</option>
                   </select>
                 </div>
 
-                {selectedCatalogTask === "custom" && (
+                {selectedCatalogTaskId === "custom" && (
                   <>
                     <div>
                       <label htmlFor={customTaskNameId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Task Name *</label>
@@ -441,13 +574,9 @@ export default function TimesheetPage() {
                         value={customDept}
                         onChange={(e) => setCustomDept(e.target.value)}
                       >
-                        <option value="assembly">Assembly</option>
-                        <option value="controls">Electrical / Controls</option>
-                        <option value="machine-shop">Machine Shop</option>
-                        <option value="laser">Laser</option>
-                        <option value="design">Design</option>
-                        <option value="enclosures">Enclosures</option>
-                        <option value="quality">Quality</option>
+                        {DEPARTMENTS.map(d => (
+                          <option key={d.id} value={d.id}>{d.label}</option>
+                        ))}
                       </select>
                     </div>
                   </>
@@ -657,7 +786,147 @@ export default function TimesheetPage() {
         </>
       )}
 
-      {/* TAB 3: QUOTING AUDIT & REVIEW (Management View) */}
+      {/* TAB 3: DEPARTMENT TASK CATALOG (Lead / Manager View) */}
+      {activeTab === "dept_catalog" && isLeadOrManager && (
+        <div className={styles.contentCard}>
+          <div className={styles.cardHeader}>
+            <div>
+              <h2 className={styles.cardTitle}>
+                <span>🏢</span> Core Department Tasks Library
+              </h2>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-secondary, #aaa)" }}>
+                Define core tasks and baseline quoting standards per department. Retiring tasks removes them from future machine quotes while protecting historical data.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <label style={{ fontSize: "0.85rem", fontWeight: 700 }}>Department:</label>
+              <select
+                style={{ padding: "0.5rem 0.85rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
+                value={selectedCatalogDept}
+                onChange={(e) => setSelectedCatalogDept(e.target.value)}
+              >
+                {DEPARTMENTS.map(d => (
+                  <option key={d.id} value={d.id}>{d.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Add New Core Department Task Form */}
+          <div style={{ padding: "1.25rem", background: "rgba(0,0,0,0.2)", borderBottom: "1px solid var(--border-color, #333)" }}>
+            <h4 style={{ margin: "0 0 0.75rem 0", fontSize: "0.95rem", color: "var(--vtr-theme-primary, #00e5ff)" }}>
+              + Add New Core Task to {DEPARTMENTS.find(d => d.id === selectedCatalogDept)?.label}
+            </h4>
+            <form onSubmit={handleAddDeptTaskSubmit} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", alignItems: "flex-end" }}>
+              <div>
+                <label htmlFor={newDeptId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Department</label>
+                <input
+                  id={newDeptId}
+                  type="text"
+                  value={DEPARTMENTS.find(d => d.id === selectedCatalogDept)?.label || selectedCatalogDept}
+                  disabled
+                  style={{ width: "100%", padding: "0.5rem", background: "rgba(255,255,255,0.05)", border: "1px solid #333", color: "#888", borderRadius: "4px" }}
+                />
+              </div>
+              <div>
+                <label htmlFor={newCodeId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Task Identifier Code *</label>
+                <input
+                  id={newCodeId}
+                  type="text"
+                  placeholder="e.g. sensor_bracket_mount"
+                  style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
+                  value={newDeptTaskCode}
+                  onChange={(e) => setNewDeptTaskCode(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor={newNameId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Display Task Name *</label>
+                <input
+                  id={newNameId}
+                  type="text"
+                  placeholder="e.g. Sensor Bracket Mount & Test"
+                  style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
+                  value={newDeptTaskName}
+                  onChange={(e) => setNewDeptTaskName(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor={newHoursId} style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Default Quoted Hours *</label>
+                <input
+                  id={newHoursId}
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
+                  value={newDeptDefaultQuote}
+                  onChange={(e) => setNewDeptDefaultQuote(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <button type="submit" className="vtr-btn vtr-btn-primary" disabled={addingDeptTask} style={{ width: "100%" }}>
+                  {addingDeptTask ? "Adding..." : "+ Add to Catalog"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Department Tasks Table */}
+          <div className={styles.tableWrapper}>
+            {filteredDeptTasks.length === 0 ? (
+              <div className={styles.emptyState}>No core tasks defined for this department yet.</div>
+            ) : (
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Task Code</th>
+                    <th>Task Name</th>
+                    <th>Department</th>
+                    <th>Default Quoted Hours</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredDeptTasks.map((task) => (
+                    <tr key={task.id}>
+                      <td>
+                        <code>{task.task_code}</code>
+                      </td>
+                      <td>
+                        <strong>{task.task_name}</strong>
+                      </td>
+                      <td style={{ textTransform: "capitalize" }}>{task.department}</td>
+                      <td style={{ fontWeight: 700, fontSize: "1rem" }}>{task.default_quoted_hours.toFixed(1)}h</td>
+                      <td>
+                        <span className={`${styles.categoryBadge} ${task.is_active ? styles.badgeProduction : styles.badgeIndirect}`}>
+                          {task.is_active ? "ACTIVE" : "RETIRED"}
+                        </span>
+                      </td>
+                      <td>
+                        {task.is_active && (
+                          <button
+                            className="vtr-btn vtr-btn-danger"
+                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                            onClick={() => handleRetireDeptTask(task.id, task.task_name)}
+                          >
+                            Retire Task
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: QUOTING AUDIT & REVIEW (Management View) */}
       {activeTab === "quoting_review" && (
         <div className={styles.contentCard}>
           <div className={styles.cardHeader}>

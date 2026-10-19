@@ -114,6 +114,12 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/machines/{id}/labor-summary", handleGetMachineLaborSummary)
 	mux.HandleFunc("GET /api/timesheets/quoting-review", handleGetQuotingReviewReport)
 
+	// Department Core Task Catalog Endpoints
+	mux.HandleFunc("GET /api/department-tasks", handleGetDepartmentTasks)
+	mux.Handle("POST /api/department-tasks", RequireRole("admin", "manager")(http.HandlerFunc(handleCreateDepartmentTask)))
+	mux.Handle("PUT /api/department-tasks/{id}", RequireRole("admin", "manager")(http.HandlerFunc(handleUpdateDepartmentTask)))
+	mux.Handle("DELETE /api/department-tasks/{id}", RequireRole("admin", "manager")(http.HandlerFunc(handleDeleteDepartmentTask)))
+
 	mux.HandleFunc("GET /api/logs", handleGetLogs)
 	mux.HandleFunc("GET /api/system/version", handleGetSystemVersion)
 	mux.HandleFunc("GET /api/system/timezone", handleGetTimezone)

@@ -1,12 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchApi } from '../lib/api';
 import { useSSE } from '../components/SSEProvider';
-import { TimeEntry, MachineLaborSummary, ProjectTask, CreateTimeEntryRequest, CreateProjectTaskRequest, UpdateTaskQuoteRequest } from '../types';
+import {
+  TimeEntry,
+  MachineLaborSummary,
+  ProjectTask,
+  DepartmentTask,
+  CreateTimeEntryRequest,
+  CreateProjectTaskRequest,
+  UpdateTaskQuoteRequest,
+  CreateDepartmentTaskRequest,
+  UpdateDepartmentTaskRequest,
+} from '../types';
 
 export function useTimesheetData(selectedMachineId?: string) {
   const [myEntries, setMyEntries] = useState<TimeEntry[]>([]);
   const [machineSummary, setMachineSummary] = useState<MachineLaborSummary | null>(null);
   const [quotingReview, setQuotingReview] = useState<MachineLaborSummary[]>([]);
+  const [departmentTasks, setDepartmentTasks] = useState<DepartmentTask[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchMyEntries = useCallback(async () => {
@@ -39,9 +50,21 @@ export function useTimesheetData(selectedMachineId?: string) {
     }
   }, []);
 
+  const fetchDepartmentTasks = useCallback(async (department?: string) => {
+    try {
+      const params: Record<string, string> = {};
+      if (department) params.department = department;
+      const data = await fetchApi<DepartmentTask[]>('department-tasks', { params });
+      setDepartmentTasks(data || []);
+    } catch (err) {
+      console.error('Failed to load department tasks catalog', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchMyEntries();
-  }, [fetchMyEntries]);
+    fetchDepartmentTasks();
+  }, [fetchMyEntries, fetchDepartmentTasks]);
 
   useEffect(() => {
     if (selectedMachineId) {
@@ -51,6 +74,7 @@ export function useTimesheetData(selectedMachineId?: string) {
     }
   }, [selectedMachineId, fetchMachineSummary]);
 
+  // SSE listeners
   useSSE('time_entry_created', (newEntry: TimeEntry) => {
     setMyEntries(prev => {
       if (prev.find(e => e.id === newEntry.id)) return prev;
@@ -72,6 +96,21 @@ export function useTimesheetData(selectedMachineId?: string) {
     if (selectedMachineId && updatedTask.machine_id === selectedMachineId) {
       fetchMachineSummary(selectedMachineId);
     }
+  });
+
+  useSSE('department_task_created', (newTask: DepartmentTask) => {
+    setDepartmentTasks(prev => {
+      if (prev.find(t => t.id === newTask.id)) return prev.map(t => t.id === newTask.id ? newTask : t);
+      return [...prev, newTask];
+    });
+  });
+
+  useSSE('department_task_updated', (updated: DepartmentTask) => {
+    setDepartmentTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+  });
+
+  useSSE('department_task_deleted', (data: { id: string }) => {
+    setDepartmentTasks(prev => prev.filter(t => t.id !== data.id));
   });
 
   const logTime = async (req: CreateTimeEntryRequest): Promise<TimeEntry> => {
@@ -116,17 +155,45 @@ export function useTimesheetData(selectedMachineId?: string) {
     return updated;
   };
 
+  const createDepartmentTask = async (req: CreateDepartmentTaskRequest): Promise<DepartmentTask> => {
+    const created = await fetchApi<DepartmentTask>('department-tasks', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+    setDepartmentTasks(prev => [...prev.filter(t => t.id !== created.id), created]);
+    return created;
+  };
+
+  const updateDepartmentTask = async (id: string, req: UpdateDepartmentTaskRequest): Promise<DepartmentTask> => {
+    const updated = await fetchApi<DepartmentTask>(`department-tasks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(req),
+    });
+    setDepartmentTasks(prev => prev.map(t => t.id === id ? updated : t));
+    return updated;
+  };
+
+  const deleteDepartmentTask = async (id: string): Promise<void> => {
+    await fetchApi(`department-tasks/${id}`, { method: 'DELETE' });
+    setDepartmentTasks(prev => prev.filter(t => t.id !== id));
+  };
+
   return {
     myEntries,
     machineSummary,
     quotingReview,
+    departmentTasks,
     loading,
     fetchMyEntries,
     fetchMachineSummary,
     fetchQuotingReview,
+    fetchDepartmentTasks,
     logTime,
     deleteEntry,
     createOrUpdateTask,
     updateTaskQuote,
+    createDepartmentTask,
+    updateDepartmentTask,
+    deleteDepartmentTask,
   };
 }

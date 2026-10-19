@@ -366,4 +366,142 @@ func TestTimesheetHandlers(t *testing.T) {
 			t.Fatalf("expected 400 Bad Request, got %d", rr.Code)
 		}
 	})
+
+	var createdDeptTaskID uuid.UUID
+
+	t.Run("Create_Department_Task_As_Manager_Success", func(t *testing.T) {
+		reqPayload := models.CreateDepartmentTaskRequest{
+			Department:         "controls",
+			TaskCode:           "hmi_screen_design",
+			TaskName:           "HMI Screen Design & Alarm Config",
+			DefaultQuotedHours: 18.5,
+		}
+		body, _ := json.Marshal(reqPayload)
+		req := httptest.NewRequest(http.MethodPost, "/api/department-tasks", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(managerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("expected 201 Created, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var dt models.DepartmentTask
+		if err := json.NewDecoder(rr.Body).Decode(&dt); err != nil {
+			t.Fatalf("failed to decode department task: %v", err)
+		}
+		if dt.TaskCode != "hmi_screen_design" || dt.DefaultQuotedHours != 18.5 {
+			t.Errorf("unexpected department task data: %+v", dt)
+		}
+		createdDeptTaskID = dt.ID
+	})
+
+	t.Run("Create_Department_Task_As_Worker_Forbidden", func(t *testing.T) {
+		reqPayload := models.CreateDepartmentTaskRequest{
+			Department:         "assembly",
+			TaskCode:           "unauthorized_task",
+			TaskName:           "Unauthorized Task",
+			DefaultQuotedHours: 10.0,
+		}
+		body, _ := json.Marshal(reqPayload)
+		req := httptest.NewRequest(http.MethodPost, "/api/department-tasks", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusForbidden {
+			t.Fatalf("expected 403 Forbidden for worker, got %d", rr.Code)
+		}
+	})
+
+	t.Run("Get_Department_Tasks_Filtered_By_Department", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/department-tasks?department=controls", nil)
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d", rr.Code)
+		}
+
+		var list []models.DepartmentTask
+		if err := json.NewDecoder(rr.Body).Decode(&list); err != nil {
+			t.Fatalf("failed to decode list: %v", err)
+		}
+		if len(list) == 0 {
+			t.Fatalf("expected at least 1 controls task")
+		}
+		found := false
+		for _, task := range list {
+			if task.TaskCode == "hmi_screen_design" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected to find hmi_screen_design in controls tasks")
+		}
+	})
+
+	t.Run("Update_Department_Task_Name_And_Default_Quote", func(t *testing.T) {
+		newName := "HMI Advanced Screen & Alarm Design"
+		newQuote := 22.0
+		reqPayload := models.UpdateDepartmentTaskRequest{
+			TaskName:           &newName,
+			DefaultQuotedHours: &newQuote,
+		}
+		body, _ := json.Marshal(reqPayload)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/department-tasks/%s", createdDeptTaskID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(managerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var updated models.DepartmentTask
+		_ = json.NewDecoder(rr.Body).Decode(&updated)
+		if updated.TaskName != newName || updated.DefaultQuotedHours != 22.0 {
+			t.Errorf("unexpected updated task: %+v", updated)
+		}
+	})
+
+	t.Run("Delete_Department_Task_Deactivates", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/department-tasks/%s", createdDeptTaskID), nil)
+		req.AddCookie(managerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		// Verify task is now inactive and omitted from standard GET query
+		getReq := httptest.NewRequest(http.MethodGet, "/api/department-tasks?department=controls", nil)
+		getReq.AddCookie(workerCookie)
+
+		getRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(getRR, getReq)
+
+		var list []models.DepartmentTask
+		_ = json.NewDecoder(getRR.Body).Decode(&list)
+		for _, task := range list {
+			if task.ID == createdDeptTaskID {
+				t.Errorf("expected deactivated task to be excluded from default query")
+			}
+		}
+
+		// Clean up created test task
+		_, _ = db.DB.Exec("DELETE FROM department_tasks WHERE id = $1", createdDeptTaskID)
+	})
 }
+

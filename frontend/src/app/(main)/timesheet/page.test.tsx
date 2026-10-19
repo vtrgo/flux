@@ -100,6 +100,20 @@ describe('TimesheetPage', () => {
       if (endpoint === 'machines/m-1/tasks') {
         return Promise.resolve(mockLaborSummary.tasks);
       }
+      if (endpoint.startsWith('department-tasks')) {
+        return Promise.resolve([
+          {
+            id: 'dt-1',
+            department: 'assembly',
+            task_code: 'mech_assembly',
+            task_name: 'Mechanical Assembly',
+            default_quoted_hours: 40.0,
+            is_active: true,
+            created_at: '2026-10-19T00:00:00Z',
+            updated_at: '2026-10-19T00:00:00Z',
+          },
+        ]);
+      }
       return Promise.resolve([]);
     });
   });
@@ -130,6 +144,21 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('-35.50h')).toBeInTheDocument();
   });
 
+  it('toggles to Department Tasks tab and displays core tasks library', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const deptTabBtn = screen.getByText('🏢 Department Tasks');
+    await act(async () => {
+      fireEvent.click(deptTabBtn);
+    });
+
+    expect(screen.getByText('Core Department Tasks Library')).toBeInTheDocument();
+    expect(screen.getByText('mech_assembly')).toBeInTheDocument();
+    expect(screen.getByText('Retire Task')).toBeInTheDocument();
+  });
+
   it('opens TimesheetLogModal when + LOG TIME is clicked', async () => {
     await act(async () => {
       render(<TimesheetPage />);
@@ -145,3 +174,4 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('🔄 Rework (SOP 1-003)')).toBeInTheDocument();
   });
 });
+

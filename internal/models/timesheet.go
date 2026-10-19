@@ -86,3 +86,28 @@ type CreateTimeEntryRequest struct {
 	HoursSpent      float64       `json:"hours_spent"`
 	WorkDescription string        `json:"work_description"`
 }
+
+type DepartmentTask struct {
+	ID                 uuid.UUID  `json:"id"`
+	Department         string     `json:"department"`
+	TaskCode           string     `json:"task_code"`
+	TaskName           string     `json:"task_name"`
+	DefaultQuotedHours float64    `json:"default_quoted_hours"`
+	IsActive           bool       `json:"is_active"`
+	CreatedBy          *uuid.UUID `json:"created_by,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+}
+
+type CreateDepartmentTaskRequest struct {
+	Department         string  `json:"department"`
+	TaskCode           string  `json:"task_code"`
+	TaskName           string  `json:"task_name"`
+	DefaultQuotedHours float64 `json:"default_quoted_hours"`
+}
+
+type UpdateDepartmentTaskRequest struct {
+	TaskName           *string  `json:"task_name,omitempty"`
+	DefaultQuotedHours *float64 `json:"default_quoted_hours,omitempty"`
+	IsActive           *bool    `json:"is_active,omitempty"`
+}
