@@ -31,7 +31,7 @@ export default function TimesheetPage() {
   const newHoursId = useId();
   const tableFilterId = useId();
   const { user, isAdmin, hasRole } = useAuth();
-  const isLeadOrManager = isAdmin || hasRole(["manager", "lead"]);
+  const isLeadOrManager = isAdmin || hasRole(["manager", "lead", "sales"]);
 
   const [activeTab, setActiveTab] = useState<"my_time" | "project_variance" | "quoting_review" | "dept_catalog" | "approvals">("my_time");
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -408,7 +408,7 @@ export default function TimesheetPage() {
                 className="vtr-btn vtr-btn-secondary"
                 onClick={() => setIsAddTaskOpen(!isAddTaskOpen)}
               >
-                {isAddTaskOpen ? "Close Task Form" : "+ Define Quoted Task"}
+                {isAddTaskOpen ? "Close Task Form" : "+ Assign Task to Project"}
               </button>
             )}
           </div>
@@ -418,7 +418,7 @@ export default function TimesheetPage() {
             <div className={styles.contentCard} style={{ border: "1px solid var(--vtr-theme-primary, #00e5ff)", padding: "1.25rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
                 <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--vtr-theme-primary, #00e5ff)" }}>
-                  Assign Quoted Tasks to Machine {machineSummary?.order_number}
+                  Assign Tasks to Machine {machineSummary?.order_number}
                 </h3>
                 <span style={{ fontSize: "0.85rem", color: "var(--text-secondary, #aaa)" }}>
                   Target Department: <strong style={{ color: "var(--vtr-theme-primary, #00e5ff)" }}>

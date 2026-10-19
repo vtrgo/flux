@@ -17,7 +17,7 @@ import styles from './WeeklyTimesheetGrid.module.css';
 
 interface WeeklyTimesheetGridProps {
   machines: Machine[];
-  departmentTasks: DepartmentTask[];
+  departmentTasks?: DepartmentTask[];
   initialWeekStart?: string;
   readOnlyUserView?: boolean;
   userDepartment?: string;
@@ -70,7 +70,7 @@ function matchesDepartment(taskDept?: string, userDept?: string): boolean {
 
 export function WeeklyTimesheetGrid({
   machines,
-  departmentTasks,
+  departmentTasks = [],
   initialWeekStart,
   readOnlyUserView = false,
   userDepartment,
@@ -601,9 +601,6 @@ export function WeeklyTimesheetGrid({
                   const deptMachineTasks = selectedMachineTasks.filter(
                     t => matchesDepartment(t.department, effectiveDepartment) || t.id === row.project_task_id
                   );
-                  const deptCoreTasks = departmentTasks.filter(
-                    t => t.is_active && (matchesDepartment(t.department, effectiveDepartment) || (row.task_name && t.task_name === row.task_name))
-                  );
 
                   return (
                     <tr key={row.rowKey}>
@@ -647,22 +644,22 @@ export function WeeklyTimesheetGrid({
                               onChange={e => handleTaskChange(row.rowKey, e.target.value)}
                             >
                               <option value="">Select a task...</option>
-                              {deptMachineTasks.length > 0 && (
-                                <optgroup label="📋 Quoted Tasks Allocated by Lead">
-                                  {deptMachineTasks.map(t => (
-                                    <option key={t.id} value={`task:${t.id}`}>
-                                      [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              )}
-                              <optgroup label="🏢 Core Department Tasks">
-                                {deptCoreTasks.map(t => (
-                                  <option key={t.id} value={`dept:${t.task_code}`}>
-                                    [{t.department}] {t.task_name} (Default: {t.default_quoted_hours}h)
+                              {deptMachineTasks.length > 0 ? (
+                                deptMachineTasks.map(t => (
+                                  <option key={t.id} value={`task:${t.id}`}>
+                                    [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
                                   </option>
-                                ))}
-                              </optgroup>
+                                ))
+                              ) : (
+                                <option disabled value="">
+                                  No {effectiveDepartment ? `${effectiveDepartment} ` : ''}tasks assigned to this project
+                                </option>
+                              )}
+                              {row.task_name && !row.project_task_id && !deptMachineTasks.some(t => t.task_name === row.task_name) && (
+                                <option value={`task_name:${row.task_name}`}>
+                                  {row.task_name}
+                                </option>
+                              )}
                             </select>
                           ) : (
                             <select

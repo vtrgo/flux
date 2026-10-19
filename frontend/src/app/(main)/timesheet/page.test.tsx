@@ -314,7 +314,7 @@ describe('TimesheetPage', () => {
     expect(projectDeptSelect).toHaveValue('all');
 
     // Open task assignment panel
-    const assignBtn = screen.getByText('+ Define Quoted Task');
+    const assignBtn = screen.getByText('+ Assign Task to Project');
     await act(async () => {
       fireEvent.click(assignBtn);
     });
@@ -464,6 +464,10 @@ describe('TimesheetPage', () => {
     // Controls tasks should NOT be present
     expect(optionTexts.some(t => t.includes('Panel Wiring'))).toBe(false);
     expect(optionTexts.some(t => t.includes('PLC Programming'))).toBe(false);
+
+    // Verify no separate optgroups for "Quoted Tasks Allocated by Lead" vs "Core Department Tasks"
+    expect(screen.queryByText(/Core Department Tasks/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Quoted Tasks Allocated by Lead/i)).not.toBeInTheDocument();
   });
 });
 
