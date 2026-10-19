@@ -106,8 +106,8 @@ func RegisterRoutes(mux *http.ServeMux) {
 
 	// Timesheet and Foundational Labor Endpoints
 	mux.HandleFunc("GET /api/machines/{id}/tasks", handleGetMachineTasks)
-	mux.Handle("POST /api/machines/{id}/tasks", RequireRole("admin", "manager")(http.HandlerFunc(handleCreateProjectTask)))
-	mux.Handle("PUT /api/tasks/{task_id}/quote", RequireRole("admin", "manager")(http.HandlerFunc(handleUpdateTaskQuote)))
+	mux.Handle("POST /api/machines/{id}/tasks", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleCreateProjectTask)))
+	mux.Handle("PUT /api/tasks/{task_id}/quote", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleUpdateTaskQuote)))
 	mux.HandleFunc("POST /api/time-entries", handleCreateTimeEntry)
 	mux.HandleFunc("GET /api/time-entries/my", handleGetMyTimeEntries)
 	mux.HandleFunc("DELETE /api/time-entries/{id}", handleDeleteTimeEntry)
@@ -116,9 +116,9 @@ func RegisterRoutes(mux *http.ServeMux) {
 
 	// Department Core Task Catalog Endpoints
 	mux.HandleFunc("GET /api/department-tasks", handleGetDepartmentTasks)
-	mux.Handle("POST /api/department-tasks", RequireRole("admin", "manager")(http.HandlerFunc(handleCreateDepartmentTask)))
-	mux.Handle("PUT /api/department-tasks/{id}", RequireRole("admin", "manager")(http.HandlerFunc(handleUpdateDepartmentTask)))
-	mux.Handle("DELETE /api/department-tasks/{id}", RequireRole("admin", "manager")(http.HandlerFunc(handleDeleteDepartmentTask)))
+	mux.Handle("POST /api/department-tasks", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleCreateDepartmentTask)))
+	mux.Handle("PUT /api/department-tasks/{id}", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleUpdateDepartmentTask)))
+	mux.Handle("DELETE /api/department-tasks/{id}", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleDeleteDepartmentTask)))
 
 	mux.HandleFunc("GET /api/logs", handleGetLogs)
 	mux.HandleFunc("GET /api/system/version", handleGetSystemVersion)

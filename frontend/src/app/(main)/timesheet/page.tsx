@@ -57,6 +57,8 @@ export default function TimesheetPage() {
   const [newDeptTaskName, setNewDeptTaskName] = useState("");
   const [newDeptDefaultQuote, setNewDeptDefaultQuote] = useState("10.0");
   const [addingDeptTask, setAddingDeptTask] = useState(false);
+  const [editingDeptTaskId, setEditingDeptTaskId] = useState<string | null>(null);
+  const [editDeptQuoteVal, setEditDeptQuoteVal] = useState<string>("");
 
   const {
     myEntries,
@@ -70,6 +72,7 @@ export default function TimesheetPage() {
     fetchQuotingReview,
     fetchDepartmentTasks,
     createDepartmentTask,
+    updateDepartmentTask,
     deleteDepartmentTask,
   } = useTimesheetData(selectedMachineId);
 
@@ -313,6 +316,23 @@ export default function TimesheetPage() {
       toast.success(`Task "${name}" retired from catalog`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to retire task";
+      toast.error(message);
+    }
+  };
+
+  const handleSaveDeptQuoteEdit = async (deptTaskId: string) => {
+    const hours = parseFloat(editDeptQuoteVal);
+    if (isNaN(hours) || hours < 0) {
+      toast.error("Default quoted hours must be 0 or greater");
+      return;
+    }
+
+    try {
+      await updateDepartmentTask(deptTaskId, { default_quoted_hours: hours });
+      toast.success("Default quoted hours updated");
+      setEditingDeptTaskId(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update default quote";
       toast.error(message);
     }
   };
@@ -965,34 +985,82 @@ export default function TimesheetPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDeptTasks.map((task) => (
-                    <tr key={task.id}>
-                      <td>
-                        <code>{task.task_code}</code>
-                      </td>
-                      <td>
-                        <strong>{task.task_name}</strong>
-                      </td>
-                      <td style={{ textTransform: "capitalize" }}>{task.department}</td>
-                      <td style={{ fontWeight: 700, fontSize: "1rem" }}>{task.default_quoted_hours.toFixed(1)}h</td>
-                      <td>
-                        <span className={`${styles.categoryBadge} ${task.is_active ? styles.badgeProduction : styles.badgeIndirect}`}>
-                          {task.is_active ? "ACTIVE" : "RETIRED"}
-                        </span>
-                      </td>
-                      <td>
-                        {task.is_active && (
-                          <button
-                            className="vtr-btn vtr-btn-danger"
-                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                            onClick={() => handleRetireDeptTask(task.id, task.task_name)}
-                          >
-                            Retire Task
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredDeptTasks.map((task) => {
+                    const isEditingDeptQuote = editingDeptTaskId === task.id;
+
+                    return (
+                      <tr key={task.id}>
+                        <td>
+                          <code>{task.task_code}</code>
+                        </td>
+                        <td>
+                          <strong>{task.task_name}</strong>
+                        </td>
+                        <td style={{ textTransform: "capitalize" }}>{task.department}</td>
+                        <td>
+                          {isEditingDeptQuote ? (
+                            <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                style={{ width: "80px", padding: "0.25rem", background: "#000", border: "1px solid #00e5ff", color: "#fff" }}
+                                value={editDeptQuoteVal}
+                                onChange={(e) => setEditDeptQuoteVal(e.target.value)}
+                                autoFocus
+                              />
+                              <button
+                                className="vtr-btn vtr-btn-primary"
+                                style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                                onClick={() => handleSaveDeptQuoteEdit(task.id)}
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="vtr-btn"
+                                style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                                onClick={() => setEditingDeptTaskId(null)}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={{ fontWeight: 700, fontSize: "1rem" }}>{task.default_quoted_hours.toFixed(1)}h</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`${styles.categoryBadge} ${task.is_active ? styles.badgeProduction : styles.badgeIndirect}`}>
+                            {task.is_active ? "ACTIVE" : "RETIRED"}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            {isLeadOrManager && task.is_active && !isEditingDeptQuote && (
+                              <button
+                                className="vtr-btn vtr-btn-secondary"
+                                style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                                onClick={() => {
+                                  setEditingDeptTaskId(task.id);
+                                  setEditDeptQuoteVal(task.default_quoted_hours.toString());
+                                }}
+                              >
+                                Edit Default Quote
+                              </button>
+                            )}
+                            {isLeadOrManager && task.is_active && (
+                              <button
+                                className="vtr-btn vtr-btn-danger"
+                                style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                                onClick={() => handleRetireDeptTask(task.id, task.task_name)}
+                              >
+                                Retire Task
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

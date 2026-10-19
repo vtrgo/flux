@@ -101,7 +101,20 @@ describe('TimesheetPage', () => {
       hasRole: vi.fn().mockReturnValue(true),
     });
 
-    (fetchApi as any).mockImplementation((endpoint: string) => {
+    (fetchApi as any).mockImplementation((endpoint: string, options?: any) => {
+      if (options?.method === 'PUT' && endpoint.startsWith('department-tasks/')) {
+        const body = JSON.parse(options.body);
+        return Promise.resolve({
+          id: 'dt-1',
+          department: 'assembly',
+          task_code: 'mech_assembly',
+          task_name: 'Mechanical Assembly',
+          default_quoted_hours: body.default_quoted_hours ?? 40.0,
+          is_active: true,
+          created_at: '2026-10-19T00:00:00Z',
+          updated_at: '2026-10-19T00:00:00Z',
+        });
+      }
       if (endpoint === 'machines') {
         return Promise.resolve(mockMachines);
       }
@@ -168,7 +181,7 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('-35.50h')).toBeInTheDocument();
   });
 
-  it('toggles to Department Tasks tab and displays core tasks library', async () => {
+  it('toggles to Department Tasks tab and displays core tasks library with default quote editing', async () => {
     await act(async () => {
       render(<TimesheetPage />);
     });
@@ -181,6 +194,32 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('Core Department Tasks Library')).toBeInTheDocument();
     expect(screen.getByText('mech_assembly')).toBeInTheDocument();
     expect(screen.getByText('Retire Task')).toBeInTheDocument();
+
+    // Verify Edit Default Quote button
+    const editDefaultBtn = screen.getByText('Edit Default Quote');
+    expect(editDefaultBtn).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(editDefaultBtn);
+    });
+
+    // Check save and input
+    const saveBtn = screen.getByText('Save');
+    expect(saveBtn).toBeInTheDocument();
+
+    const input = screen.getByDisplayValue('40');
+    await act(async () => {
+      fireEvent.change(input, { target: { value: '45.5' } });
+      fireEvent.click(saveBtn);
+    });
+
+    expect(fetchApi).toHaveBeenCalledWith(
+      'department-tasks/dt-1',
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ default_quoted_hours: 45.5 }),
+      })
+    );
   });
 
   it('opens TimesheetLogModal when + LOG TIME is clicked', async () => {

@@ -75,6 +75,7 @@ func TestTimesheetHandlers(t *testing.T) {
 	})
 
 	managerCookie := createTestRoleCookie(t, "manager")
+	leadCookie := createTestRoleCookie(t, "lead")
 	workerCookie := createTestRoleCookie(t, "user")
 
 	var createdTaskID uuid.UUID
@@ -471,6 +472,30 @@ func TestTimesheetHandlers(t *testing.T) {
 		_ = json.NewDecoder(rr.Body).Decode(&updated)
 		if updated.TaskName != newName || updated.DefaultQuotedHours != 22.0 {
 			t.Errorf("unexpected updated task: %+v", updated)
+		}
+	})
+
+	t.Run("Update_Department_Task_Default_Quote_As_Lead_Success", func(t *testing.T) {
+		leadQuote := 24.5
+		reqPayload := models.UpdateDepartmentTaskRequest{
+			DefaultQuotedHours: &leadQuote,
+		}
+		body, _ := json.Marshal(reqPayload)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/department-tasks/%s", createdDeptTaskID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(leadCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK for team lead, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var updated models.DepartmentTask
+		_ = json.NewDecoder(rr.Body).Decode(&updated)
+		if updated.DefaultQuotedHours != 24.5 {
+			t.Errorf("expected default quoted hours to be updated by lead to 24.5, got %v", updated.DefaultQuotedHours)
 		}
 	})
 
