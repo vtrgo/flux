@@ -506,7 +506,7 @@ export default function TimesheetPage() {
               >
                 {machines.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.order_number} ({m.model_type}) - {m.status.toUpperCase()}
+                    {m.order_number} ({m.model_type})
                   </option>
                 ))}
               </select>
