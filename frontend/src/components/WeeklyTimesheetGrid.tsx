@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { fetchApi } from '../lib/api';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { getSundayOfWeek, addWeeks, getWeekDays, formatWeekRange } from '../lib/dateUtils';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Machine,
   DepartmentTask,
@@ -19,6 +20,7 @@ interface WeeklyTimesheetGridProps {
   departmentTasks: DepartmentTask[];
   initialWeekStart?: string;
   readOnlyUserView?: boolean;
+  userDepartment?: string;
 }
 
 interface GridRow {
@@ -54,12 +56,34 @@ const createBlankRow = (): GridRow => ({
   descriptions: {},
 });
 
+function matchesDepartment(taskDept?: string, userDept?: string): boolean {
+  if (!userDept) return true;
+  if (!taskDept) return true;
+  const td = taskDept.toLowerCase().replace(/[-_]/g, '');
+  const ud = userDept.toLowerCase().replace(/[-_]/g, '');
+  if (td === ud) return true;
+  if ((td === 'controls' || td === 'electricalcontrols') && (ud === 'controls' || ud === 'electricalcontrols')) {
+    return true;
+  }
+  return false;
+}
+
 export function WeeklyTimesheetGrid({
   machines,
   departmentTasks,
   initialWeekStart,
   readOnlyUserView = false,
+  userDepartment,
 }: WeeklyTimesheetGridProps) {
+  const { user: authUser } = useAuth();
+  const effectiveDepartment = useMemo(() => {
+    return (
+      userDepartment ||
+      authUser?.department ||
+      ''
+    ).toLowerCase().trim();
+  }, [userDepartment, authUser?.department]);
+
   const [currentWeekSunday, setCurrentWeekSunday] = useState<string>(() =>
     initialWeekStart ? getSundayOfWeek(initialWeekStart) : getSundayOfWeek()
   );
@@ -568,6 +592,12 @@ export function WeeklyTimesheetGrid({
                 rows.map(row => {
                   const rowTotal = Object.values(row.days).reduce((s, h) => s + (h || 0), 0);
                   const selectedMachineTasks = row.machine_id ? machineTasksCache[row.machine_id] || [] : [];
+                  const deptMachineTasks = selectedMachineTasks.filter(
+                    t => matchesDepartment(t.department, effectiveDepartment) || t.id === row.project_task_id
+                  );
+                  const deptCoreTasks = departmentTasks.filter(
+                    t => t.is_active && (matchesDepartment(t.department, effectiveDepartment) || (row.task_name && t.task_name === row.task_name))
+                  );
 
                   return (
                     <tr key={row.rowKey}>
@@ -610,9 +640,9 @@ export function WeeklyTimesheetGrid({
                               onChange={e => handleTaskChange(row.rowKey, e.target.value)}
                             >
                               <option value="">Select a task...</option>
-                              {selectedMachineTasks.length > 0 && (
+                              {deptMachineTasks.length > 0 && (
                                 <optgroup label="📋 Quoted Tasks Allocated by Lead">
-                                  {selectedMachineTasks.map(t => (
+                                  {deptMachineTasks.map(t => (
                                     <option key={t.id} value={`task:${t.id}`}>
                                       [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
                                     </option>
@@ -620,13 +650,11 @@ export function WeeklyTimesheetGrid({
                                 </optgroup>
                               )}
                               <optgroup label="🏢 Core Department Tasks">
-                                {departmentTasks
-                                  .filter(t => t.is_active)
-                                  .map(t => (
-                                    <option key={t.id} value={`dept:${t.task_code}`}>
-                                      [{t.department}] {t.task_name} (Default: {t.default_quoted_hours}h)
-                                    </option>
-                                  ))}
+                                {deptCoreTasks.map(t => (
+                                  <option key={t.id} value={`dept:${t.task_code}`}>
+                                    [{t.department}] {t.task_name} (Default: {t.default_quoted_hours}h)
+                                  </option>
+                                ))}
                               </optgroup>
                             </select>
                           ) : (

@@ -349,6 +349,7 @@ export default function TimesheetPage() {
         <WeeklyTimesheetGrid
           machines={machines}
           departmentTasks={departmentTasks}
+          userDepartment={user?.department}
         />
       )}
 

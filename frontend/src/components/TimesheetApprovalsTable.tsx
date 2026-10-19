@@ -477,6 +477,7 @@ export function TimesheetApprovalsTable({
               departmentTasks={departmentTasks}
               initialWeekStart={inspectingTimesheet.week_start_date}
               readOnlyUserView={true}
+              userDepartment={inspectingTimesheet.department}
             />
           </div>
         </div>

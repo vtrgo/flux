@@ -436,6 +436,31 @@ describe('TimesheetPage', () => {
     // Save button should be available
     expect(screen.getByText('Saved')).toBeInTheDocument();
   });
+
+  it('filters task options in the entry grid to user department', async () => {
+    (useAuth as any).mockReturnValue({
+      user: { id: 'u-1', username: 'assembler1', role: 'technician', department: 'assembly' },
+      isAdmin: false,
+      hasRole: vi.fn().mockReturnValue(false),
+    });
+
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    // The grid loads mockWeeklyTimesheet which has machine m-1
+    const taskSelects = screen.getAllByLabelText('Task / Allocation Target');
+    expect(taskSelects.length).toBeGreaterThan(0);
+    const select = taskSelects[0] as HTMLSelectElement;
+
+    // Check options inside select
+    const optionTexts = Array.from(select.options).map(o => o.text);
+    // Assembly tasks should be present
+    expect(optionTexts.some(t => t.includes('Mechanical Assembly'))).toBe(true);
+    // Controls tasks should NOT be present
+    expect(optionTexts.some(t => t.includes('Panel Wiring'))).toBe(false);
+    expect(optionTexts.some(t => t.includes('PLC Programming'))).toBe(false);
+  });
 });
 
 
