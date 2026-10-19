@@ -19,6 +19,7 @@ type ProjectTask struct {
 	ID          uuid.UUID  `json:"id"`
 	MachineID   uuid.UUID  `json:"machine_id"`
 	OrderNumber string     `json:"order_number,omitempty"`
+	TaskID      *uuid.UUID `json:"task_id,omitempty"`
 	TaskCode    string     `json:"task_code"`
 	TaskName    string     `json:"task_name"`
 	Department  string     `json:"department"`
@@ -40,6 +41,7 @@ type TimeEntry struct {
 	OrderNumber       string        `json:"order_number,omitempty"`
 	EntryType         TimeEntryType `json:"entry_type"`
 	ProjectTaskID     *uuid.UUID    `json:"project_task_id,omitempty"`
+	TaskID            *uuid.UUID    `json:"task_id,omitempty"`
 	TaskName          string        `json:"task_name,omitempty"`
 	Department        string        `json:"department,omitempty"`
 	ReworkItemID      *uuid.UUID    `json:"rework_item_id,omitempty"`
@@ -67,10 +69,11 @@ type MachineLaborSummary struct {
 }
 
 type CreateProjectTaskRequest struct {
-	TaskCode    string  `json:"task_code"`
-	TaskName    string  `json:"task_name"`
-	Department  string  `json:"department"`
-	QuotedHours float64 `json:"quoted_hours"`
+	TaskID      *uuid.UUID `json:"task_id,omitempty"`
+	TaskCode    string     `json:"task_code"`
+	TaskName    string     `json:"task_name"`
+	Department  string     `json:"department"`
+	QuotedHours float64    `json:"quoted_hours"`
 }
 
 type UpdateTaskQuoteRequest struct {
@@ -82,6 +85,7 @@ type CreateTimeEntryRequest struct {
 	MachineID       *uuid.UUID    `json:"machine_id,omitempty"`
 	EntryType       TimeEntryType `json:"entry_type"`
 	ProjectTaskID   *uuid.UUID    `json:"project_task_id,omitempty"`
+	TaskID          *uuid.UUID    `json:"task_id,omitempty"`
 	ReworkItemID    *uuid.UUID    `json:"rework_item_id,omitempty"`
 	DefectID        *uuid.UUID    `json:"defect_id,omitempty"`
 	WorkDate        string        `json:"work_date"`
@@ -94,6 +98,7 @@ type DepartmentTask struct {
 	Department         string     `json:"department"`
 	TaskCode           string     `json:"task_code"`
 	TaskName           string     `json:"task_name"`
+	Description        *string    `json:"description,omitempty"`
 	DefaultQuotedHours float64    `json:"default_quoted_hours"`
 	IsActive           bool       `json:"is_active"`
 	CreatedBy          *uuid.UUID `json:"created_by,omitempty"`
@@ -105,13 +110,61 @@ type CreateDepartmentTaskRequest struct {
 	Department         string  `json:"department"`
 	TaskCode           string  `json:"task_code"`
 	TaskName           string  `json:"task_name"`
+	Description        *string `json:"description,omitempty"`
 	DefaultQuotedHours float64 `json:"default_quoted_hours"`
 }
 
 type UpdateDepartmentTaskRequest struct {
+	Department         *string  `json:"department,omitempty"`
+	TaskCode           *string  `json:"task_code,omitempty"`
 	TaskName           *string  `json:"task_name,omitempty"`
+	Description        *string  `json:"description,omitempty"`
 	DefaultQuotedHours *float64 `json:"default_quoted_hours,omitempty"`
 	IsActive           *bool    `json:"is_active,omitempty"`
+}
+
+type CorrelationStatus string
+
+const (
+	CorrelationStatusBudgetedUnstarted CorrelationStatus = "budgeted_unstarted"
+	CorrelationStatusOnTrack           CorrelationStatus = "on_track"
+	CorrelationStatusNearingLimit      CorrelationStatus = "nearing_limit"
+	CorrelationStatusOverBudget        CorrelationStatus = "over_budget"
+	CorrelationStatusUnbudgeted        CorrelationStatus = "unbudgeted"
+)
+
+type LaborCorrelationItem struct {
+	TaskID         *uuid.UUID        `json:"task_id,omitempty"`
+	TaskCode       string            `json:"task_code"`
+	TaskName       string            `json:"task_name"`
+	Department     string            `json:"department"`
+	AssignedHours  float64           `json:"assigned_hours"`
+	ConsumedHours  float64           `json:"consumed_hours"`
+	Variance       float64           `json:"variance"`        // Consumed - Assigned
+	BurnPercentage float64           `json:"burn_percentage"` // (Consumed / Assigned) * 100
+	Status         CorrelationStatus `json:"status"`
+	ProjectTaskID  *uuid.UUID        `json:"project_task_id,omitempty"`
+}
+
+type DepartmentRollup struct {
+	Department     string  `json:"department"`
+	AssignedHours  float64 `json:"assigned_hours"`
+	ConsumedHours  float64 `json:"consumed_hours"`
+	Variance       float64 `json:"variance"`
+	BurnPercentage float64 `json:"burn_percentage"`
+}
+
+type MachineLaborCorrelationReport struct {
+	MachineID             uuid.UUID                   `json:"machine_id"`
+	OrderNumber           string                      `json:"order_number"`
+	ModelType             string                      `json:"model_type"`
+	Status                string                      `json:"status"`
+	TotalAssignedHours    float64                     `json:"total_assigned_hours"`
+	TotalConsumedHours    float64                     `json:"total_consumed_hours"`
+	NetVariance           float64                     `json:"net_variance"`
+	OverallBurnPercentage float64                     `json:"overall_burn_percentage"`
+	Tasks                 []LaborCorrelationItem      `json:"tasks"`
+	DepartmentBreakdown   map[string]DepartmentRollup `json:"department_breakdown"`
 }
 
 type WeeklyTimesheetStatus string
@@ -129,7 +182,7 @@ type WeeklyTimesheet struct {
 	UserName        string                `json:"user_name,omitempty"`
 	UserEmail       string                `json:"user_email,omitempty"`
 	Department      string                `json:"department"`
-	WeekStartDate   string                `json:"week_start_date"` // YYYY-MM-DD (ISO Monday)
+	WeekStartDate   string                `json:"week_start_date"` // YYYY-MM-DD (ISO Sunday)
 	Status          WeeklyTimesheetStatus `json:"status"`
 	TotalHours      float64               `json:"total_hours"`
 	Notes           string                `json:"notes,omitempty"`
@@ -149,6 +202,7 @@ type WeeklyTimesheetSaveItem struct {
 	MachineID       *uuid.UUID    `json:"machine_id,omitempty"`
 	EntryType       TimeEntryType `json:"entry_type"`
 	ProjectTaskID   *uuid.UUID    `json:"project_task_id,omitempty"`
+	TaskID          *uuid.UUID    `json:"task_id,omitempty"`
 	Department      string        `json:"department,omitempty"`
 	WorkDate        string        `json:"work_date"`
 	HoursSpent      float64       `json:"hours_spent"`

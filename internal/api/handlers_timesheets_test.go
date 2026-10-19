@@ -895,3 +895,207 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 	_, _ = db.DB.Exec("DELETE FROM weekly_timesheets WHERE id = $1", timesheetID)
 }
 
+func TestLaborCorrelationAndAuthoritativeTasks(t *testing.T) {
+	setupTestDB(t)
+	mux := http.NewServeMux()
+	RegisterRoutes(mux)
+
+	managerCookie := createTestRoleCookie(t, "manager")
+	workerCookie := createTestRoleCookie(t, "user")
+
+	// 1. Create a machine for testing
+	var soID uuid.UUID
+	poNum := fmt.Sprintf("PO-CORR-%d", time.Now().UnixNano())
+	err := db.DB.QueryRow(`
+		INSERT INTO sales_orders (customer_name, po_number, internal_project_number, project_name, status)
+		VALUES ('Corr Customer', $1, 'PRJ-CORR-1', 'Feeder Corr', 'open')
+		RETURNING id
+	`, poNum).Scan(&soID)
+	if err != nil {
+		t.Fatalf("failed to insert test sales order: %v", err)
+	}
+
+	var machineID uuid.UUID
+	orderNum := fmt.Sprintf("M-CORR-%d", time.Now().UnixNano())
+	err = db.DB.QueryRow(`
+		INSERT INTO machines (sales_order_id, order_number, model_type, status)
+		VALUES ($1, $2, 'VTR-2000', 'assembly')
+		RETURNING id
+	`, soID, orderNum).Scan(&machineID)
+	if err != nil {
+		t.Fatalf("failed to insert test machine: %v", err)
+	}
+	defer func() {
+		_, _ = db.DB.Exec("DELETE FROM time_entries WHERE machine_id = $1", machineID)
+		_, _ = db.DB.Exec("DELETE FROM project_tasks WHERE machine_id = $1", machineID)
+		_, _ = db.DB.Exec("DELETE FROM machines WHERE id = $1", machineID)
+		_, _ = db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", soID)
+	}()
+
+	var deptTaskID uuid.UUID
+
+	t.Run("Create_Master_Task_Via_Alias_With_Description", func(t *testing.T) {
+		desc := "Standard harness assembly and pinout verification"
+		taskReq := models.CreateDepartmentTaskRequest{
+			Department:         "Assembly",
+			TaskCode:           "ASY-TEST-01",
+			TaskName:           "Wire Harness Testing",
+			Description:        &desc,
+			DefaultQuotedHours: 6.0,
+		}
+		body, _ := json.Marshal(taskReq)
+		req := httptest.NewRequest(http.MethodPost, "/api/tasks", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(managerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var created models.DepartmentTask
+		if err := json.NewDecoder(rr.Body).Decode(&created); err != nil {
+			t.Fatalf("failed to decode created task: %v", err)
+		}
+		if created.Description == nil || *created.Description != desc {
+			t.Errorf("expected description %q, got %v", desc, created.Description)
+		}
+		deptTaskID = created.ID
+	})
+
+	defer func() {
+		if deptTaskID != uuid.Nil {
+			_, _ = db.DB.Exec("DELETE FROM department_tasks WHERE id = $1", deptTaskID)
+		}
+	}()
+
+	var projectTaskID uuid.UUID
+
+	t.Run("Create_Project_Task_Linked_To_Master_Task", func(t *testing.T) {
+		ptReq := models.CreateProjectTaskRequest{
+			TaskID:      &deptTaskID,
+			TaskCode:    "ASY-TEST-01",
+			TaskName:    "Wire Harness Testing",
+			Department:  "Assembly",
+			QuotedHours: 8.0,
+		}
+		body, _ := json.Marshal(ptReq)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/tasks", machineID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(managerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var pt models.ProjectTask
+		_ = json.NewDecoder(rr.Body).Decode(&pt)
+		if pt.TaskID == nil || *pt.TaskID != deptTaskID {
+			t.Errorf("expected project task task_id to link to %s, got %v", deptTaskID, pt.TaskID)
+		}
+		projectTaskID = pt.ID
+	})
+
+	t.Run("Log_Time_And_Verify_Machine_Labor_Correlation", func(t *testing.T) {
+		// Worker logs 10 hours on the 8-hour budgeted task -> should show over budget
+		timeReq := models.CreateTimeEntryRequest{
+			MachineID:       &machineID,
+			ProjectTaskID:   &projectTaskID,
+			EntryType:       models.TimeEntryTypeProduction,
+			WorkDate:        "2026-10-19",
+			HoursSpent:      10.0,
+			WorkDescription: "Wire Harness Testing",
+		}
+		body, _ := json.Marshal(timeReq)
+		req := httptest.NewRequest(http.MethodPost, "/api/time-entries", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		// Also log 2 hours of unbudgeted work (task without project_tasks quote)
+		unbudgetedReq := models.CreateTimeEntryRequest{
+			MachineID:       &machineID,
+			EntryType:       models.TimeEntryTypeProduction,
+			WorkDate:        "2026-10-20",
+			HoursSpent:      2.0,
+			WorkDescription: "Unbudgeted Emergency Rework",
+		}
+		unbudgetedBody, _ := json.Marshal(unbudgetedReq)
+		req2 := httptest.NewRequest(http.MethodPost, "/api/time-entries", bytes.NewReader(unbudgetedBody))
+		req2.Header.Set("Content-Type", "application/json")
+		req2.AddCookie(workerCookie)
+
+		rr2 := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr2, req2)
+		if rr2.Code != http.StatusCreated {
+			t.Fatalf("expected 201 for unbudgeted entry, got %d: %s", rr2.Code, rr2.Body.String())
+		}
+
+		// Fetch labor correlation report
+		corrReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/machines/%s/labor-correlation", machineID), nil)
+		corrReq.AddCookie(managerCookie)
+		corrRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(corrRR, corrReq)
+
+		if corrRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on labor-correlation, got %d: %s", corrRR.Code, corrRR.Body.String())
+		}
+
+		var report models.MachineLaborCorrelationReport
+		if err := json.NewDecoder(corrRR.Body).Decode(&report); err != nil {
+			t.Fatalf("failed to decode correlation report: %v", err)
+		}
+
+		if report.TotalAssignedHours != 8.0 {
+			t.Errorf("expected TotalAssignedHours 8.0, got %v", report.TotalAssignedHours)
+		}
+		if report.TotalConsumedHours != 12.0 {
+			t.Errorf("expected TotalConsumedHours 12.0 (10 + 2), got %v", report.TotalConsumedHours)
+		}
+		if report.NetVariance != 4.0 {
+			t.Errorf("expected NetVariance 4.0, got %v", report.NetVariance)
+		}
+		if report.OverallBurnPercentage != 150.0 {
+			t.Errorf("expected OverallBurnPercentage 150.0%%, got %v", report.OverallBurnPercentage)
+		}
+
+		// Verify task statuses
+		var foundBudgeted, foundUnbudgeted bool
+		for _, item := range report.Tasks {
+			if item.TaskName == "Wire Harness Testing" {
+				foundBudgeted = true
+				if item.Status != models.CorrelationStatusOverBudget {
+					t.Errorf("expected Wire Harness Testing status %s, got %s", models.CorrelationStatusOverBudget, item.Status)
+				}
+				if item.BurnPercentage != 125.0 {
+					t.Errorf("expected burn 125%%, got %v", item.BurnPercentage)
+				}
+			}
+			if item.TaskName == "Unbudgeted Emergency Rework" {
+				foundUnbudgeted = true
+				if item.Status != models.CorrelationStatusUnbudgeted {
+					t.Errorf("expected unbudgeted status %s, got %s", models.CorrelationStatusUnbudgeted, item.Status)
+				}
+			}
+		}
+
+		if !foundBudgeted {
+			t.Errorf("budgeted task not found in report tasks: %+v", report.Tasks)
+		}
+		if !foundUnbudgeted {
+			t.Errorf("unbudgeted task not found in report tasks: %+v", report.Tasks)
+		}
+	})
+}
+
+

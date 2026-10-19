@@ -26,14 +26,14 @@ func handleGetMachineTasks(w http.ResponseWriter, r *http.Request) {
 
 	query := `
 		SELECT 
-			pt.id, pt.machine_id, m.order_number, pt.task_code, pt.task_name, pt.department,
+			pt.id, pt.machine_id, m.order_number, pt.task_id, pt.task_code, pt.task_name, pt.department,
 			pt.quoted_hours,
 			COALESCE(SUM(te.hours_spent), 0.00) AS actual_hours,
 			(COALESCE(SUM(te.hours_spent), 0.00) - pt.quoted_hours) AS variance,
 			pt.status, pt.created_by, pt.created_at, pt.updated_at
 		FROM project_tasks pt
 		JOIN machines m ON pt.machine_id = m.id
-		LEFT JOIN time_entries te ON te.project_task_id = pt.id AND te.entry_type = 'production'
+		LEFT JOIN time_entries te ON (te.project_task_id = pt.id OR (te.machine_id = pt.machine_id AND te.task_id IS NOT NULL AND te.task_id = pt.task_id)) AND te.entry_type = 'production'
 		WHERE pt.machine_id = $1
 		GROUP BY pt.id, m.order_number
 		ORDER BY pt.created_at ASC
@@ -51,8 +51,9 @@ func handleGetMachineTasks(w http.ResponseWriter, r *http.Request) {
 		var t models.ProjectTask
 		var orderNum string
 		var createdBy uuid.NullUUID
+		var taskID uuid.NullUUID
 		err := rows.Scan(
-			&t.ID, &t.MachineID, &orderNum, &t.TaskCode, &t.TaskName, &t.Department,
+			&t.ID, &t.MachineID, &orderNum, &taskID, &t.TaskCode, &t.TaskName, &t.Department,
 			&t.QuotedHours, &t.ActualHours, &t.Variance, &t.Status, &createdBy,
 			&t.CreatedAt, &t.UpdatedAt,
 		)
@@ -61,6 +62,9 @@ func handleGetMachineTasks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		t.OrderNumber = orderNum
+		if taskID.Valid {
+			t.TaskID = &taskID.UUID
+		}
 		if createdBy.Valid {
 			t.CreatedBy = &createdBy.UUID
 		}
@@ -102,23 +106,39 @@ func handleCreateProjectTask(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var taskUUID *uuid.UUID = req.TaskID
+	if taskUUID == nil {
+		var resolvedID uuid.UUID
+		if err := db.DB.QueryRowContext(r.Context(), `
+			SELECT id FROM department_tasks 
+			WHERE (LOWER(REPLACE(REPLACE(department, '-', ''), '_', '')) = LOWER(REPLACE(REPLACE($1, '-', ''), '_', ''))
+			       OR (LOWER(department) IN ('controls', 'electrical-controls', 'electrical_controls') AND LOWER($1) IN ('controls', 'electrical-controls', 'electrical_controls')))
+			  AND (task_code = $2 OR LOWER(task_name) = LOWER($3))
+			LIMIT 1
+		`, req.Department, req.TaskCode, req.TaskName).Scan(&resolvedID); err == nil {
+			taskUUID = &resolvedID
+		}
+	}
+
 	var task models.ProjectTask
 	var createdBy uuid.NullUUID
+	var scannedTaskID uuid.NullUUID
 	upsertQuery := `
-		INSERT INTO project_tasks (machine_id, task_code, task_name, department, quoted_hours, status, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, 'open', $6, NOW(), NOW())
+		INSERT INTO project_tasks (machine_id, task_id, task_code, task_name, department, quoted_hours, status, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 'open', $7, NOW(), NOW())
 		ON CONFLICT (machine_id, task_code) DO UPDATE
-		SET task_name = EXCLUDED.task_name,
+		SET task_id = COALESCE(EXCLUDED.task_id, project_tasks.task_id),
+		    task_name = EXCLUDED.task_name,
 		    department = EXCLUDED.department,
 		    quoted_hours = EXCLUDED.quoted_hours,
 		    updated_at = NOW()
-		RETURNING id, machine_id, task_code, task_name, department, quoted_hours, status, created_by, created_at, updated_at
+		RETURNING id, machine_id, task_id, task_code, task_name, department, quoted_hours, status, created_by, created_at, updated_at
 	`
 
 	err = db.DB.QueryRowContext(r.Context(), upsertQuery,
-		machineID, req.TaskCode, req.TaskName, req.Department, req.QuotedHours, creatorUUID,
+		machineID, taskUUID, req.TaskCode, req.TaskName, req.Department, req.QuotedHours, creatorUUID,
 	).Scan(
-		&task.ID, &task.MachineID, &task.TaskCode, &task.TaskName, &task.Department,
+		&task.ID, &task.MachineID, &scannedTaskID, &task.TaskCode, &task.TaskName, &task.Department,
 		&task.QuotedHours, &task.Status, &createdBy, &task.CreatedAt, &task.UpdatedAt,
 	)
 	if err != nil {
@@ -126,6 +146,9 @@ func handleCreateProjectTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if scannedTaskID.Valid {
+		task.TaskID = &scannedTaskID.UUID
+	}
 	if createdBy.Valid {
 		task.CreatedBy = &createdBy.UUID
 	}
@@ -134,10 +157,10 @@ func handleCreateProjectTask(w http.ResponseWriter, r *http.Request) {
 	_ = db.DB.QueryRowContext(r.Context(), `
 		SELECT m.order_number, COALESCE(SUM(te.hours_spent), 0.00)
 		FROM machines m
-		LEFT JOIN time_entries te ON te.project_task_id = $1 AND te.entry_type = 'production'
+		LEFT JOIN time_entries te ON (te.project_task_id = $1 OR (te.machine_id = $2 AND te.task_id IS NOT NULL AND te.task_id = $3)) AND te.entry_type = 'production'
 		WHERE m.id = $2
 		GROUP BY m.order_number
-	`, task.ID, task.MachineID).Scan(&task.OrderNumber, &task.ActualHours)
+	`, task.ID, task.MachineID, taskUUID).Scan(&task.OrderNumber, &task.ActualHours)
 	task.Variance = task.ActualHours - task.QuotedHours
 
 	BroadcastEvent("timesheet_task_updated", task)
@@ -243,15 +266,37 @@ func handleCreateTimeEntry(w http.ResponseWriter, r *http.Request) {
 	var machineID *uuid.UUID = req.MachineID
 	switch req.EntryType {
 	case models.TimeEntryTypeProduction:
-		if req.ProjectTaskID == nil {
-			respondError(w, http.StatusBadRequest, "project_task_id is required for production time entries", nil)
+		if req.ProjectTaskID == nil && req.TaskID == nil && strings.TrimSpace(req.WorkDescription) == "" {
+			respondError(w, http.StatusBadRequest, "task or project_task_id is required for production time entries", nil)
 			return
 		}
 		// Resolve machine_id from project_task if missing
-		if machineID == nil {
+		if machineID == nil && req.ProjectTaskID != nil {
 			var mID uuid.UUID
 			if err := db.DB.QueryRowContext(r.Context(), `SELECT machine_id FROM project_tasks WHERE id = $1`, req.ProjectTaskID).Scan(&mID); err == nil {
 				machineID = &mID
+			}
+		}
+		if machineID == nil {
+			respondError(w, http.StatusBadRequest, "machine_id is required for production time entries", nil)
+			return
+		}
+		// Try to resolve project_task_id if missing
+		if req.ProjectTaskID == nil {
+			var ptID uuid.UUID
+			if req.TaskID != nil {
+				if err := db.DB.QueryRowContext(r.Context(), `
+					SELECT id FROM project_tasks WHERE machine_id = $1 AND task_id = $2 LIMIT 1
+				`, *machineID, *req.TaskID).Scan(&ptID); err == nil {
+					req.ProjectTaskID = &ptID
+				}
+			}
+			if req.ProjectTaskID == nil && req.WorkDescription != "" {
+				if err := db.DB.QueryRowContext(r.Context(), `
+					SELECT id FROM project_tasks WHERE machine_id = $1 AND (task_name = $2 OR task_code = $2) LIMIT 1
+				`, *machineID, req.WorkDescription).Scan(&ptID); err == nil {
+					req.ProjectTaskID = &ptID
+				}
 			}
 		}
 	case models.TimeEntryTypeRework:
@@ -300,17 +345,34 @@ func handleCreateTimeEntry(w http.ResponseWriter, r *http.Request) {
 		RETURNING id
 	`, userUUID, workDate).Scan(&weeklyTimesheetID)
 
+	var authorTaskID *uuid.UUID = req.TaskID
+	if authorTaskID == nil && req.ProjectTaskID != nil {
+		var resolvedTaskID uuid.NullUUID
+		_ = db.DB.QueryRowContext(r.Context(), `SELECT task_id FROM project_tasks WHERE id = $1`, req.ProjectTaskID).Scan(&resolvedTaskID)
+		if resolvedTaskID.Valid {
+			authorTaskID = &resolvedTaskID.UUID
+		}
+	}
+	if authorTaskID == nil && req.WorkDescription != "" {
+		var resolvedTaskID uuid.UUID
+		if err := db.DB.QueryRowContext(r.Context(), `
+			SELECT id FROM department_tasks WHERE (task_name = $1 OR task_code = $1) ORDER BY is_active DESC LIMIT 1
+		`, req.WorkDescription).Scan(&resolvedTaskID); err == nil {
+			authorTaskID = &resolvedTaskID
+		}
+	}
+
 	insertQuery := `
 		INSERT INTO time_entries (
-			user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, rework_item_id, defect_id,
+			user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, task_id, rework_item_id, defect_id,
 			work_date, hours_spent, work_description, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-		RETURNING id, user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, rework_item_id, defect_id,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+		RETURNING id, user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, task_id, rework_item_id, defect_id,
 		          work_date, hours_spent, work_description, created_at, updated_at
 	`
 
 	var entry models.TimeEntry
-	var mID, taskID, rwID, defID, wtID uuid.NullUUID
+	var mID, taskID, aTaskID, rwID, defID, wtID uuid.NullUUID
 	var wDate time.Time
 
 	var wtIDParam *uuid.UUID
@@ -319,10 +381,10 @@ func handleCreateTimeEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = db.DB.QueryRowContext(r.Context(), insertQuery,
-		userUUID, wtIDParam, machineID, req.EntryType, req.ProjectTaskID, req.ReworkItemID, req.DefectID,
+		userUUID, wtIDParam, machineID, req.EntryType, req.ProjectTaskID, authorTaskID, req.ReworkItemID, req.DefectID,
 		workDate, req.HoursSpent, req.WorkDescription,
 	).Scan(
-		&entry.ID, &entry.UserID, &wtID, &mID, &entry.EntryType, &taskID, &rwID, &defID,
+		&entry.ID, &entry.UserID, &wtID, &mID, &entry.EntryType, &taskID, &aTaskID, &rwID, &defID,
 		&wDate, &entry.HoursSpent, &entry.WorkDescription, &entry.CreatedAt, &entry.UpdatedAt,
 	)
 	if err != nil {
@@ -333,6 +395,9 @@ func handleCreateTimeEntry(w http.ResponseWriter, r *http.Request) {
 	entry.WorkDate = wDate.Format("2006-01-02")
 	if wtID.Valid {
 		entry.WeeklyTimesheetID = &wtID.UUID
+	}
+	if aTaskID.Valid {
+		entry.TaskID = &aTaskID.UUID
 	}
 	if weeklyTimesheetID != uuid.Nil {
 		_, _ = db.DB.ExecContext(r.Context(), `
@@ -394,7 +459,9 @@ func handleGetMyTimeEntries(w http.ResponseWriter, r *http.Request) {
 	query := `
 		SELECT 
 			te.id, te.user_id, u.username, te.machine_id, COALESCE(m.order_number, ''),
-			te.entry_type, te.project_task_id, COALESCE(pt.task_name, ''),
+			te.entry_type, te.project_task_id, te.task_id,
+			COALESCE(dt.task_name, pt.task_name, te.work_description, ''),
+			COALESCE(dt.department, pt.department, ''),
 			te.rework_item_id, COALESCE(rw.part_number, ''),
 			te.defect_id,
 			te.work_date, te.hours_spent, COALESCE(te.work_description, ''),
@@ -403,6 +470,7 @@ func handleGetMyTimeEntries(w http.ResponseWriter, r *http.Request) {
 		JOIN users u ON te.user_id = u.id
 		LEFT JOIN machines m ON te.machine_id = m.id
 		LEFT JOIN project_tasks pt ON te.project_task_id = pt.id
+		LEFT JOIN department_tasks dt ON te.task_id = dt.id
 		LEFT JOIN rework_items rw ON te.rework_item_id = rw.id
 		WHERE te.user_id = $1
 	`
@@ -430,12 +498,13 @@ func handleGetMyTimeEntries(w http.ResponseWriter, r *http.Request) {
 	entries := make([]models.TimeEntry, 0)
 	for rows.Next() {
 		var e models.TimeEntry
-		var mID, taskID, rwID, defID uuid.NullUUID
+		var mID, taskID, aTaskID, rwID, defID uuid.NullUUID
 		var wDate time.Time
 
 		err := rows.Scan(
 			&e.ID, &e.UserID, &e.UserName, &mID, &e.OrderNumber,
-			&e.EntryType, &taskID, &e.TaskName,
+			&e.EntryType, &taskID, &aTaskID, &e.TaskName,
+			&e.Department,
 			&rwID, &e.ReworkPartNum,
 			&defID,
 			&wDate, &e.HoursSpent, &e.WorkDescription,
@@ -452,6 +521,9 @@ func handleGetMyTimeEntries(w http.ResponseWriter, r *http.Request) {
 		}
 		if taskID.Valid {
 			e.ProjectTaskID = &taskID.UUID
+		}
+		if aTaskID.Valid {
+			e.TaskID = &aTaskID.UUID
 		}
 		if rwID.Valid {
 			e.ReworkItemID = &rwID.UUID
@@ -685,20 +757,170 @@ func handleGetQuotingReviewReport(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, summaries)
 }
 
+// handleGetMachineLaborCorrelation returns a unified correlation report linking assigned vs consumed hours per authoritative task.
+func handleGetMachineLaborCorrelation(w http.ResponseWriter, r *http.Request) {
+	machineIDStr := r.PathValue("id")
+	machineID, err := uuid.Parse(machineIDStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid machine ID", err)
+		return
+	}
+
+	var report models.MachineLaborCorrelationReport
+	report.MachineID = machineID
+	report.Tasks = make([]models.LaborCorrelationItem, 0)
+	report.DepartmentBreakdown = make(map[string]models.DepartmentRollup)
+
+	// Fetch machine info
+	err = db.DB.QueryRowContext(r.Context(), `
+		SELECT order_number, model_type, status FROM machines WHERE id = $1
+	`, machineID).Scan(&report.OrderNumber, &report.ModelType, &report.Status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondError(w, http.StatusNotFound, "Machine not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to fetch machine info", err)
+		return
+	}
+
+	correlationQuery := `
+		WITH assigned AS (
+			SELECT 
+				pt.id AS project_task_id,
+				pt.task_id,
+				COALESCE(dt.task_code, pt.task_code) AS task_code,
+				COALESCE(dt.task_name, pt.task_name) AS task_name,
+				COALESCE(dt.department, pt.department) AS department,
+				COALESCE(pt.quoted_hours, 0.00) AS assigned_hours,
+				COALESCE(pt.task_id::text, pt.task_code) AS correlation_key
+			FROM project_tasks pt
+			LEFT JOIN department_tasks dt ON pt.task_id = dt.id
+			WHERE pt.machine_id = $1
+		),
+		consumed AS (
+			SELECT 
+				COALESCE(te.task_id, pt.task_id) AS task_id,
+				COALESCE(dt.task_code, pt.task_code, 'custom') AS task_code,
+				COALESCE(dt.task_name, pt.task_name, te.work_description, 'General Task') AS task_name,
+				COALESCE(dt.department, pt.department, 'unassigned') AS department,
+				COALESCE(SUM(te.hours_spent), 0.00) AS consumed_hours,
+				COALESCE(COALESCE(te.task_id, pt.task_id)::text, COALESCE(dt.task_code, pt.task_code, te.work_description)) AS correlation_key
+			FROM time_entries te
+			LEFT JOIN project_tasks pt ON te.project_task_id = pt.id
+			LEFT JOIN department_tasks dt ON COALESCE(te.task_id, pt.task_id) = dt.id
+			WHERE te.machine_id = $1 AND te.entry_type = 'production'
+			GROUP BY 
+				COALESCE(te.task_id, pt.task_id),
+				COALESCE(dt.task_code, pt.task_code, 'custom'),
+				COALESCE(dt.task_name, pt.task_name, te.work_description, 'General Task'),
+				COALESCE(dt.department, pt.department, 'unassigned'),
+				COALESCE(COALESCE(te.task_id, pt.task_id)::text, COALESCE(dt.task_code, pt.task_code, te.work_description))
+		)
+		SELECT 
+			COALESCE(a.task_id, c.task_id) AS task_id,
+			COALESCE(a.task_code, c.task_code) AS task_code,
+			COALESCE(a.task_name, c.task_name) AS task_name,
+			COALESCE(a.department, c.department) AS department,
+			COALESCE(a.assigned_hours, 0.00) AS assigned_hours,
+			COALESCE(c.consumed_hours, 0.00) AS consumed_hours,
+			a.project_task_id
+		FROM assigned a
+		FULL OUTER JOIN consumed c ON a.correlation_key = c.correlation_key
+		ORDER BY COALESCE(a.department, c.department) ASC, COALESCE(a.task_name, c.task_name) ASC
+	`
+
+	rows, err := db.DB.QueryContext(r.Context(), correlationQuery, machineID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to run labor correlation", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item models.LaborCorrelationItem
+		var taskID uuid.NullUUID
+		var ptID uuid.NullUUID
+		if err := rows.Scan(
+			&taskID, &item.TaskCode, &item.TaskName, &item.Department,
+			&item.AssignedHours, &item.ConsumedHours, &ptID,
+		); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to scan correlation item", err)
+			return
+		}
+
+		if taskID.Valid {
+			item.TaskID = &taskID.UUID
+		}
+		if ptID.Valid {
+			item.ProjectTaskID = &ptID.UUID
+		}
+
+		item.Variance = item.ConsumedHours - item.AssignedHours
+		if item.AssignedHours > 0 {
+			item.BurnPercentage = (item.ConsumedHours / item.AssignedHours) * 100.0
+			if item.ConsumedHours == 0 {
+				item.Status = models.CorrelationStatusBudgetedUnstarted
+			} else if item.ConsumedHours > item.AssignedHours {
+				item.Status = models.CorrelationStatusOverBudget
+			} else if item.BurnPercentage >= 85.0 {
+				item.Status = models.CorrelationStatusNearingLimit
+			} else {
+				item.Status = models.CorrelationStatusOnTrack
+			}
+		} else {
+			item.BurnPercentage = 0.0
+			item.Status = models.CorrelationStatusUnbudgeted
+		}
+
+		report.TotalAssignedHours += item.AssignedHours
+		report.TotalConsumedHours += item.ConsumedHours
+		report.Tasks = append(report.Tasks, item)
+
+		// Department rollup
+		deptRollup, exists := report.DepartmentBreakdown[item.Department]
+		if !exists {
+			deptRollup = models.DepartmentRollup{Department: item.Department}
+		}
+		deptRollup.AssignedHours += item.AssignedHours
+		deptRollup.ConsumedHours += item.ConsumedHours
+		deptRollup.Variance = deptRollup.ConsumedHours - deptRollup.AssignedHours
+		if deptRollup.AssignedHours > 0 {
+			deptRollup.BurnPercentage = (deptRollup.ConsumedHours / deptRollup.AssignedHours) * 100.0
+		}
+		report.DepartmentBreakdown[item.Department] = deptRollup
+	}
+
+	report.NetVariance = report.TotalConsumedHours - report.TotalAssignedHours
+	if report.TotalAssignedHours > 0 {
+		report.OverallBurnPercentage = (report.TotalConsumedHours / report.TotalAssignedHours) * 100.0
+	}
+
+	respondJSON(w, http.StatusOK, report)
+}
+
 // handleGetDepartmentTasks returns core catalog tasks, optionally filtered by department.
 func handleGetDepartmentTasks(w http.ResponseWriter, r *http.Request) {
 	dept := r.URL.Query().Get("department")
 	includeInactive := r.URL.Query().Get("include_inactive") == "true"
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search == "" {
+		search = strings.TrimSpace(r.URL.Query().Get("q"))
+	}
 
 	query := `
-		SELECT id, department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at
+		SELECT id, department, task_code, task_name, description, default_quoted_hours, is_active, created_by, created_at, updated_at
 		FROM department_tasks
 		WHERE 1=1
 	`
 	var args []interface{}
 	if dept != "" {
 		args = append(args, dept)
-		query += fmt.Sprintf(" AND department = $%d", len(args))
+		query += fmt.Sprintf(" AND (department = $%d OR (LOWER(department) IN ('controls', 'electrical-controls', 'electrical_controls') AND LOWER($%d) IN ('controls', 'electrical-controls', 'electrical_controls')))", len(args), len(args))
+	}
+	if search != "" {
+		args = append(args, "%"+search+"%")
+		query += fmt.Sprintf(" AND (task_name ILIKE $%d OR task_code ILIKE $%d OR description ILIKE $%d)", len(args), len(args), len(args))
 	}
 	if !includeInactive {
 		query += " AND is_active = TRUE"
@@ -715,15 +937,19 @@ func handleGetDepartmentTasks(w http.ResponseWriter, r *http.Request) {
 	tasks := make([]models.DepartmentTask, 0)
 	for rows.Next() {
 		var t models.DepartmentTask
+		var desc sql.NullString
 		var createdBy uuid.NullUUID
 		err := rows.Scan(
-			&t.ID, &t.Department, &t.TaskCode, &t.TaskName,
+			&t.ID, &t.Department, &t.TaskCode, &t.TaskName, &desc,
 			&t.DefaultQuotedHours, &t.IsActive, &createdBy,
 			&t.CreatedAt, &t.UpdatedAt,
 		)
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning department task", err)
 			return
+		}
+		if desc.Valid {
+			t.Description = &desc.String
 		}
 		if createdBy.Valid {
 			t.CreatedBy = &createdBy.UUID
@@ -760,28 +986,33 @@ func handleCreateDepartmentTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := `
-		INSERT INTO department_tasks (department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, TRUE, $5, NOW(), NOW())
+		INSERT INTO department_tasks (department, task_code, task_name, description, default_quoted_hours, is_active, created_by, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, TRUE, $6, NOW(), NOW())
 		ON CONFLICT (department, task_code) DO UPDATE
 		SET task_name = EXCLUDED.task_name,
+		    description = COALESCE(EXCLUDED.description, department_tasks.description),
 		    default_quoted_hours = EXCLUDED.default_quoted_hours,
 		    is_active = TRUE,
 		    updated_at = NOW()
-		RETURNING id, department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at
+		RETURNING id, department, task_code, task_name, description, default_quoted_hours, is_active, created_by, created_at, updated_at
 	`
 
 	var t models.DepartmentTask
+	var desc sql.NullString
 	var createdBy uuid.NullUUID
 	err := db.DB.QueryRowContext(r.Context(), query,
-		req.Department, req.TaskCode, req.TaskName, req.DefaultQuotedHours, creatorUUID,
+		req.Department, req.TaskCode, req.TaskName, req.Description, req.DefaultQuotedHours, creatorUUID,
 	).Scan(
-		&t.ID, &t.Department, &t.TaskCode, &t.TaskName,
+		&t.ID, &t.Department, &t.TaskCode, &t.TaskName, &desc,
 		&t.DefaultQuotedHours, &t.IsActive, &createdBy,
 		&t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to create department task", err)
 		return
+	}
+	if desc.Valid {
+		t.Description = &desc.String
 	}
 	if createdBy.Valid {
 		t.CreatedBy = &createdBy.UUID
@@ -814,18 +1045,24 @@ func handleUpdateDepartmentTask(w http.ResponseWriter, r *http.Request) {
 	query := `
 		UPDATE department_tasks
 		SET 
-			task_name = COALESCE($1, task_name),
-			default_quoted_hours = COALESCE($2, default_quoted_hours),
-			is_active = COALESCE($3, is_active),
+			department = COALESCE($1, department),
+			task_code = COALESCE($2, task_code),
+			task_name = COALESCE($3, task_name),
+			description = COALESCE($4, description),
+			default_quoted_hours = COALESCE($5, default_quoted_hours),
+			is_active = COALESCE($6, is_active),
 			updated_at = NOW()
-		WHERE id = $4
-		RETURNING id, department, task_code, task_name, default_quoted_hours, is_active, created_by, created_at, updated_at
+		WHERE id = $7
+		RETURNING id, department, task_code, task_name, description, default_quoted_hours, is_active, created_by, created_at, updated_at
 	`
 
 	var t models.DepartmentTask
+	var desc sql.NullString
 	var createdBy uuid.NullUUID
-	err = db.DB.QueryRowContext(r.Context(), query, req.TaskName, req.DefaultQuotedHours, req.IsActive, taskID).Scan(
-		&t.ID, &t.Department, &t.TaskCode, &t.TaskName,
+	err = db.DB.QueryRowContext(r.Context(), query,
+		req.Department, req.TaskCode, req.TaskName, req.Description, req.DefaultQuotedHours, req.IsActive, taskID,
+	).Scan(
+		&t.ID, &t.Department, &t.TaskCode, &t.TaskName, &desc,
 		&t.DefaultQuotedHours, &t.IsActive, &createdBy,
 		&t.CreatedAt, &t.UpdatedAt,
 	)
@@ -836,6 +1073,9 @@ func handleUpdateDepartmentTask(w http.ResponseWriter, r *http.Request) {
 		}
 		respondError(w, http.StatusInternalServerError, "Failed to update department task", err)
 		return
+	}
+	if desc.Valid {
+		t.Description = &desc.String
 	}
 	if createdBy.Valid {
 		t.CreatedBy = &createdBy.UUID
@@ -924,8 +1164,9 @@ func fetchWeeklyTimesheet(ctx context.Context, timesheetID uuid.UUID) (*models.W
 	entriesQuery := `
 		SELECT 
 			te.id, te.user_id, u.username, te.weekly_timesheet_id, te.machine_id, COALESCE(m.order_number, ''),
-			te.entry_type, te.project_task_id, COALESCE(pt.task_name, te.work_description, 'General Task'),
-			COALESCE(pt.department, ''),
+			te.entry_type, te.project_task_id, te.task_id,
+			COALESCE(dt.task_name, pt.task_name, te.work_description, 'General Task'),
+			COALESCE(dt.department, pt.department, ''),
 			te.rework_item_id, COALESCE(rw.part_number, ''),
 			te.defect_id,
 			to_char(te.work_date, 'YYYY-MM-DD'), te.hours_spent, COALESCE(te.work_description, ''),
@@ -934,6 +1175,7 @@ func fetchWeeklyTimesheet(ctx context.Context, timesheetID uuid.UUID) (*models.W
 		JOIN users u ON te.user_id = u.id
 		LEFT JOIN machines m ON te.machine_id = m.id
 		LEFT JOIN project_tasks pt ON te.project_task_id = pt.id
+		LEFT JOIN department_tasks dt ON te.task_id = dt.id
 		LEFT JOIN rework_items rw ON te.rework_item_id = rw.id
 		WHERE te.weekly_timesheet_id = $1
 		ORDER BY te.work_date ASC, te.created_at ASC
@@ -947,10 +1189,10 @@ func fetchWeeklyTimesheet(ctx context.Context, timesheetID uuid.UUID) (*models.W
 	wt.Entries = make([]models.TimeEntry, 0)
 	for rows.Next() {
 		var e models.TimeEntry
-		var wtID, mID, taskID, rwID, defID uuid.NullUUID
+		var wtID, mID, taskID, aTaskID, rwID, defID uuid.NullUUID
 		err := rows.Scan(
 			&e.ID, &e.UserID, &e.UserName, &wtID, &mID, &e.OrderNumber,
-			&e.EntryType, &taskID, &e.TaskName,
+			&e.EntryType, &taskID, &aTaskID, &e.TaskName,
 			&e.Department,
 			&rwID, &e.ReworkPartNum,
 			&defID,
@@ -968,6 +1210,9 @@ func fetchWeeklyTimesheet(ctx context.Context, timesheetID uuid.UUID) (*models.W
 		}
 		if taskID.Valid {
 			e.ProjectTaskID = &taskID.UUID
+		}
+		if aTaskID.Valid {
+			e.TaskID = &aTaskID.UUID
 		}
 		if rwID.Valid {
 			e.ReworkItemID = &rwID.UUID
@@ -1166,25 +1411,57 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Resolve project_task_id from machine if missing but task description is provided
-		if item.ProjectTaskID == nil && machineID != nil && item.WorkDescription != "" {
-			var ptID uuid.UUID
+		authorTaskID := item.TaskID
+		if authorTaskID == nil && item.ProjectTaskID != nil {
+			var ptTaskID uuid.NullUUID
+			_ = tx.QueryRowContext(r.Context(), `SELECT task_id FROM project_tasks WHERE id = $1`, item.ProjectTaskID).Scan(&ptTaskID)
+			if ptTaskID.Valid {
+				authorTaskID = &ptTaskID.UUID
+			}
+		}
+
+		if authorTaskID == nil && item.WorkDescription != "" {
+			var dtID uuid.UUID
 			if err := tx.QueryRowContext(r.Context(), `
-				SELECT id FROM project_tasks
-				WHERE machine_id = $1 AND (task_name = $2 OR task_code = $2)
+				SELECT id FROM department_tasks
+				WHERE (task_name = $1 OR task_code = $1)
+				ORDER BY is_active DESC, created_at DESC
 				LIMIT 1
-			`, *machineID, item.WorkDescription).Scan(&ptID); err == nil {
-				item.ProjectTaskID = &ptID
+			`, item.WorkDescription).Scan(&dtID); err == nil {
+				authorTaskID = &dtID
+			}
+		}
+
+		// Resolve project_task_id from machine if missing
+		if item.ProjectTaskID == nil && machineID != nil {
+			var ptID uuid.UUID
+			if authorTaskID != nil {
+				if err := tx.QueryRowContext(r.Context(), `
+					SELECT id FROM project_tasks
+					WHERE machine_id = $1 AND task_id = $2
+					LIMIT 1
+				`, *machineID, *authorTaskID).Scan(&ptID); err == nil {
+					item.ProjectTaskID = &ptID
+				}
+			}
+			if item.ProjectTaskID == nil && item.WorkDescription != "" {
+				if err := tx.QueryRowContext(r.Context(), `
+					SELECT id FROM project_tasks
+					WHERE machine_id = $1 AND (task_name = $2 OR task_code = $2)
+					LIMIT 1
+				`, *machineID, item.WorkDescription).Scan(&ptID); err == nil {
+					item.ProjectTaskID = &ptID
+				}
 			}
 		}
 
 		if item.ID != nil && existingIDs[*item.ID] {
 			_, err = tx.ExecContext(r.Context(), `
 				UPDATE time_entries
-				SET machine_id = $1, entry_type = $2, project_task_id = $3,
-				    work_date = $4::date, hours_spent = $5, work_description = $6, updated_at = NOW()
-				WHERE id = $7 AND weekly_timesheet_id = $8
-			`, machineID, entryType, item.ProjectTaskID, item.WorkDate, item.HoursSpent, item.WorkDescription, *item.ID, timesheetID)
+				SET machine_id = $1, entry_type = $2, project_task_id = $3, task_id = $4,
+				    work_date = $5::date, hours_spent = $6, work_description = $7, updated_at = NOW()
+				WHERE id = $8 AND weekly_timesheet_id = $9
+			`, machineID, entryType, item.ProjectTaskID, authorTaskID, item.WorkDate, item.HoursSpent, item.WorkDescription, *item.ID, timesheetID)
 			if err != nil {
 				respondError(w, http.StatusInternalServerError, "Failed to update entry", err)
 				return
@@ -1194,11 +1471,11 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 			var newID uuid.UUID
 			err = tx.QueryRowContext(r.Context(), `
 				INSERT INTO time_entries (
-					user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id,
+					user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, task_id,
 					work_date, hours_spent, work_description, created_at, updated_at
-				) VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8, NOW(), NOW())
+				) VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8, $9, NOW(), NOW())
 				RETURNING id
-			`, ownerID, timesheetID, machineID, entryType, item.ProjectTaskID, item.WorkDate, item.HoursSpent, item.WorkDescription).Scan(&newID)
+			`, ownerID, timesheetID, machineID, entryType, item.ProjectTaskID, authorTaskID, item.WorkDate, item.HoursSpent, item.WorkDescription).Scan(&newID)
 			if err != nil {
 				respondError(w, http.StatusInternalServerError, "Failed to insert entry", err)
 				return

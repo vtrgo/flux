@@ -93,6 +93,64 @@ describe('TimesheetPage', () => {
     ],
   };
 
+  const mockLaborCorrelation = {
+    machine_id: 'm-1',
+    order_number: 'M-1001',
+    model_type: 'Centrifugal Feeder',
+    total_assigned_hours: 40.0,
+    total_consumed_hours: 7.5,
+    net_variance: -32.5,
+    overall_burn_percentage: 18.75,
+    status: 'on_track' as const,
+    unbudgeted_count: 0,
+    department_rollups: [
+      {
+        department: 'assembly',
+        assigned_hours: 40.0,
+        consumed_hours: 4.5,
+        variance: -35.5,
+        burn_percentage: 11.25,
+        status: 'on_track' as const,
+      },
+      {
+        department: 'controls',
+        assigned_hours: 20.0,
+        consumed_hours: 2.0,
+        variance: -18.0,
+        burn_percentage: 10.0,
+        status: 'on_track' as const,
+      },
+    ],
+    tasks: [
+      {
+        correlation_key: 'dt-1',
+        project_task_id: 'task-1',
+        task_id: 'dt-1',
+        task_code: 'mech_assembly',
+        task_name: 'Mechanical Assembly',
+        department: 'assembly',
+        assigned_hours: 40.0,
+        consumed_hours: 4.5,
+        variance: -35.5,
+        burn_percentage: 11.25,
+        status: 'on_track' as const,
+      },
+      {
+        correlation_key: 'dt-2',
+        project_task_id: 'task-2',
+        task_id: 'dt-2',
+        task_code: 'panel_wiring',
+        task_name: 'Panel Wiring',
+        department: 'controls',
+        assigned_hours: 20.0,
+        consumed_hours: 2.0,
+        variance: -18.0,
+        burn_percentage: 10.0,
+        status: 'on_track' as const,
+      },
+    ],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     (useAuth as any).mockReturnValue({
@@ -138,6 +196,9 @@ describe('TimesheetPage', () => {
       }
       if (endpoint === 'machines/m-1/labor-summary') {
         return Promise.resolve(mockLaborSummary);
+      }
+      if (endpoint === 'machines/m-1/labor-correlation') {
+        return Promise.resolve(mockLaborCorrelation);
       }
       if (endpoint === 'machines/m-1/tasks') {
         return Promise.resolve(mockLaborSummary.tasks);
@@ -281,12 +342,12 @@ describe('TimesheetPage', () => {
     });
 
     // Machine tasks should be loaded asynchronously and displayed in task select
-    expect(await screen.findAllByText(/\[assembly\] Mechanical Assembly \(Quoted: 40h\)/i)).not.toHaveLength(0);
+    expect(await screen.findAllByText(/\[assembly\] Mechanical Assembly \((Quoted|Budget): 40h\)/i)).not.toHaveLength(0);
 
     // Select the task on newly added row
     const taskSelects = screen.getAllByLabelText(/Task \/ Allocation Target/i);
     await act(async () => {
-      fireEvent.change(taskSelects[1], { target: { value: 'task:task-1' } });
+      fireEvent.change(taskSelects[1], { target: { value: 'dept:dt-1' } });
     });
 
     // User can directly add hours across the week (Sunday is day 1)

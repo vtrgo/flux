@@ -390,6 +390,7 @@ export interface ProjectTask {
   id: string;
   machine_id: string;
   order_number?: string;
+  task_id?: string;
   task_code: string;
   task_name: string;
   department: string;
@@ -411,6 +412,7 @@ export interface TimeEntry {
   order_number?: string;
   entry_type: TimeEntryType;
   project_task_id?: string;
+  task_id?: string;
   task_name?: string;
   department?: string;
   rework_item_id?: string;
@@ -431,7 +433,7 @@ export interface WeeklyTimesheet {
   user_name?: string;
   user_email?: string;
   department: string;
-  week_start_date: string; // YYYY-MM-DD (Monday)
+  week_start_date: string; // YYYY-MM-DD (Sunday)
   status: WeeklyTimesheetStatus;
   total_hours: number;
   notes?: string;
@@ -451,6 +453,7 @@ export interface WeeklyTimesheetSaveItem {
   machine_id?: string;
   entry_type: TimeEntryType;
   project_task_id?: string;
+  task_id?: string;
   department?: string;
   work_date: string;
   hours_spent: number;
@@ -481,6 +484,7 @@ export interface MachineLaborSummary {
 }
 
 export interface CreateProjectTaskRequest {
+  task_id?: string;
   task_code: string;
   task_name: string;
   department: string;
@@ -496,6 +500,7 @@ export interface CreateTimeEntryRequest {
   machine_id?: string;
   entry_type: TimeEntryType;
   project_task_id?: string;
+  task_id?: string;
   rework_item_id?: string;
   defect_id?: string;
   work_date?: string;
@@ -508,6 +513,7 @@ export interface DepartmentTask {
   department: string;
   task_code: string;
   task_name: string;
+  description?: string;
   default_quoted_hours: number;
   is_active: boolean;
   created_by?: string;
@@ -519,12 +525,58 @@ export interface CreateDepartmentTaskRequest {
   department: string;
   task_code: string;
   task_name: string;
+  description?: string;
   default_quoted_hours: number;
 }
 
 export interface UpdateDepartmentTaskRequest {
+  department?: string;
+  task_code?: string;
   task_name?: string;
+  description?: string;
   default_quoted_hours?: number;
   is_active?: boolean;
 }
+
+export type CorrelationStatus =
+  | 'budgeted_unstarted'
+  | 'on_track'
+  | 'nearing_limit'
+  | 'over_budget'
+  | 'unbudgeted';
+
+export interface LaborCorrelationItem {
+  task_id?: string;
+  task_code: string;
+  task_name: string;
+  department: string;
+  assigned_hours: number;
+  consumed_hours: number;
+  variance: number;
+  burn_percentage: number;
+  status: CorrelationStatus;
+  project_task_id?: string;
+}
+
+export interface DepartmentRollup {
+  department: string;
+  assigned_hours: number;
+  consumed_hours: number;
+  variance: number;
+  burn_percentage: number;
+}
+
+export interface MachineLaborCorrelationReport {
+  machine_id: string;
+  order_number: string;
+  model_type: string;
+  status: string;
+  total_assigned_hours: number;
+  total_consumed_hours: number;
+  net_variance: number;
+  overall_burn_percentage: number;
+  tasks: LaborCorrelationItem[];
+  department_breakdown: Record<string, DepartmentRollup>;
+}
+
 

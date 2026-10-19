@@ -28,6 +28,7 @@ interface GridRow {
   machine_id?: string;
   order_number?: string;
   project_task_id?: string;
+  task_id?: string;
   task_name: string;
   department?: string;
   entry_type: TimeEntryType;
@@ -49,6 +50,7 @@ const createBlankRow = (): GridRow => ({
   machine_id: '',
   order_number: '',
   project_task_id: '',
+  task_id: '',
   task_name: '',
   department: '',
   entry_type: 'production',
@@ -132,7 +134,7 @@ export function WeeklyTimesheetGrid({
 
     entries.forEach(entry => {
       const machineKey = entry.machine_id || 'none';
-      const taskKey = entry.project_task_id || entry.task_name || 'general';
+      const taskKey = entry.task_id || entry.project_task_id || entry.task_name || 'general';
       const typeKey = entry.entry_type || 'production';
       const rowKey = `${machineKey}:${taskKey}:${typeKey}`;
 
@@ -142,6 +144,7 @@ export function WeeklyTimesheetGrid({
           machine_id: entry.machine_id,
           order_number: entry.order_number || (entry.machine_id ? machines.find(m => m.id === entry.machine_id)?.order_number : undefined),
           project_task_id: entry.project_task_id,
+          task_id: entry.task_id,
           task_name: entry.task_name || 'General Task',
           department: entry.department,
           entry_type: entry.entry_type || 'production',
@@ -238,37 +241,49 @@ export function WeeklyTimesheetGrid({
       prev.map(r => {
         if (r.rowKey !== rowKey) return r;
         let projectTaskId: string | undefined;
+        let taskId: string | undefined;
         let taskName = r.task_name;
         let department = r.department;
 
-        if (taskIdentifier.startsWith('task:')) {
-          const taskId = taskIdentifier.replace('task:', '');
-          const tasks = r.machine_id ? machineTasksCache[r.machine_id] : undefined;
-          const found = tasks?.find(t => t.id === taskId);
+        if (taskIdentifier.startsWith('dept:') || taskIdentifier.startsWith('auth:')) {
+          const authId = taskIdentifier.replace(/^(dept|auth):/, '');
+          const found = departmentTasks.find(t => t.id === authId || t.task_code === authId);
           if (found) {
-            projectTaskId = found.id;
+            taskId = found.id;
             taskName = found.task_name;
             department = found.department;
+            const tasks = r.machine_id ? machineTasksCache[r.machine_id] : undefined;
+            const matchingPt = tasks?.find(
+              pt => (pt.task_id && pt.task_id === found.id) || pt.task_code === found.task_code || pt.task_name === found.task_name
+            );
+            if (matchingPt) {
+              projectTaskId = matchingPt.id;
+            }
           }
-        } else if (taskIdentifier.startsWith('dept:')) {
-          const code = taskIdentifier.replace('dept:', '');
-          const found = departmentTasks.find(t => t.task_code === code);
+        } else if (taskIdentifier.startsWith('task:')) {
+          const ptId = taskIdentifier.replace('task:', '');
+          const tasks = r.machine_id ? machineTasksCache[r.machine_id] : undefined;
+          const found = tasks?.find(t => t.id === ptId);
           if (found) {
-            projectTaskId = undefined;
+            projectTaskId = found.id;
+            taskId = found.task_id;
             taskName = found.task_name;
             department = found.department;
           }
         } else if (taskIdentifier.startsWith('task_name:')) {
           taskName = taskIdentifier.replace('task_name:', '');
           projectTaskId = undefined;
+          taskId = undefined;
         } else if (taskIdentifier) {
           taskName = taskIdentifier;
           projectTaskId = undefined;
+          taskId = undefined;
         }
 
         return {
           ...r,
           project_task_id: projectTaskId,
+          task_id: taskId,
           task_name: taskName,
           department,
         };
@@ -349,6 +364,7 @@ export function WeeklyTimesheetGrid({
             machine_id: row.machine_id && row.machine_id !== 'none' ? row.machine_id : undefined,
             entry_type: row.entry_type,
             project_task_id: row.project_task_id || undefined,
+            task_id: row.task_id || undefined,
             department: row.department,
             work_date: dateStr,
             hours_spent: hours,
@@ -602,6 +618,10 @@ export function WeeklyTimesheetGrid({
                     t => matchesDepartment(t.department, effectiveDepartment) || t.id === row.project_task_id
                   );
 
+                  const availableDeptTasks = departmentTasks.filter(
+                    t => t.is_active && (matchesDepartment(t.department, effectiveDepartment) || t.id === row.task_id)
+                  );
+
                   return (
                     <tr key={row.rowKey}>
                       {/* Machine Selection */}
@@ -635,7 +655,9 @@ export function WeeklyTimesheetGrid({
                               aria-label="Task / Allocation Target"
                               className={styles.rowSelect}
                               value={
-                                row.project_task_id
+                                row.task_id
+                                  ? `dept:${row.task_id}`
+                                  : row.project_task_id
                                   ? `task:${row.project_task_id}`
                                   : row.task_name
                                   ? `task_name:${row.task_name}`
@@ -644,22 +666,45 @@ export function WeeklyTimesheetGrid({
                               onChange={e => handleTaskChange(row.rowKey, e.target.value)}
                             >
                               <option value="">Select a task...</option>
-                              {deptMachineTasks.length > 0 ? (
-                                deptMachineTasks.map(t => (
-                                  <option key={t.id} value={`task:${t.id}`}>
-                                    [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
-                                  </option>
-                                ))
-                              ) : (
+                              {availableDeptTasks.length > 0 && (
+                                <optgroup label={`📋 Authoritative ${effectiveDepartment ? `${effectiveDepartment.toUpperCase()} ` : ''}Tasks`}>
+                                  {availableDeptTasks.map(t => {
+                                    const matchingPt = selectedMachineTasks.find(
+                                      pt => (pt.task_id && pt.task_id === t.id) || pt.task_code === t.task_code || pt.task_name === t.task_name
+                                    );
+                                    const budgetNote = matchingPt ? `(Budget: ${matchingPt.quoted_hours}h)` : `(Std: ${t.default_quoted_hours}h)`;
+                                    return (
+                                      <option key={t.id} value={`dept:${t.id}`}>
+                                        [{t.department}] {t.task_name} {budgetNote}
+                                      </option>
+                                    );
+                                  })}
+                                </optgroup>
+                              )}
+                              {deptMachineTasks.filter(pt => !availableDeptTasks.some(dt => (pt.task_id && pt.task_id === dt.id) || pt.task_code === dt.task_code)).length > 0 && (
+                                <optgroup label="⚙️ Custom Quoted Project Tasks">
+                                  {deptMachineTasks
+                                    .filter(pt => !availableDeptTasks.some(dt => (pt.task_id && pt.task_id === dt.id) || pt.task_code === dt.task_code))
+                                    .map(t => (
+                                      <option key={t.id} value={`task:${t.id}`}>
+                                        [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
+                                      </option>
+                                    ))}
+                                </optgroup>
+                              )}
+                              {availableDeptTasks.length === 0 && deptMachineTasks.length === 0 && (
                                 <option disabled value="">
-                                  No {effectiveDepartment ? `${effectiveDepartment} ` : ''}tasks assigned to this project
+                                  No tasks available for {effectiveDepartment || 'department'}
                                 </option>
                               )}
-                              {row.task_name && !row.project_task_id && !deptMachineTasks.some(t => t.task_name === row.task_name) && (
-                                <option value={`task_name:${row.task_name}`}>
-                                  {row.task_name}
-                                </option>
-                              )}
+                              {row.task_name &&
+                                !row.task_id &&
+                                !availableDeptTasks.some(t => t.task_name === row.task_name) &&
+                                !deptMachineTasks.some(t => t.task_name === row.task_name) && (
+                                  <option value={`task_name:${row.task_name}`}>
+                                    {row.task_name}
+                                  </option>
+                                )}
                             </select>
                           ) : (
                             <select

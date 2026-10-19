@@ -13,6 +13,7 @@ import {
   UpdateTaskQuoteRequest,
   CreateDepartmentTaskRequest,
   UpdateDepartmentTaskRequest,
+  MachineLaborCorrelationReport,
 } from '../types';
 
 export function useTimesheetData(selectedMachineId?: string) {
@@ -20,6 +21,7 @@ export function useTimesheetData(selectedMachineId?: string) {
   const [weeklyTimesheet, setWeeklyTimesheet] = useState<WeeklyTimesheet | null>(null);
   const [approvals, setApprovals] = useState<WeeklyTimesheet[]>([]);
   const [machineSummary, setMachineSummary] = useState<MachineLaborSummary | null>(null);
+  const [correlationReport, setCorrelationReport] = useState<MachineLaborCorrelationReport | null>(null);
   const [quotingReview, setQuotingReview] = useState<MachineLaborSummary[]>([]);
   const [departmentTasks, setDepartmentTasks] = useState<DepartmentTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,22 @@ export function useTimesheetData(selectedMachineId?: string) {
       setMachineSummary(data);
     } catch (err) {
       console.error('Failed to load machine labor summary', err);
+    }
+  }, []);
+
+  const fetchMachineLaborCorrelation = useCallback(async (machineId: string) => {
+    try {
+      const data = await fetchApi<MachineLaborCorrelationReport>(`machines/${machineId}/labor-correlation`);
+      if (data && !Array.isArray(data) && Array.isArray(data.tasks)) {
+        setCorrelationReport(data);
+        return data;
+      }
+      setCorrelationReport(null);
+      return null;
+    } catch (err) {
+      console.error('Failed to load machine labor correlation report', err);
+      setCorrelationReport(null);
+      return null;
     }
   }, []);
 
@@ -73,10 +91,12 @@ export function useTimesheetData(selectedMachineId?: string) {
   useEffect(() => {
     if (selectedMachineId) {
       fetchMachineSummary(selectedMachineId);
+      fetchMachineLaborCorrelation(selectedMachineId);
     } else {
       setMachineSummary(null);
+      setCorrelationReport(null);
     }
-  }, [selectedMachineId, fetchMachineSummary]);
+  }, [selectedMachineId, fetchMachineSummary, fetchMachineLaborCorrelation]);
 
   // SSE listeners
   useSSE('time_entry_created', (newEntry: TimeEntry) => {
@@ -301,11 +321,23 @@ export function useTimesheetData(selectedMachineId?: string) {
     setDepartmentTasks(prev => prev.filter(t => t.id !== id));
   };
 
+  useSSE('department_task_created', (newTask: DepartmentTask) => {
+    setDepartmentTasks(prev => {
+      if (prev.find(t => t.id === newTask.id)) return prev;
+      return [newTask, ...prev];
+    });
+  });
+
+  useSSE('department_task_updated', (updated: DepartmentTask) => {
+    setDepartmentTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+  });
+
   return {
     myEntries,
     weeklyTimesheet,
     approvals,
     machineSummary,
+    correlationReport,
     quotingReview,
     departmentTasks,
     loading,
@@ -318,6 +350,7 @@ export function useTimesheetData(selectedMachineId?: string) {
     approveWeeklyTimesheet,
     rejectWeeklyTimesheet,
     fetchMachineSummary,
+    fetchMachineLaborCorrelation,
     fetchQuotingReview,
     fetchDepartmentTasks,
     logTime,

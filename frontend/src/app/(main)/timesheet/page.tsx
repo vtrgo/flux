@@ -6,7 +6,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { useTimesheetData } from "../../../hooks/useTimesheetData";
 import { WeeklyTimesheetGrid } from "../../../components/WeeklyTimesheetGrid";
 import { TimesheetApprovalsTable } from "../../../components/TimesheetApprovalsTable";
-import { Machine, CreateProjectTaskRequest, CreateDepartmentTaskRequest } from "../../../types";
+import { Machine, CreateProjectTaskRequest, CreateDepartmentTaskRequest, ProjectTask, LaborCorrelationItem } from "../../../types";
 import { fetchApi } from "../../../lib/api";
 import styles from "./timesheet.module.css";
 
@@ -57,7 +57,9 @@ export default function TimesheetPage() {
   const [selectedCatalogDept, setSelectedCatalogDept] = useState<string>("assembly");
   const [newDeptTaskCode, setNewDeptTaskCode] = useState("");
   const [newDeptTaskName, setNewDeptTaskName] = useState("");
+  const [newDeptDescription, setNewDeptDescription] = useState("");
   const [newDeptDefaultQuote, setNewDeptDefaultQuote] = useState("10.0");
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState("");
   const [addingDeptTask, setAddingDeptTask] = useState(false);
   const [editingDeptTaskId, setEditingDeptTaskId] = useState<string | null>(null);
   const [editDeptQuoteVal, setEditDeptQuoteVal] = useState<string>("");
@@ -65,12 +67,14 @@ export default function TimesheetPage() {
   const {
     myEntries,
     machineSummary,
+    correlationReport,
     quotingReview,
     departmentTasks,
     loading,
     deleteEntry,
     createOrUpdateTask,
     updateTaskQuote,
+    fetchMachineLaborCorrelation,
     fetchQuotingReview,
     fetchDepartmentTasks,
     createDepartmentTask,
@@ -125,10 +129,34 @@ export default function TimesheetPage() {
     return machineSummary.tasks.filter(t => t.department === projectDept);
   }, [machineSummary, projectDept]);
 
-  // Filtered department tasks for catalog view
+  // Correlated tasks for the active machine
+  const correlatedTasks = useMemo(() => {
+    if (!correlationReport || !correlationReport.tasks) return null;
+    if (projectDept === "all") return correlationReport.tasks;
+    return correlationReport.tasks.filter(t => t.department.toLowerCase() === projectDept.toLowerCase());
+  }, [correlationReport, projectDept]);
+
+  const hasAnyMachineTasks = useMemo(() => {
+    return Boolean(
+      (correlationReport?.tasks && correlationReport.tasks.length > 0) ||
+      (machineSummary?.tasks && machineSummary.tasks.length > 0)
+    );
+  }, [correlationReport, machineSummary]);
+
+  // Filtered department tasks for catalog view with search filter
   const filteredDeptTasks = useMemo(() => {
-    return departmentTasks.filter(t => t.department === selectedCatalogDept);
-  }, [departmentTasks, selectedCatalogDept]);
+    return departmentTasks.filter(t => {
+      const matchesDept = t.department === selectedCatalogDept;
+      if (!matchesDept) return false;
+      if (!catalogSearchQuery.trim()) return true;
+      const q = catalogSearchQuery.toLowerCase();
+      return (
+        t.task_name.toLowerCase().includes(q) ||
+        t.task_code.toLowerCase().includes(q) ||
+        (t.description && t.description.toLowerCase().includes(q))
+      );
+    });
+  }, [departmentTasks, selectedCatalogDept, catalogSearchQuery]);
 
   const handleAddTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,12 +196,14 @@ export default function TimesheetPage() {
     try {
       setAddingTask(true);
       const req: CreateProjectTaskRequest = {
+        task_id: selectedCatalogTaskId !== "custom" ? selectedCatalogTaskId : undefined,
         task_code: code,
         task_name: name,
         department: dept,
         quoted_hours: hours,
       };
       await createOrUpdateTask(selectedMachineId, req);
+      await fetchMachineLaborCorrelation(selectedMachineId);
       toast.success(`Task "${name}" added to ${dept} with ${hours} quoted hours!`);
       setIsAddTaskOpen(false);
       setCustomTaskName("");
@@ -199,12 +229,14 @@ export default function TimesheetPage() {
     try {
       for (const t of deptItems) {
         await createOrUpdateTask(selectedMachineId, {
+          task_id: t.id,
           task_code: t.task_code,
           task_name: t.task_name,
           department: t.department,
           quoted_hours: t.default_quoted_hours,
         });
       }
+      await fetchMachineLaborCorrelation(selectedMachineId);
       toast.success(`Populated ${deptItems.length} default tasks for ${dept}!`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to populate default tasks";
@@ -221,6 +253,7 @@ export default function TimesheetPage() {
 
     try {
       await updateTaskQuote(taskId, { quoted_hours: hours });
+      await fetchMachineLaborCorrelation(selectedMachineId);
       toast.success("Quoted hours updated");
       setEditingTaskId(null);
     } catch (err: unknown) {
@@ -247,12 +280,14 @@ export default function TimesheetPage() {
         department: selectedCatalogDept,
         task_code: newDeptTaskCode.trim().toLowerCase().replace(/[^a-z0-9]/g, "_"),
         task_name: newDeptTaskName.trim(),
+        description: newDeptDescription.trim() || undefined,
         default_quoted_hours: hours,
       };
       await createDepartmentTask(req);
       toast.success(`Core task "${req.task_name}" added to ${selectedCatalogDept}`);
       setNewDeptTaskCode("");
       setNewDeptTaskName("");
+      setNewDeptDescription("");
       setNewDeptDefaultQuote("10.0");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to add department task";
@@ -413,6 +448,117 @@ export default function TimesheetPage() {
             )}
           </div>
 
+          {/* KPI Dashboard from Labor Correlation */}
+          {(() => {
+            const isCorrelationValid = Boolean(
+              correlationReport &&
+              !Array.isArray(correlationReport) &&
+              Array.isArray(correlationReport.tasks)
+            );
+            const totalAssigned = isCorrelationValid ? (correlationReport?.total_assigned_hours ?? 0) : (machineSummary?.total_quoted_hours ?? 0);
+            const totalConsumed = isCorrelationValid ? (correlationReport?.total_consumed_hours ?? 0) : (machineSummary?.total_actual_hours ?? 0);
+            const variance = isCorrelationValid ? (correlationReport?.net_variance ?? (totalConsumed - totalAssigned)) : (totalConsumed - totalAssigned);
+            const pct = totalAssigned > 0 ? (totalConsumed / totalAssigned) * 100 : (totalConsumed > 0 ? 100 : 0);
+            const unbudgetedTasks = isCorrelationValid ? (correlationReport?.tasks ?? []).filter(t => t.status === "unbudgeted") : [];
+            const unbudgetedHours = unbudgetedTasks.reduce((sum, t) => sum + (t.consumed_hours ?? 0), 0);
+
+            return (
+              <>
+                <div className={styles.kpiGrid}>
+                  <div className={styles.kpiCard}>
+                    <span className={styles.kpiLabel}>Hours Assigned (Budget)</span>
+                    <span className={styles.kpiValue}>
+                      {totalAssigned.toFixed(1)}h
+                    </span>
+                    <span className={styles.kpiSub}>Independent Quoting Target</span>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <span className={styles.kpiLabel}>Hours Consumed (Actual)</span>
+                    <span className={styles.kpiValue} style={{ color: "var(--vtr-theme-primary, #00e5ff)" }}>
+                      {totalConsumed.toFixed(1)}h
+                    </span>
+                    <span className={styles.kpiSub}>Captured from Timesheets</span>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <span className={styles.kpiLabel}>Labor Variance</span>
+                    <span className={`${styles.kpiValue} ${variance > 0 ? styles.variancePositive : styles.varianceNegative}`}>
+                      {variance > 0 ? `+${variance.toFixed(1)}h` : `${variance.toFixed(1)}h`}
+                    </span>
+                    <span className={styles.kpiSub}>
+                      {variance > 0 ? "Over Quoted Hours" : "Within Quoted Budget"}
+                    </span>
+                  </div>
+                  <div className={styles.kpiCard}>
+                    <span className={styles.kpiLabel}>Budget Burn Rate</span>
+                    <span className={styles.kpiValue}>{pct.toFixed(0)}%</span>
+                    <div className={styles.progressBarBg}>
+                      <div
+                        className={`${styles.progressBarFill} ${
+                          pct > 100 ? styles.progressRed : pct >= 85 ? styles.progressYellow : styles.progressGreen
+                        }`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Unbudgeted Labor Alert Banner */}
+                {unbudgetedTasks.length > 0 && (
+                  <div style={{
+                    background: "rgba(255, 112, 67, 0.12)",
+                    border: "1px solid rgba(255, 112, 67, 0.4)",
+                    borderRadius: "8px",
+                    padding: "0.85rem 1.25rem",
+                    color: "#ff7043",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "0.75rem"
+                  }}>
+                    <span>
+                      ⚠️ <strong>Unbudgeted Labor Detected:</strong>{" "}
+                      {unbudgetedHours.toFixed(1)} hours logged across {unbudgetedTasks.length} tasks without assigned project budgets.
+                    </span>
+                    {isLeadOrManager && (
+                      <span style={{ fontSize: "0.85rem", opacity: 0.9 }}>
+                        Click &ldquo;+ Assign Budget&rdquo; in the table below to allocate budgeted hours.
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Department Breakdown Rollup Cards */}
+                {projectDept === "all" && isCorrelationValid && correlationReport?.department_breakdown && Object.keys(correlationReport.department_breakdown).length > 0 && (
+                  <div style={{ display: "flex", gap: "0.75rem", overflowX: "auto", paddingBottom: "0.25rem" }}>
+                    {Object.values(correlationReport.department_breakdown).map((dept) => (
+                      <div
+                        key={dept.department}
+                        style={{
+                          background: "rgba(255, 255, 255, 0.03)",
+                          border: "1px solid #333",
+                          borderRadius: "6px",
+                          padding: "0.5rem 0.75rem",
+                          fontSize: "0.8rem",
+                          minWidth: "155px"
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, textTransform: "capitalize", color: "var(--vtr-theme-primary, #00e5ff)", marginBottom: "0.2rem" }}>
+                          {dept.department}
+                        </div>
+                        <div style={{ color: "#aaa" }}>Budget: <strong style={{ color: "#fff" }}>{(dept.assigned_hours ?? 0).toFixed(1)}h</strong></div>
+                        <div style={{ color: "#aaa" }}>Actual: <strong style={{ color: "#00e5ff" }}>{(dept.consumed_hours ?? 0).toFixed(1)}h</strong></div>
+                        <div style={{ color: (dept.variance ?? 0) > 0 ? "var(--accent-red, #ff4444)" : "var(--accent-green, #00e676)", fontWeight: 700 }}>
+                          Variance: {(dept.variance ?? 0) > 0 ? `+${(dept.variance ?? 0).toFixed(1)}h` : `${(dept.variance ?? 0).toFixed(1)}h`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
           {/* Add Quoted Task Sub-panel */}
           {isAddTaskOpen && isLeadOrManager && (
             <div className={styles.contentCard} style={{ border: "1px solid var(--vtr-theme-primary, #00e5ff)", padding: "1.25rem" }}>
@@ -557,8 +703,8 @@ export default function TimesheetPage() {
                   Model: <strong>{machineSummary?.model_type}</strong> | Department Scope:{" "}
                   <strong style={{ color: "var(--vtr-theme-primary, #00e5ff)" }}>
                     {projectDept === "all"
-                      ? `All Departments (${filteredMachineTasks.length} tasks)`
-                      : `${DEPARTMENTS.find((d) => d.id === projectDept)?.label} (${filteredMachineTasks.length} tasks)`}
+                      ? `All Departments (${(correlatedTasks || filteredMachineTasks).length} tasks)`
+                      : `${DEPARTMENTS.find((d) => d.id === projectDept)?.label} (${(correlatedTasks || filteredMachineTasks).length} tasks)`}
                   </strong>
                 </span>
               </div>
@@ -574,25 +720,25 @@ export default function TimesheetPage() {
             </div>
 
             <div className={styles.tableWrapper}>
-              {!machineSummary || !machineSummary.tasks || machineSummary.tasks.length === 0 ? (
+              {!hasAnyMachineTasks ? (
                 <div className={styles.emptyState}>
-                  <p>No tasks quoted for this machine yet.</p>
+                  <p>No tasks quoted or logged for this machine yet.</p>
                   {isLeadOrManager && (
                     <button className="vtr-btn vtr-btn-primary" onClick={() => setIsAddTaskOpen(true)}>
                       + Establish Quoted Tasks for this Machine
                     </button>
                   )}
                 </div>
-              ) : filteredMachineTasks.length === 0 ? (
+              ) : (correlatedTasks ? correlatedTasks.length === 0 : filteredMachineTasks.length === 0) ? (
                 <div className={styles.emptyState}>
-                  <p>No tasks quoted for {DEPARTMENTS.find(d => d.id === projectDept)?.label || projectDept}.</p>
+                  <p>No tasks quoted for {DEPARTMENTS.find((d) => d.id === projectDept)?.label || projectDept}.</p>
                   <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", marginTop: "0.5rem" }}>
                     {isLeadOrManager && (
                       <button
                         className="vtr-btn vtr-btn-primary"
                         onClick={() => handlePopulateDeptDefaults(projectDept)}
                       >
-                        + Add All {DEPARTMENTS.find(d => d.id === projectDept)?.label} Tasks
+                        + Add All {DEPARTMENTS.find((d) => d.id === projectDept)?.label} Tasks
                       </button>
                     )}
                     <button className="vtr-btn vtr-btn-secondary" onClick={() => setProjectDept("all")}>
@@ -606,8 +752,8 @@ export default function TimesheetPage() {
                     <tr>
                       <th>Task Name</th>
                       <th>Department</th>
-                      <th>Quoted Hours</th>
-                      <th>Actual Hours</th>
+                      <th>Assigned Hours</th>
+                      <th>Consumed Hours</th>
                       <th>Variance (+/-)</th>
                       <th>Budget Progress</th>
                       <th>Status</th>
@@ -615,23 +761,34 @@ export default function TimesheetPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredMachineTasks.map((task) => {
-                      const pct = task.quoted_hours > 0 ? (task.actual_hours / task.quoted_hours) * 100 : 0;
-                      let progressClass = styles.progressGreen;
-                      if (pct >= 100) progressClass = styles.progressRed;
-                      else if (pct >= 85) progressClass = styles.progressYellow;
+                    {(correlatedTasks || filteredMachineTasks).map((taskItem) => {
+                      const isCorrelated = "assigned_hours" in taskItem;
+                      const projectTaskId = isCorrelated ? (taskItem as LaborCorrelationItem).project_task_id : (taskItem as ProjectTask).id;
+                      const taskId = projectTaskId || (isCorrelated ? (taskItem as LaborCorrelationItem).task_code : (taskItem as ProjectTask).task_code);
+                      const taskName = taskItem.task_name;
+                      const taskCode = taskItem.task_code;
+                      const department = taskItem.department;
+                      const assignedHours = isCorrelated ? (taskItem.assigned_hours ?? 0) : ((taskItem as any).quoted_hours ?? 0);
+                      const consumedHours = isCorrelated ? (taskItem.consumed_hours ?? 0) : ((taskItem as any).actual_hours ?? 0);
+                      const variance = isCorrelated ? (taskItem.variance ?? 0) : ((taskItem as any).variance ?? 0);
+                      const burnPct = isCorrelated ? (taskItem.burn_percentage ?? 0) : (assignedHours > 0 ? (consumedHours / assignedHours) * 100 : 0);
+                      const status = isCorrelated ? taskItem.status : ((taskItem as any).status || "open");
 
-                      const isEditing = editingTaskId === task.id;
+                      let progressClass = styles.progressGreen;
+                      if (burnPct >= 100) progressClass = styles.progressRed;
+                      else if (burnPct >= 85) progressClass = styles.progressYellow;
+
+                      const isEditing = editingTaskId === taskId;
 
                       return (
-                        <tr key={task.id}>
+                        <tr key={taskId || taskCode}>
                           <td>
-                            <strong>{task.task_name}</strong>
-                            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary, #888)" }}>{task.task_code}</div>
+                            <strong>{taskName}</strong>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary, #888)" }}>{taskCode}</div>
                           </td>
-                          <td style={{ textTransform: "capitalize" }}>{task.department}</td>
+                          <td style={{ textTransform: "capitalize" }}>{department}</td>
                           <td>
-                            {isEditing ? (
+                            {isEditing && projectTaskId ? (
                               <div style={{ display: "flex", gap: "0.3rem", alignItems: "center" }}>
                                 <input
                                   type="number"
@@ -645,7 +802,7 @@ export default function TimesheetPage() {
                                 <button
                                   className="vtr-btn vtr-btn-primary"
                                   style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                                  onClick={() => handleSaveQuoteEdit(task.id)}
+                                  onClick={() => handleSaveQuoteEdit(projectTaskId)}
                                 >
                                   Save
                                 </button>
@@ -658,47 +815,91 @@ export default function TimesheetPage() {
                                 </button>
                               </div>
                             ) : (
-                              <span style={{ fontWeight: 700, fontSize: "1rem" }}>{task.quoted_hours.toFixed(1)}h</span>
+                              <span style={{ fontWeight: 700, fontSize: "1rem" }}>{assignedHours.toFixed(1)}h</span>
                             )}
                           </td>
                           <td style={{ fontWeight: 700, fontSize: "1rem", color: "var(--vtr-theme-primary, #00e5ff)" }}>
-                            {task.actual_hours.toFixed(2)}h
+                            {consumedHours.toFixed(2)}h
                           </td>
                           <td style={{ fontWeight: 800 }}>
-                            <span className={task.variance > 0 ? styles.variancePositive : styles.varianceNegative}>
-                              {task.variance > 0 ? `+${task.variance.toFixed(2)}h` : `${task.variance.toFixed(2)}h`}
+                            <span className={variance > 0 ? styles.variancePositive : styles.varianceNegative}>
+                              {variance > 0 ? `+${variance.toFixed(2)}h` : `${variance.toFixed(2)}h`}
                             </span>
                           </td>
                           <td style={{ minWidth: "150px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: "2px" }}>
-                              <span>{pct.toFixed(0)}%</span>
-                              <span>{task.actual_hours.toFixed(1)} / {task.quoted_hours.toFixed(1)}h</span>
+                              <span>{burnPct.toFixed(0)}%</span>
+                              <span>{consumedHours.toFixed(1)} / {assignedHours.toFixed(1)}h</span>
                             </div>
                             <div className={styles.progressBarBg}>
                               <div
                                 className={`${styles.progressBarFill} ${progressClass}`}
-                                style={{ width: `${Math.min(pct, 100)}%` }}
+                                style={{ width: `${Math.min(burnPct, 100)}%` }}
                               />
                             </div>
                           </td>
                           <td>
-                            <span className={`${styles.categoryBadge} ${task.status === "completed" ? styles.badgeProduction : styles.badgeIndirect}`}>
-                              {task.status.toUpperCase()}
-                            </span>
+                            {status === "unbudgeted" ? (
+                              <span className={`${styles.categoryBadge} ${styles.badgeRework}`} title="Hours logged without pre-allocated project budget">
+                                ⚠️ UNBUDGETED
+                              </span>
+                            ) : status === "over_budget" ? (
+                              <span className={`${styles.categoryBadge} ${styles.badgeRework}`}>
+                                OVER BUDGET
+                              </span>
+                            ) : status === "nearing_limit" ? (
+                              <span className={`${styles.categoryBadge} ${styles.badgeIssueFix}`}>
+                                NEARING LIMIT
+                              </span>
+                            ) : status === "budgeted_unstarted" ? (
+                              <span className={`${styles.categoryBadge} ${styles.badgeIndirect}`}>
+                                NOT STARTED
+                              </span>
+                            ) : (
+                              <span className={`${styles.categoryBadge} ${styles.badgeProduction}`}>
+                                ON TRACK
+                              </span>
+                            )}
                           </td>
                           {isLeadOrManager && (
                             <td>
                               {!isEditing && (
-                                <button
-                                  className="vtr-btn vtr-btn-secondary"
-                                  style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                                  onClick={() => {
-                                    setEditingTaskId(task.id);
-                                    setEditQuoteVal(task.quoted_hours.toString());
-                                  }}
-                                >
-                                  Edit Quote
-                                </button>
+                                isCorrelated && taskItem.status === "unbudgeted" ? (
+                                  <button
+                                    className="vtr-btn vtr-btn-primary"
+                                    style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                                    onClick={() => {
+                                      const matchingDeptTask = departmentTasks.find(
+                                        dt => (taskItem.task_id && dt.id === taskItem.task_id) || dt.task_code === taskItem.task_code || dt.task_name === taskItem.task_name
+                                      );
+                                      if (matchingDeptTask) {
+                                        setSelectedCatalogTaskId(matchingDeptTask.id);
+                                        setTaskQuotedHours(matchingDeptTask.default_quoted_hours.toString());
+                                      } else {
+                                        setSelectedCatalogTaskId("custom");
+                                        setCustomTaskName(taskItem.task_name);
+                                        setTaskQuotedHours("10.0");
+                                      }
+                                      setTargetQuotingDept(taskItem.department);
+                                      setIsAddTaskOpen(true);
+                                    }}
+                                  >
+                                    + Assign Budget
+                                  </button>
+                                ) : (
+                                  projectTaskId ? (
+                                    <button
+                                      className="vtr-btn vtr-btn-secondary"
+                                      style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                                      onClick={() => {
+                                        setEditingTaskId(projectTaskId);
+                                        setEditQuoteVal(assignedHours.toString());
+                                      }}
+                                    >
+                                      Edit Quote
+                                    </button>
+                                  ) : null
+                                )
                               )}
                             </td>
                           )}
@@ -726,17 +927,39 @@ export default function TimesheetPage() {
               </p>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: 700 }}>Department:</label>
-              <select
-                style={{ padding: "0.5rem 0.85rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
-                value={selectedCatalogDept}
-                onChange={(e) => setSelectedCatalogDept(e.target.value)}
-              >
-                {DEPARTMENTS.map(d => (
-                  <option key={d.id} value={d.id}>{d.label}</option>
-                ))}
-              </select>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: 700 }}>Department:</label>
+                <select
+                  style={{ padding: "0.5rem 0.85rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
+                  value={selectedCatalogDept}
+                  onChange={(e) => setSelectedCatalogDept(e.target.value)}
+                >
+                  {DEPARTMENTS.map(d => (
+                    <option key={d.id} value={d.id}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <input
+                  type="text"
+                  placeholder="Search catalog tasks..."
+                  value={catalogSearchQuery}
+                  onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                  style={{ padding: "0.45rem 0.75rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff", fontSize: "0.85rem", width: "200px" }}
+                />
+                {catalogSearchQuery && (
+                  <button
+                    type="button"
+                    className="vtr-btn"
+                    style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                    onClick={() => setCatalogSearchQuery("")}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -793,6 +1016,16 @@ export default function TimesheetPage() {
                   required
                 />
               </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label style={{ display: "block", fontSize: "0.8rem", color: "#aaa", marginBottom: "0.3rem" }}>Task Scope & Benchmark Description (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Standard mounting procedures, wiring schematics, and pinout verification benchmarks..."
+                  style={{ width: "100%", padding: "0.5rem", background: "#000", border: "1px solid #444", borderRadius: "4px", color: "#fff" }}
+                  value={newDeptDescription}
+                  onChange={(e) => setNewDeptDescription(e.target.value)}
+                />
+              </div>
               <div>
                 <button type="submit" className="vtr-btn vtr-btn-primary" disabled={addingDeptTask} style={{ width: "100%" }}>
                   {addingDeptTask ? "Adding..." : "+ Add to Catalog"}
@@ -804,13 +1037,13 @@ export default function TimesheetPage() {
           {/* Department Tasks Table */}
           <div className={styles.tableWrapper}>
             {filteredDeptTasks.length === 0 ? (
-              <div className={styles.emptyState}>No core tasks defined for this department yet.</div>
+              <div className={styles.emptyState}>No core tasks matching your filters.</div>
             ) : (
               <table className={styles.table}>
                 <thead>
                   <tr>
                     <th>Task Code</th>
-                    <th>Task Name</th>
+                    <th>Task Name & Benchmark Scope</th>
                     <th>Department</th>
                     <th>Default Quoted Hours</th>
                     <th>Status</th>
@@ -828,6 +1061,11 @@ export default function TimesheetPage() {
                         </td>
                         <td>
                           <strong>{task.task_name}</strong>
+                          {task.description && (
+                            <div style={{ fontSize: "0.8rem", color: "var(--text-secondary, #aaa)", marginTop: "0.25rem" }}>
+                              {task.description}
+                            </div>
+                          )}
                         </td>
                         <td style={{ textTransform: "capitalize" }}>{task.department}</td>
                         <td>
