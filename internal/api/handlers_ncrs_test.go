@@ -244,7 +244,7 @@ func TestNCRs(t *testing.T) {
 			"root_cause":             "Root cause identified during review",
 			"corrective_action":      "Corrective action scheduled",
 			"team_lead_signature":    "Enda McNamara",
-			"send_notification":      true,
+			"send_notification":      false,
 			"upgrade_from_defect_id": oldDefectID.String(),
 		}
 
@@ -323,12 +323,12 @@ func TestNCRs(t *testing.T) {
 			"ncr_number":          fmt.Sprintf("NCR-%s-SIG-%d", time.Now().Format("2006"), time.Now().UnixNano()),
 			"assembler":           "Dave Tech",
 			"location":            "Station 1",
-			"description":         "Signature fallback notification test",
+			"description":         "Signature fallback test",
 			"severity":            "minor",
 			"source_department":   "quality",
 			"assigned_department": "assembly",
 			"team_lead_signature": "Lucas Sinclair",
-			"send_notification":   true,
+			"send_notification":   false,
 		}
 		body, _ := json.Marshal(payload)
 		req := httptest.NewRequest(http.MethodPost, "/api/ncrs", bytes.NewReader(body))

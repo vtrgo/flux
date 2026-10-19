@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"flag"
 	"os"
 	"strings"
 )
@@ -20,7 +21,8 @@ type Config struct {
 	DefaultRecipientEmail string
 }
 
-// LoadConfigFromEnv populates configuration from environment variables with sensible defaults
+// LoadConfigFromEnv populates configuration from environment variables with sensible defaults.
+// In test environments, live Teams notifications are strictly disabled.
 func LoadConfigFromEnv() Config {
 	enabled := true
 	if val := os.Getenv("NOTIFICATIONS_ENABLED"); val != "" {
@@ -28,11 +30,18 @@ func LoadConfigFromEnv() Config {
 		if lower == "false" || lower == "0" || lower == "no" {
 			enabled = false
 		}
+	} else if flag.Lookup("test.v") != nil || strings.HasSuffix(os.Args[0], ".test") {
+		// Automatically disable live notifications during automated test executions
+		enabled = false
 	}
 
 	powerAutomateURL := os.Getenv("POWER_AUTOMATE_WEBHOOK_URL")
 	if powerAutomateURL == "" {
-		powerAutomateURL = DefaultPowerAutomateWebhookURL
+		if enabled {
+			powerAutomateURL = DefaultPowerAutomateWebhookURL
+		} else {
+			powerAutomateURL = ""
+		}
 	}
 
 	defaultEmail := os.Getenv("DEFAULT_NOTIFICATION_RECIPIENT_EMAIL")

@@ -184,3 +184,104 @@ type TimezoneOption struct {
 	Region string `json:"region"` // Geographic region, e.g. "North America"
 	Offset string `json:"offset"` // Current offset label, e.g. "UTC-04:00"
 }
+
+// ReworkItem represents a component undergoing modification or remaking per SOP 1-003
+type ReworkItem struct {
+	ID                         uuid.UUID  `json:"id"`
+	SalesOrderID               uuid.UUID  `json:"sales_order_id"`
+	ProjectName                *string    `json:"project_name,omitempty"`
+	CustomerName               *string    `json:"customer_name,omitempty"`
+	MachineID                  *uuid.UUID `json:"machine_id,omitempty"`
+	OrderNumber                *string    `json:"order_number,omitempty"`
+	DefectID                   *uuid.UUID `json:"defect_id,omitempty"`
+	IsNCR                      bool       `json:"is_ncr"`
+	NCRNumber                  *string    `json:"ncr_number,omitempty"`
+	ProjectNumber              string     `json:"project_number"`
+	SubAssembly                *string    `json:"sub_assembly,omitempty"`
+	PartNumber                 string     `json:"part_number"`
+	Description                string     `json:"description"`
+	Revision                   string     `json:"revision"`
+	Material                   string     `json:"material"`
+	Qty                        int        `json:"qty"`
+	PartType                   string     `json:"part_type"` // 'NEW' or 'MOD'
+	MechDesignerID             *uuid.UUID `json:"mech_designer_id,omitempty"`
+	MechDesignerName           *string    `json:"mech_designer_name,omitempty"`
+	DateReleasedFromMechDesign *time.Time `json:"date_released_from_mech_design,omitempty"`
+	PMReleasedToID             *uuid.UUID `json:"pm_released_to_id,omitempty"`
+	PMReleasedToName           *string    `json:"pm_released_to_name,omitempty"`
+	PDMVaultReleased           bool       `json:"pdm_vault_released"`
+	ReasonForRework            string     `json:"reason_for_rework"`
+	DateReleasedToMfg          *time.Time `json:"date_released_to_mfg,omitempty"`
+	RequestedCompletionDate    *string    `json:"requested_completion_date,omitempty"`
+	PMDeliveredTo              *string    `json:"pm_delivered_to,omitempty"`
+	PMDateDelivered            *time.Time `json:"pm_date_delivered,omitempty"`
+	ExpectedCompletionDate     *string    `json:"expected_completion_date,omitempty"`
+	MaterialOrderedDate        *string    `json:"material_ordered_date,omitempty"`
+	AssignedMachinistID        *uuid.UUID `json:"assigned_machinist_id,omitempty"`
+	AssignedMachinistName      *string    `json:"assigned_machinist_name,omitempty"`
+	DateMfgCompleted           *time.Time `json:"date_mfg_completed,omitempty"`
+	PartGivenToOrLeftAt        *string    `json:"part_given_to_or_left_at,omitempty"`
+	IsAfterHoursDrop           bool       `json:"is_after_hours_drop"`
+	EstimatedHours             float64    `json:"estimated_hours"`
+	ActualHours                float64    `json:"actual_hours"`
+	RequiresOutsideProcessing  bool       `json:"requires_outside_processing"`
+	OutsideVendor              *string    `json:"outside_vendor,omitempty"`
+	DateSentForProcessing      *string    `json:"date_sent_for_processing,omitempty"`
+	DateExpectedFromProcessing *string    `json:"date_expected_from_processing,omitempty"`
+	DateReceivedFromProcessing *string    `json:"date_received_from_processing,omitempty"`
+	KittingDeliveredTo         *string    `json:"kitting_delivered_to,omitempty"`
+	KittingDateDelivered       *time.Time `json:"kitting_date_delivered,omitempty"`
+	Status                     string     `json:"status"`
+	AssemblerID                *uuid.UUID `json:"assembler_id,omitempty"`
+	AssemblerName              *string    `json:"assembler_name,omitempty"`
+	PartsCollectedByPM         bool       `json:"parts_collected_by_pm"`
+	IsAssemblerSelfModified    bool       `json:"is_assembler_self_modified"`
+	CompletedAt                *time.Time `json:"completed_at,omitempty"`
+	CompletedByID              *uuid.UUID `json:"completed_by_id,omitempty"`
+	CompletedByName            *string    `json:"completed_by_name,omitempty"`
+	CreatedAt                  time.Time  `json:"created_at"`
+	UpdatedAt                  time.Time  `json:"updated_at"`
+}
+
+// ProjectReworkSummary represents aggregated rework metrics for a sales order / project
+type ProjectReworkSummary struct {
+	SalesOrderID   uuid.UUID `json:"sales_order_id"`
+	TotalActive    int       `json:"total_active"`
+	TotalInMfg     int       `json:"total_in_mfg"`
+	TotalOutsidePP int       `json:"total_outside_pp"`
+	TotalCompleted int       `json:"total_completed"`
+	TotalEstHours  float64   `json:"total_est_hours"`
+	TotalActHours  float64   `json:"total_act_hours"`
+}
+
+// MachineFATReadinessResponse represents quality and rework blockers prior to FAT or shipping
+type MachineFATReadinessResponse struct {
+	MachineID    uuid.UUID `json:"machine_id"`
+	CanProceed   bool      `json:"can_proceed"`
+	OpenIssues   int       `json:"open_issues"`
+	OpenNCRs     int       `json:"open_ncrs"`
+	ActiveRework int       `json:"active_rework"`
+	Blockers     []string  `json:"blockers"`
+}
+
+// ControlsSchematicRework tracks redlines and sign-offs for master electrical schematics
+type ControlsSchematicRework struct {
+	ID                         uuid.UUID  `json:"id"`
+	SalesOrderID               uuid.UUID  `json:"sales_order_id"`
+	MachineID                  uuid.UUID  `json:"machine_id"`
+	SchematicNumber            string     `json:"schematic_number"`
+	MasterCopyRedlined         bool       `json:"master_copy_redlined"`
+	RedlinedByUserID           *uuid.UUID `json:"redlined_by_user_id,omitempty"`
+	RedlinedByUserName         *string    `json:"redlined_by_user_name,omitempty"`
+	RedlinesDescription        *string    `json:"redlines_description,omitempty"`
+	SchematicsDigitallyUpdated bool       `json:"schematics_digitally_updated"`
+	UpdatedByUserID            *uuid.UUID `json:"updated_by_user_id,omitempty"`
+	UpdatedByUserName          *string    `json:"updated_by_user_name,omitempty"`
+	UpdatedAt                  *time.Time `json:"updated_at,omitempty"`
+	ChecklistSignedOff         bool       `json:"checklist_signed_off"`
+	SignedOffByUserID          *uuid.UUID `json:"signed_off_by_user_id,omitempty"`
+	SignedOffByUserName        *string    `json:"signed_off_by_user_name,omitempty"`
+	SignedOffAt                *time.Time `json:"signed_off_at,omitempty"`
+	CreatedAt                  time.Time  `json:"created_at"`
+}
+

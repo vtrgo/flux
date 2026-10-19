@@ -4,6 +4,8 @@ set -euo pipefail
 echo "== [0/3] Bootstrapping Test Database =="
 export DB_NAME="flux_test"
 export DATABASE_URL="host=/var/run/postgresql dbname=flux_test sslmode=disable"
+export NOTIFICATIONS_ENABLED="false"
+export POWER_AUTOMATE_WEBHOOK_URL=""
 
 if ! psql -lqt | cut -d \| -f 1 | grep -qw "flux_test"; then
   echo "Error: flux_test database does not exist."

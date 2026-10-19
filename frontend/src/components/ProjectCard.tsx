@@ -1,5 +1,5 @@
 import React from 'react';
-import { SalesOrder, Machine, DefectSummary, ProjectDefectSummary } from '../types';
+import { SalesOrder, Machine, DefectSummary, ProjectDefectSummary, ProjectReworkSummary } from '../types';
 import { MachineCard } from './MachineCard';
 import { calculateProjectDaysLate } from '../lib/dateUtils';
 import { useDateTime } from '../contexts/DateTimeContext';
@@ -9,6 +9,7 @@ interface ProjectCardProps {
   order: SalesOrder;
   orderMachines: Machine[];
   projectSummary?: ProjectDefectSummary;
+  reworkSummary?: ProjectReworkSummary;
   defectSummaries: DefectSummary[];
   onDeleteMachine: (e: React.MouseEvent, id: string) => void;
   onSelectDept: (machineId: string, dept: string) => void;
@@ -18,6 +19,7 @@ export function ProjectCard({
   order,
   orderMachines,
   projectSummary,
+  reworkSummary,
   defectSummaries,
   onDeleteMachine,
   onSelectDept
@@ -62,6 +64,17 @@ export function ProjectCard({
               Project Closed: {projectTotalClosed}
             </span>
           </div>
+          {reworkSummary && (reworkSummary.total_active > 0 || reworkSummary.total_completed > 0) && (
+            <div className={styles.summaryBadge} style={{ borderColor: 'rgba(255, 170, 0, 0.4)' }}>
+              <span style={{ color: reworkSummary.total_active > 0 ? '#ffaa00' : 'var(--text-secondary)' }}>
+                Rework: {reworkSummary.total_active} Active
+              </span>
+              <span>&rarr;</span>
+              <span style={{ color: '#4ade80' }}>
+                {reworkSummary.total_completed} Done ({reworkSummary.total_act_hours.toFixed(1)}h)
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

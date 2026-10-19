@@ -19,6 +19,9 @@ Flux is built on a high-performance, single-executable paradigm. The modern Next
 *   **Real-Time Department Hubs:** Dedicated Kanban-style hubs for Design, Kitting, Machine Shop, Laser, Assembly, Electrical Controls, Enclosures, and Quality / PM. 
 *   **Quality Resolution Hub:** A global triage center for all quality issues, allowing cross-departmental coordination to clear defects.
 *   **Non-Conformance Reporting (NCR) System:** A dedicated quality hub (`/ncrs`) for tracking formal non-conformances with unique NCR identifiers, location tracking, root cause analysis, corrective actions, role-gated manager sign-offs, and print-ready formal reports.
+*   **SOP 1-003 Rework Operations Hub (`/rework`):** End-to-end digital tracking of engineering rework and modified parts across Design, PM, Machine Shop, Kitting/Receiving, and Assembly. Replaces legacy SharePoint spreadsheets with stage-segmented travelers, PDM release validation, NEW vs. MOD part classification, outside processing vendor tracking, and after-hours desk drop handoff logging.
+*   **Electrical & Controls Master Schematic Redlines:** Dedicated tracking of Master Electrical Schematic redlines and final Electrical Design Checklist sign-offs (SOP 1-003 Section 6).
+*   **Machine FAT Readiness Gate:** Strict quality gate (`/api/machines/{id}/fat-readiness`) preventing machines from proceeding to Factory Acceptance Testing (FAT) or shipping while incomplete rework items or open NCRs remain.
 *   **Issue-to-NCR Upgrade Pipeline:** Managers and administrators can seamlessly upgrade standard shop-floor defects into formal NCRs directly from the issue modal, automatically transferring photo attachments and audit trails.
 *   **Automated Notifications & Power Automate Integration:** Outbound webhook dispatch sending rich Microsoft Adaptive Cards (v1.2) to Power Automate workflows, triggering instant Microsoft Teams or Outlook alerts when defects or NCRs are logged or assigned.
 *   **In-App Notification Center:** A real-time notification bell in the global header with unread badge counters, live SSE event reception, customizable filters, and persistent local history.
@@ -57,7 +60,7 @@ Ensure PostgreSQL is running, then use the bootstrap script to automatically cre
 ```
 
 ### 2. Testing
-Before running or building, ensure the environment is healthy by executing the unified test suite (which validates Go handlers via `httptest` and runs frontend unit tests via `vitest`):
+Before running or building, ensure the environment is healthy by executing the unified test suite (which validates Go handlers via `httptest` and runs frontend unit tests via `vitest`). Live Microsoft Teams notifications are strictly suppressed during all test executions to protect production channels:
 ```bash
 ./scripts/test.sh
 ```
@@ -87,13 +90,16 @@ This script will automatically generate the Next.js static export, embed it into
 ## Codebase Organization
 
 *   `/cmd/flux`: The Go application entry point, middleware chaining, and graceful shutdown orchestration.
-*   `/internal/api`: Go HTTP handlers, SSE broadcaster hub, unified JSON responses, and route definitions.
-*   `/internal/notifications`: Notification dispatcher worker pool, Power Automate Adaptive Card builder, and transport channels.
-*   `/internal/models`: Go structs reflecting the PostgreSQL schema (defects, NCRs, machines, sales orders).
-*   `/internal/db`: Database connection pool initialization and migration routines.
+*   `/internal/api`: Go HTTP handlers (`handlers_rework.go`, `handlers_ncrs.go`, `handlers_defects.go`), SSE broadcaster hub, unified JSON responses, and route definitions.
+*   `/internal/notifications`: Notification dispatcher worker pool, Power Automate Adaptive Card builder, and transport channels (with automated test isolation).
+*   `/internal/models`: Go structs reflecting the PostgreSQL schema (defects, NCRs, machines, sales orders, rework items, controls schematics).
+*   `/internal/db`: Database connection pool initialization and migration routines (`scripts/migrations`).
 *   `/internal/logger`: Structured `slog` logging configuration and SSE log broadcasting.
 *   `/internal/version`: Embedded release and runtime version telemetry.
-*   `/docs/notifications`: Payload schema, Adaptive Card specifications, and integration documentation.
-*   `/frontend/src/app/(main)`: Next.js page router (Dashboard, Departments, Quality, NCRs, Kickoff, Admin).
-*   `/frontend/src/components`: Reusable, heavily memoized UI modules (e.g., `IssueCard`, `MachineCard`, `NotificationBell`, `IssueModal`, `NCRModal`).
-*   `/frontend/src/hooks`: Decoupled data-fetching, keyboard hotkeys, in-app alerts, and SSE state orchestration.
+*   `/docs`: Technical architecture, SOP guides, and payload schemas:
+    *   [`docs/REWORK_SOP_TRACKING.md`](docs/REWORK_SOP_TRACKING.md): Comprehensive SOP 1-003 Rework implementation and API reference.
+    *   [`docs/notifications/README.md`](docs/notifications/README.md): Adaptive Card specifications and Power Automate integration guide.
+    *   [`docs/MES_STRUCTURAL_RECOMMENDATIONS.md`](docs/MES_STRUCTURAL_RECOMMENDATIONS.md): Architectural best practices and scaling guidelines.
+*   `/frontend/src/app/(main)`: Next.js page router (Dashboard, Departments, Quality, NCRs, Rework Hub, Kickoff, Admin).
+*   `/frontend/src/components`: Reusable, heavily memoized UI modules (e.g., `IssueCard`, `MachineCard`, `NotificationBell`, `IssueModal`, `NCRModal`, `ReworkModal`, `ControlsSchematicTracker`).
+*   `/frontend/src/hooks`: Decoupled data-fetching, keyboard hotkeys, in-app alerts, rework telemetry (`useReworkData`), and SSE state orchestration.
