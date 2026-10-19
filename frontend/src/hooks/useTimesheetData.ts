@@ -106,6 +106,7 @@ export function useTimesheetData(selectedMachineId?: string) {
     });
     if (selectedMachineId && newEntry.machine_id === selectedMachineId) {
       fetchMachineSummary(selectedMachineId);
+      fetchMachineLaborCorrelation(selectedMachineId);
     }
   });
 
@@ -113,12 +114,14 @@ export function useTimesheetData(selectedMachineId?: string) {
     setMyEntries(prev => prev.filter(e => e.id !== data.id));
     if (selectedMachineId) {
       fetchMachineSummary(selectedMachineId);
+      fetchMachineLaborCorrelation(selectedMachineId);
     }
   });
 
   useSSE('timesheet_task_updated', (updatedTask: ProjectTask) => {
     if (selectedMachineId && updatedTask.machine_id === selectedMachineId) {
       fetchMachineSummary(selectedMachineId);
+      fetchMachineLaborCorrelation(selectedMachineId);
     }
   });
 
@@ -145,6 +148,7 @@ export function useTimesheetData(selectedMachineId?: string) {
     setMyEntries(prev => [created, ...prev.filter(e => e.id !== created.id)]);
     if (selectedMachineId && req.machine_id === selectedMachineId) {
       await fetchMachineSummary(selectedMachineId);
+      await fetchMachineLaborCorrelation(selectedMachineId);
     }
     return created;
   };
@@ -154,6 +158,7 @@ export function useTimesheetData(selectedMachineId?: string) {
     setMyEntries(prev => prev.filter(e => e.id !== id));
     if (selectedMachineId) {
       await fetchMachineSummary(selectedMachineId);
+      await fetchMachineLaborCorrelation(selectedMachineId);
     }
   };
 
@@ -164,6 +169,7 @@ export function useTimesheetData(selectedMachineId?: string) {
     });
     if (selectedMachineId === machineId) {
       await fetchMachineSummary(machineId);
+      await fetchMachineLaborCorrelation(machineId);
     }
     return created;
   };
@@ -175,6 +181,7 @@ export function useTimesheetData(selectedMachineId?: string) {
     });
     if (selectedMachineId) {
       await fetchMachineSummary(selectedMachineId);
+      await fetchMachineLaborCorrelation(selectedMachineId);
     }
     return updated;
   };

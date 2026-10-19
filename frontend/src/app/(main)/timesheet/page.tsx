@@ -763,16 +763,18 @@ export default function TimesheetPage() {
                   <tbody>
                     {(correlatedTasks || filteredMachineTasks).map((taskItem) => {
                       const isCorrelated = "assigned_hours" in taskItem;
-                      const projectTaskId = isCorrelated ? (taskItem as LaborCorrelationItem).project_task_id : (taskItem as ProjectTask).id;
-                      const taskId = projectTaskId || (isCorrelated ? (taskItem as LaborCorrelationItem).task_code : (taskItem as ProjectTask).task_code);
+                      const correlationItem = isCorrelated ? (taskItem as LaborCorrelationItem) : null;
+                      const projectTask = !isCorrelated ? (taskItem as ProjectTask) : null;
+                      const projectTaskId = correlationItem ? correlationItem.project_task_id : projectTask?.id;
+                      const taskId = projectTaskId || (correlationItem ? correlationItem.task_code : projectTask?.task_code);
                       const taskName = taskItem.task_name;
                       const taskCode = taskItem.task_code;
                       const department = taskItem.department;
-                      const assignedHours = isCorrelated ? (taskItem.assigned_hours ?? 0) : ((taskItem as any).quoted_hours ?? 0);
-                      const consumedHours = isCorrelated ? (taskItem.consumed_hours ?? 0) : ((taskItem as any).actual_hours ?? 0);
-                      const variance = isCorrelated ? (taskItem.variance ?? 0) : ((taskItem as any).variance ?? 0);
-                      const burnPct = isCorrelated ? (taskItem.burn_percentage ?? 0) : (assignedHours > 0 ? (consumedHours / assignedHours) * 100 : 0);
-                      const status = isCorrelated ? taskItem.status : ((taskItem as any).status || "open");
+                      const assignedHours = correlationItem ? (correlationItem.assigned_hours ?? 0) : (projectTask?.quoted_hours ?? 0);
+                      const consumedHours = correlationItem ? (correlationItem.consumed_hours ?? 0) : (projectTask?.actual_hours ?? 0);
+                      const variance = correlationItem ? (correlationItem.variance ?? 0) : (projectTask?.variance ?? 0);
+                      const burnPct = correlationItem ? (correlationItem.burn_percentage ?? 0) : (assignedHours > 0 ? (consumedHours / assignedHours) * 100 : 0);
+                      const status = correlationItem ? correlationItem.status : (projectTask?.status || "open");
 
                       let progressClass = styles.progressGreen;
                       if (burnPct >= 100) progressClass = styles.progressRed;

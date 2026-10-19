@@ -165,20 +165,24 @@ export function WeeklyTimesheetGrid({
     setIsDirty(false);
   }, [weeklyTimesheet, machines]);
 
-  // Pre-load machine tasks for any machine IDs present in rows
+  // Pre-load machine tasks for unique machine IDs present in rows
+  const uniqueMachineIds = useMemo(() => {
+    return Array.from(new Set(rows.map(r => r.machine_id).filter((id): id is string => Boolean(id && id !== 'none'))));
+  }, [rows]);
+
   useEffect(() => {
-    rows.forEach(r => {
-      if (r.machine_id && r.machine_id !== 'none' && !machineTasksCache[r.machine_id]) {
-        fetchApi<ProjectTask[]>(`machines/${r.machine_id}/tasks`)
+    uniqueMachineIds.forEach(machineId => {
+      if (!machineTasksCache[machineId]) {
+        fetchApi<ProjectTask[]>(`machines/${machineId}/tasks`)
           .then(tasks => {
-            setMachineTasksCache(prev => ({ ...prev, [r.machine_id!]: tasks || [] }));
+            setMachineTasksCache(prev => ({ ...prev, [machineId]: tasks || [] }));
           })
           .catch(err => {
-            console.error('Failed to load tasks for machine', r.machine_id, err);
+            console.error('Failed to load tasks for machine', machineId, err);
           });
       }
     });
-  }, [rows, machineTasksCache]);
+  }, [uniqueMachineIds, machineTasksCache]);
 
   const isLocked = useMemo(() => {
     if (readOnlyUserView) return true;

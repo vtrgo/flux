@@ -1386,6 +1386,7 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to query existing entries", err)
 		return
 	}
+	defer existingRows.Close()
 	existingIDs := make(map[uuid.UUID]bool)
 	for existingRows.Next() {
 		var eid uuid.UUID
@@ -1393,7 +1394,6 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 			existingIDs[eid] = true
 		}
 	}
-	existingRows.Close()
 
 	keptIDs := make(map[uuid.UUID]bool)
 
