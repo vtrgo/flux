@@ -179,6 +179,9 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('Task Allocation & Variance Breakdown: M-1001')).toBeInTheDocument();
     expect(screen.getAllByText('40.0h').length).toBeGreaterThan(0);
     expect(screen.getByText('-35.50h')).toBeInTheDocument();
+
+    // Verify Total Quoted Hours KPI card is removed
+    expect(screen.queryByText('Total Quoted Hours')).not.toBeInTheDocument();
   });
 
   it('toggles to Department Tasks tab and displays core tasks library with default quote editing', async () => {
@@ -237,7 +240,7 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('🔄 Rework (SOP 1-003)')).toBeInTheDocument();
   });
 
-  it('supports independent department selection distilling tasks to the selected department', async () => {
+  it('supports project-level department scope and distills task options', async () => {
     await act(async () => {
       render(<TimesheetPage />);
     });
@@ -246,6 +249,10 @@ describe('TimesheetPage', () => {
     await act(async () => {
       fireEvent.click(varianceTabBtn);
     });
+
+    // Project Context Bar has Department Scope
+    const projectDeptSelect = screen.getByLabelText(/Department Scope:/i);
+    expect(projectDeptSelect).toHaveValue('all');
 
     // Open task assignment panel
     const assignBtn = screen.getByText('+ Define Quoted Task');
@@ -253,28 +260,28 @@ describe('TimesheetPage', () => {
       fireEvent.click(assignBtn);
     });
 
-    // Verify independent department selection
-    expect(screen.getByText(/1\. Target Department \*/i)).toBeInTheDocument();
-    const deptSelect = screen.getByLabelText(/1\. Target Department \*/i);
+    // In 'all' scope, target department dropdown allows selecting target department
+    expect(screen.getByText(/Target Department \*/i)).toBeInTheDocument();
+    const deptSelect = screen.getByLabelText(/Target Department \*/i);
     expect(deptSelect).toHaveValue('assembly');
 
     // Verify task options are distilled to assembly
-    expect(screen.getByText(/2\. Distilled Assembly Tasks \*/i)).toBeInTheDocument();
+    expect(screen.getByText(/Distilled Assembly Tasks \*/i)).toBeInTheDocument();
     expect(screen.getByText('Mechanical Assembly (Default: 40h)')).toBeInTheDocument();
     expect(screen.queryByText('PLC Programming (Default: 25h)')).not.toBeInTheDocument();
 
-    // Change department to controls
+    // Change department to controls in form
     await act(async () => {
       fireEvent.change(deptSelect, { target: { value: 'controls' } });
     });
 
     // Verify task options are distilled to controls
-    expect(screen.getByText(/2\. Distilled Electrical \/ Controls Tasks \*/i)).toBeInTheDocument();
+    expect(screen.getByText(/Distilled Electrical \/ Controls Tasks \*/i)).toBeInTheDocument();
     expect(screen.getByText('PLC Programming (Default: 25h)')).toBeInTheDocument();
     expect(screen.queryByText('Mechanical Assembly (Default: 40h)')).not.toBeInTheDocument();
   });
 
-  it('filters machine variance tasks by department in the table', async () => {
+  it('filters machine variance tasks by department via project-level scope', async () => {
     await act(async () => {
       render(<TimesheetPage />);
     });
@@ -284,14 +291,14 @@ describe('TimesheetPage', () => {
       fireEvent.click(varianceTabBtn);
     });
 
-    // Both assembly and controls tasks exist initially
+    // Both assembly and controls tasks exist initially under 'all'
     expect(screen.getByText('Mechanical Assembly')).toBeInTheDocument();
     expect(screen.getByText('Panel Wiring')).toBeInTheDocument();
 
-    // Filter by Controls department
-    const filterSelect = screen.getByLabelText(/Department:/i);
+    // Filter by Controls department via Project Context Bar
+    const projectDeptSelect = screen.getByLabelText(/Department Scope:/i);
     await act(async () => {
-      fireEvent.change(filterSelect, { target: { value: 'controls' } });
+      fireEvent.change(projectDeptSelect, { target: { value: 'controls' } });
     });
 
     expect(screen.getByText('Panel Wiring')).toBeInTheDocument();
@@ -299,14 +306,14 @@ describe('TimesheetPage', () => {
 
     // Filter by Laser (empty)
     await act(async () => {
-      fireEvent.change(filterSelect, { target: { value: 'laser' } });
+      fireEvent.change(projectDeptSelect, { target: { value: 'laser' } });
     });
 
     expect(screen.getByText(/No tasks quoted for Laser\./i)).toBeInTheDocument();
     expect(screen.queryByText('Panel Wiring')).not.toBeInTheDocument();
 
     // Reset via Show All Departments button
-    const showAllBtn = screen.getByText('Show All Departments');
+    const showAllBtn = screen.getAllByText('Show All Departments')[0];
     await act(async () => {
       fireEvent.click(showAllBtn);
     });
