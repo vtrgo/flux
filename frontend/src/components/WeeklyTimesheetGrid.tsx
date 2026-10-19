@@ -155,7 +155,7 @@ export function WeeklyTimesheetGrid({
   const isLocked = useMemo(() => {
     if (readOnlyUserView) return true;
     if (!weeklyTimesheet) return false;
-    return weeklyTimesheet.status === 'submitted' || weeklyTimesheet.status === 'approved';
+    return weeklyTimesheet.status === 'approved';
   }, [weeklyTimesheet, readOnlyUserView]);
 
   // Handlers for week navigation
@@ -331,7 +331,7 @@ export function WeeklyTimesheetGrid({
         entries: items,
       });
       setIsDirty(false);
-      toast.success('Weekly timesheet draft saved successfully');
+      toast.success(weeklyTimesheet.status === 'submitted' ? 'Timesheet changes saved' : 'Weekly timesheet draft saved successfully');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save timesheet';
       toast.error(msg);
@@ -354,7 +354,7 @@ export function WeeklyTimesheetGrid({
       return;
     }
 
-    if (!window.confirm(`Submit timesheet for week ${formatWeekRange(currentWeekSunday)} (${totalHours.toFixed(1)} hrs total)? This will lock editing until reviewed.`)) {
+    if (!window.confirm(`Submit timesheet for week ${formatWeekRange(currentWeekSunday)} (${totalHours.toFixed(1)} hrs total) for lead review?`)) {
       return;
     }
 
@@ -476,7 +476,15 @@ export function WeeklyTimesheetGrid({
                 disabled={isLocked || saving || !isDirty}
                 type="button"
               >
-                {saving ? 'Saving...' : isDirty ? 'Save Draft *' : 'Save Draft'}
+                {saving
+                  ? 'Saving...'
+                  : isDirty
+                  ? weeklyTimesheet?.status === 'submitted'
+                    ? 'Save Changes *'
+                    : 'Save Draft *'
+                  : weeklyTimesheet?.status === 'submitted'
+                  ? 'Saved'
+                  : 'Save Draft'}
               </button>
               {weeklyTimesheet?.status === 'submitted' ? (
                 <button
@@ -484,6 +492,7 @@ export function WeeklyTimesheetGrid({
                   onClick={handleWithdraw}
                   disabled={submitting}
                   type="button"
+                  title="Withdraw timesheet back to draft"
                 >
                   ↩ Withdraw
                 </button>
@@ -507,7 +516,7 @@ export function WeeklyTimesheetGrid({
       {weeklyTimesheet?.status === 'submitted' && (
         <div className={`${styles.banner} ${styles.bannerSubmitted}`}>
           <span>
-            ⏳ <strong>Timesheet Submitted:</strong> This timesheet is currently awaiting team lead review and is locked.
+            ⏳ <strong>Timesheet Submitted:</strong> This timesheet is currently submitted for review. You can still make and save changes until it is approved.
           </span>
         </div>
       )}

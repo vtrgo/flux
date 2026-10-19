@@ -723,14 +723,15 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 		}
 	})
 
-	t.Run("Cannot_Edit_Submitted_Timesheet", func(t *testing.T) {
+	t.Run("Can_Edit_Submitted_Timesheet_Before_Approval", func(t *testing.T) {
 		saveReq := models.WeeklyTimesheetSaveRequest{
 			Entries: []models.WeeklyTimesheetSaveItem{
 				{
-					MachineID:     &machineID,
-					ProjectTaskID: &taskID,
-					WorkDate:      "2026-10-19",
-					HoursSpent:    2.0,
+					MachineID:       &machineID,
+					ProjectTaskID:   &taskID,
+					WorkDate:        "2026-10-19",
+					HoursSpent:      5.0,
+					WorkDescription: "Base plate mounting & adjustments",
 				},
 			},
 		}
@@ -741,8 +742,17 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 		rr := httptest.NewRecorder()
 		AuthMiddleware(mux).ServeHTTP(rr, req)
 
-		if rr.Code != http.StatusBadRequest {
-			t.Errorf("expected 400 when editing submitted timesheet, got %d", rr.Code)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200 when editing submitted timesheet, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var wt models.WeeklyTimesheet
+		_ = json.NewDecoder(rr.Body).Decode(&wt)
+		if wt.TotalHours != 5.0 {
+			t.Errorf("expected 5.0 total hours, got %v", wt.TotalHours)
+		}
+		if wt.Status != models.WeeklyTimesheetStatusSubmitted {
+			t.Errorf("expected status to remain submitted, got %s", wt.Status)
 		}
 	})
 
@@ -857,6 +867,26 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 		AuthMiddleware(mux).ServeHTTP(withdrawRR, withdrawReq)
 		if withdrawRR.Code != http.StatusBadRequest {
 			t.Errorf("expected 400 when attempting to withdraw approved timesheet, got %d", withdrawRR.Code)
+		}
+
+		// Approved timesheet cannot be edited by worker
+		saveApprovedReq := models.WeeklyTimesheetSaveRequest{
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					MachineID:     &machineID,
+					ProjectTaskID: &taskID,
+					WorkDate:      "2026-10-19",
+					HoursSpent:    1.0,
+				},
+			},
+		}
+		saveApprovedBody, _ := json.Marshal(saveApprovedReq)
+		editApprovedReq := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", timesheetID), bytes.NewReader(saveApprovedBody))
+		editApprovedReq.AddCookie(workerCookie)
+		editApprovedRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(editApprovedRR, editApprovedReq)
+		if editApprovedRR.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 when attempting to edit approved timesheet, got %d", editApprovedRR.Code)
 		}
 	})
 

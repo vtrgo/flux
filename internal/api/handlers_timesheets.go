@@ -1098,8 +1098,8 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if status == string(models.WeeklyTimesheetStatusSubmitted) || status == string(models.WeeklyTimesheetStatusApproved) {
-		respondError(w, http.StatusBadRequest, fmt.Sprintf("Cannot modify timesheet with status '%s'. Withdraw it or request rejection first.", status), nil)
+	if status == string(models.WeeklyTimesheetStatusApproved) {
+		respondError(w, http.StatusBadRequest, "Cannot modify timesheet: it has already been approved and locked into payroll ledger.", nil)
 		return
 	}
 

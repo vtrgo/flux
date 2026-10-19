@@ -405,6 +405,37 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('Reject')).toBeInTheDocument();
     expect(screen.getByText('Inspect Grid')).toBeInTheDocument();
   });
+
+  it('allows user to edit submitted timesheet until approved', async () => {
+    (fetchApi as any).mockImplementation((endpoint: string, options?: any) => {
+      if (endpoint.startsWith('timesheets/weekly')) {
+        return Promise.resolve({
+          ...mockWeeklyTimesheet,
+          status: 'submitted',
+          submitted_at: '2026-10-19T10:00:00Z',
+        });
+      }
+      if (endpoint === 'machines') return Promise.resolve(mockMachines);
+      if (endpoint === 'time-entries/my') return Promise.resolve(mockTimeEntries);
+      if (endpoint.startsWith('department-tasks')) return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
+
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    // Check banner mentions submitted but editable
+    expect(screen.getByText(/Timesheet Submitted:/i)).toBeInTheDocument();
+    expect(screen.getByText(/You can still make and save changes/i)).toBeInTheDocument();
+
+    // Inputs should NOT be disabled
+    const mondayInput = screen.getByLabelText(/Mechanical Assembly on Monday/i);
+    expect(mondayInput).not.toBeDisabled();
+
+    // Save button should be available
+    expect(screen.getByText('Saved')).toBeInTheDocument();
+  });
 });
 
 
