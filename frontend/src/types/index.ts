@@ -406,11 +406,13 @@ export interface TimeEntry {
   id: string;
   user_id: string;
   user_name?: string;
+  weekly_timesheet_id?: string;
   machine_id?: string;
   order_number?: string;
   entry_type: TimeEntryType;
   project_task_id?: string;
   task_name?: string;
+  department?: string;
   rework_item_id?: string;
   rework_part_number?: string;
   defect_id?: string;
@@ -419,6 +421,49 @@ export interface TimeEntry {
   work_description?: string;
   created_at: string;
   updated_at: string;
+}
+
+export type WeeklyTimesheetStatus = 'draft' | 'submitted' | 'approved' | 'rejected';
+
+export interface WeeklyTimesheet {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  user_email?: string;
+  department: string;
+  week_start_date: string; // YYYY-MM-DD (Monday)
+  status: WeeklyTimesheetStatus;
+  total_hours: number;
+  notes?: string;
+  submitted_at?: string;
+  submitted_by?: string;
+  approved_at?: string;
+  approved_by?: string;
+  approver_name?: string;
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
+  entries?: TimeEntry[];
+}
+
+export interface WeeklyTimesheetSaveItem {
+  id?: string;
+  machine_id?: string;
+  entry_type: TimeEntryType;
+  project_task_id?: string;
+  department?: string;
+  work_date: string;
+  hours_spent: number;
+  work_description?: string;
+}
+
+export interface WeeklyTimesheetSaveRequest {
+  notes?: string;
+  entries: WeeklyTimesheetSaveItem[];
+}
+
+export interface RejectTimesheetRequest {
+  reason: string;
 }
 
 export interface MachineLaborSummary {

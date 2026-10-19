@@ -115,6 +115,21 @@ describe('TimesheetPage', () => {
           updated_at: '2026-10-19T00:00:00Z',
         });
       }
+      if (endpoint.startsWith('timesheets/weekly')) {
+        if (options?.method === 'PUT') {
+          return Promise.resolve(mockWeeklyTimesheet);
+        }
+        return Promise.resolve(mockWeeklyTimesheet);
+      }
+      if (endpoint.startsWith('timesheets/approvals')) {
+        return Promise.resolve([
+          {
+            ...mockWeeklyTimesheet,
+            status: 'submitted',
+            submitted_at: '2026-10-19T10:00:00Z',
+          },
+        ]);
+      }
       if (endpoint === 'machines') {
         return Promise.resolve(mockMachines);
       }
@@ -154,6 +169,20 @@ describe('TimesheetPage', () => {
       return Promise.resolve([]);
     });
   });
+
+  const mockWeeklyTimesheet = {
+    id: 'wt-1',
+    user_id: 'u-1',
+    user_name: 'testuser',
+    department: 'assembly',
+    week_start_date: '2026-10-19',
+    status: 'draft',
+    total_hours: 4.5,
+    notes: 'Draft note',
+    created_at: '2026-10-19T00:00:00Z',
+    updated_at: '2026-10-19T00:00:00Z',
+    entries: mockTimeEntries,
+  };
 
   it('renders Timesheet page with header, KPIs, and logged entries', async () => {
     await act(async () => {
@@ -321,5 +350,35 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('Mechanical Assembly')).toBeInTheDocument();
     expect(screen.getByText('Panel Wiring')).toBeInTheDocument();
   });
+
+  it('renders Weekly Timesheet grid with daily allocations and draft controls', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    // Weekly grid controls
+    expect(screen.getByText('Submit Timesheet')).toBeInTheDocument();
+    expect(screen.getByText('Save Draft')).toBeInTheDocument();
+    expect(screen.getAllByText('Draft').length).toBeGreaterThan(0);
+    expect(screen.getByText('Total Logged This Week:')).toBeInTheDocument();
+  });
+
+  it('toggles to Approvals tab and allows lead to review timesheets', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const approvalsTabBtn = screen.getByText('✅ Approvals');
+    await act(async () => {
+      fireEvent.click(approvalsTabBtn);
+    });
+
+    expect(screen.getByText('Submitted (Needs Review)')).toBeInTheDocument();
+    expect(screen.getByText('🔄 Refresh List')).toBeInTheDocument();
+    expect(screen.getByText('Approve')).toBeInTheDocument();
+    expect(screen.getByText('Reject')).toBeInTheDocument();
+    expect(screen.getByText('Inspect Grid')).toBeInTheDocument();
+  });
 });
+
 

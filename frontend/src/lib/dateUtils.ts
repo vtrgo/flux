@@ -175,3 +175,83 @@ export function formatTimestamp(dateString?: string | null, timezone: string = D
     return date.toLocaleString();
   }
 }
+
+/**
+ * Returns the ISO Monday (YYYY-MM-DD) for a given date or string.
+ * If omitted, defaults to the Monday of the current week.
+ */
+export function getMondayOfWeek(input?: Date | string): string {
+  let d: Date;
+  if (!input) {
+    d = new Date();
+  } else if (typeof input === 'string') {
+    const [y, m, day] = input.split('T')[0].split('-').map(Number);
+    d = new Date(Date.UTC(y, m - 1, day, 12, 0, 0));
+  } else {
+    d = new Date(input);
+  }
+
+  const dayOfWeek = d.getUTCDay(); // 0 is Sunday, 1 is Monday, ...
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diff, 12, 0, 0));
+
+  const y = monday.getUTCFullYear();
+  const m = String(monday.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(monday.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Adds or subtracts weeks to a YYYY-MM-DD Monday date.
+ */
+export function addWeeks(mondayStr: string, weeks: number): string {
+  const [y, m, d] = mondayStr.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + weeks * 7, 12, 0, 0));
+  const newY = date.getUTCFullYear();
+  const newM = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const newD = String(date.getUTCDate()).padStart(2, '0');
+  return `${newY}-${newM}-${newD}`;
+}
+
+export interface WeekDayInfo {
+  dateStr: string;   // 'YYYY-MM-DD'
+  dayName: string;   // 'Mon', 'Tue', ...
+  fullName: string;  // 'Monday', ...
+  shortDate: string; // 'Oct 19'
+}
+
+/**
+ * Returns the 7 days of the work week starting on Monday.
+ */
+export function getWeekDays(mondayStr: string): WeekDayInfo[] {
+  const [y, m, d] = mondayStr.split('-').map(Number);
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const fullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const cur = new Date(Date.UTC(y, m - 1, d + i, 12, 0, 0));
+    const curY = cur.getUTCFullYear();
+    const curM = cur.getUTCMonth();
+    const curD = cur.getUTCDate();
+    const dateStr = `${curY}-${String(curM + 1).padStart(2, '0')}-${String(curD).padStart(2, '0')}`;
+    return {
+      dateStr,
+      dayName: dayNames[i],
+      fullName: fullNames[i],
+      shortDate: `${monthNames[curM]} ${curD}`,
+    };
+  });
+}
+
+/**
+ * Formats a week range (e.g. "Oct 19 – Oct 25, 2026").
+ */
+export function formatWeekRange(mondayStr: string): string {
+  const days = getWeekDays(mondayStr);
+  const start = days[0];
+  const end = days[6];
+  const endYear = end.dateStr.split('-')[0];
+  return `${start.shortDate} – ${end.shortDate}, ${endYear}`;
+}
+

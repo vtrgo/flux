@@ -114,6 +114,15 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/machines/{id}/labor-summary", handleGetMachineLaborSummary)
 	mux.HandleFunc("GET /api/timesheets/quoting-review", handleGetQuotingReviewReport)
 
+	// Weekly Timesheet Endpoints
+	mux.HandleFunc("GET /api/timesheets/weekly", handleGetWeeklyTimesheet)
+	mux.HandleFunc("PUT /api/timesheets/weekly/{id}/save", handleSaveWeeklyTimesheet)
+	mux.HandleFunc("POST /api/timesheets/weekly/{id}/submit", handleSubmitWeeklyTimesheet)
+	mux.HandleFunc("POST /api/timesheets/weekly/{id}/withdraw", handleWithdrawWeeklyTimesheet)
+	mux.Handle("GET /api/timesheets/approvals", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleGetTimesheetApprovals)))
+	mux.Handle("POST /api/timesheets/weekly/{id}/approve", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleApproveWeeklyTimesheet)))
+	mux.Handle("POST /api/timesheets/weekly/{id}/reject", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleRejectWeeklyTimesheet)))
+
 	// Department Core Task Catalog Endpoints
 	mux.HandleFunc("GET /api/department-tasks", handleGetDepartmentTasks)
 	mux.Handle("POST /api/department-tasks", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleCreateDepartmentTask)))

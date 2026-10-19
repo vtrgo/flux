@@ -530,3 +530,338 @@ func TestTimesheetHandlers(t *testing.T) {
 	})
 }
 
+func TestWeeklyTimesheetLifecycle(t *testing.T) {
+	setupTestDB(t)
+
+	mux := http.NewServeMux()
+	RegisterRoutes(mux)
+
+	// Create test sales order and machine
+	var soID uuid.UUID
+	poNum := fmt.Sprintf("PO-WT-TEST-%d", time.Now().UnixNano())
+	err := db.DB.QueryRow(`
+		INSERT INTO sales_orders (customer_name, po_number, internal_project_number, project_name, status)
+		VALUES ('Weekly TS Customer', $1, 'PRJ-WT-1', 'Feeder WT', 'open')
+		RETURNING id
+	`, poNum).Scan(&soID)
+	if err != nil {
+		t.Fatalf("failed to create test sales order: %v", err)
+	}
+
+	var machineID uuid.UUID
+	orderNum := fmt.Sprintf("M-WT-TEST-%d", time.Now().UnixNano())
+	err = db.DB.QueryRow(`
+		INSERT INTO machines (sales_order_id, order_number, model_type, status)
+		VALUES ($1, $2, 'Centrifugal Feeder', 'assembly')
+		RETURNING id
+	`, soID, orderNum).Scan(&machineID)
+	if err != nil {
+		t.Fatalf("failed to create test machine: %v", err)
+	}
+
+	var taskID uuid.UUID
+	err = db.DB.QueryRow(`
+		INSERT INTO project_tasks (machine_id, task_code, task_name, department, quoted_hours, status)
+		VALUES ($1, 'mech_assy', 'Mechanical Assembly', 'assembly', 20.0, 'open')
+		RETURNING id
+	`, machineID).Scan(&taskID)
+	if err != nil {
+		t.Fatalf("failed to create test task: %v", err)
+	}
+
+	t.Cleanup(func() {
+		_, _ = db.DB.Exec("DELETE FROM time_entries WHERE machine_id = $1", machineID)
+		_, _ = db.DB.Exec("DELETE FROM project_tasks WHERE machine_id = $1", machineID)
+		_, _ = db.DB.Exec("DELETE FROM machines WHERE id = $1", machineID)
+		_, _ = db.DB.Exec("DELETE FROM sales_orders WHERE id = $1", soID)
+	})
+
+	managerCookie := createTestRoleCookie(t, "manager")
+	workerCookie := createTestRoleCookie(t, "user")
+
+	weekMonday := "2026-10-19"
+	var timesheetID uuid.UUID
+
+	t.Run("Get_Weekly_Timesheet_Initializes_Draft", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/timesheets/weekly?week_start=%s", weekMonday), nil)
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var wt models.WeeklyTimesheet
+		if err := json.NewDecoder(rr.Body).Decode(&wt); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if wt.Status != models.WeeklyTimesheetStatusDraft {
+			t.Errorf("expected draft status, got %s", wt.Status)
+		}
+		if wt.TotalHours != 0.0 {
+			t.Errorf("expected 0 total hours, got %v", wt.TotalHours)
+		}
+		if wt.WeekStartDate != weekMonday {
+			t.Errorf("expected week_start %s, got %s", weekMonday, wt.WeekStartDate)
+		}
+		timesheetID = wt.ID
+	})
+
+	t.Run("Save_Weekly_Timesheet_Success", func(t *testing.T) {
+		notes := "Week 42 assembly progress"
+		saveReq := models.WeeklyTimesheetSaveRequest{
+			Notes: &notes,
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					MachineID:       &machineID,
+					ProjectTaskID:   &taskID,
+					EntryType:       models.TimeEntryTypeProduction,
+					WorkDate:        "2026-10-19", // Monday
+					HoursSpent:      4.5,
+					WorkDescription: "Base plate mounting",
+				},
+				{
+					MachineID:       &machineID,
+					ProjectTaskID:   &taskID,
+					EntryType:       models.TimeEntryTypeProduction,
+					WorkDate:        "2026-10-20", // Tuesday
+					HoursSpent:      3.5,
+					WorkDescription: "Drive motor alignment",
+				},
+			},
+		}
+
+		body, _ := json.Marshal(saveReq)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", timesheetID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var wt models.WeeklyTimesheet
+		_ = json.NewDecoder(rr.Body).Decode(&wt)
+
+		if wt.TotalHours != 8.0 {
+			t.Errorf("expected 8.0 total hours, got %v", wt.TotalHours)
+		}
+		if len(wt.Entries) != 2 {
+			t.Fatalf("expected 2 entries, got %d", len(wt.Entries))
+		}
+		if wt.Notes != notes {
+			t.Errorf("expected notes %s, got %s", notes, wt.Notes)
+		}
+	})
+
+	t.Run("Save_Weekly_Timesheet_Validates_Hours_And_Date", func(t *testing.T) {
+		// Test hours > 24
+		saveReq := models.WeeklyTimesheetSaveRequest{
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					MachineID:     &machineID,
+					ProjectTaskID: &taskID,
+					WorkDate:      "2026-10-19",
+					HoursSpent:    25.0,
+				},
+			},
+		}
+		body, _ := json.Marshal(saveReq)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", timesheetID), bytes.NewReader(body))
+		req.AddCookie(workerCookie)
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 for hours > 24, got %d", rr.Code)
+		}
+
+		// Test out of week date
+		saveReq2 := models.WeeklyTimesheetSaveRequest{
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					MachineID:     &machineID,
+					ProjectTaskID: &taskID,
+					WorkDate:      "2026-10-27", // Next week
+					HoursSpent:    5.0,
+				},
+			},
+		}
+		body2, _ := json.Marshal(saveReq2)
+		req2 := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", timesheetID), bytes.NewReader(body2))
+		req2.AddCookie(workerCookie)
+		rr2 := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr2, req2)
+		if rr2.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 for out-of-week date, got %d", rr2.Code)
+		}
+	})
+
+	t.Run("Submit_Weekly_Timesheet_Transitions_To_Submitted", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/submit", timesheetID), nil)
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var wt models.WeeklyTimesheet
+		_ = json.NewDecoder(rr.Body).Decode(&wt)
+		if wt.Status != models.WeeklyTimesheetStatusSubmitted {
+			t.Errorf("expected submitted status, got %s", wt.Status)
+		}
+		if wt.SubmittedAt == nil {
+			t.Errorf("expected submitted_at timestamp to be set")
+		}
+	})
+
+	t.Run("Cannot_Edit_Submitted_Timesheet", func(t *testing.T) {
+		saveReq := models.WeeklyTimesheetSaveRequest{
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					MachineID:     &machineID,
+					ProjectTaskID: &taskID,
+					WorkDate:      "2026-10-19",
+					HoursSpent:    2.0,
+				},
+			},
+		}
+		body, _ := json.Marshal(saveReq)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", timesheetID), bytes.NewReader(body))
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 when editing submitted timesheet, got %d", rr.Code)
+		}
+	})
+
+	t.Run("Withdraw_Weekly_Timesheet_Returns_To_Draft", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/withdraw", timesheetID), nil)
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var wt models.WeeklyTimesheet
+		_ = json.NewDecoder(rr.Body).Decode(&wt)
+		if wt.Status != models.WeeklyTimesheetStatusDraft {
+			t.Errorf("expected draft status after withdraw, got %s", wt.Status)
+		}
+
+		// Re-submit so lead can review
+		submitReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/submit", timesheetID), nil)
+		submitReq.AddCookie(workerCookie)
+		submitRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(submitRR, submitReq)
+		if submitRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on re-submit, got %d", submitRR.Code)
+		}
+	})
+
+	t.Run("Manager_Approvals_List_And_Reject", func(t *testing.T) {
+		// Manager lists submitted timesheets
+		listReq := httptest.NewRequest(http.MethodGet, "/api/timesheets/approvals?status=submitted", nil)
+		listReq.AddCookie(managerCookie)
+		listRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(listRR, listReq)
+
+		if listRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on approvals list, got %d", listRR.Code)
+		}
+
+		var list []models.WeeklyTimesheet
+		_ = json.NewDecoder(listRR.Body).Decode(&list)
+		found := false
+		for _, item := range list {
+			if item.ID == timesheetID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected timesheet %s to appear in manager approvals list", timesheetID)
+		}
+
+		// Reject timesheet
+		rejectReqBody, _ := json.Marshal(models.RejectTimesheetRequest{
+			Reason: "Needs review: Please confirm assembly task code",
+		})
+		rejReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/reject", timesheetID), bytes.NewReader(rejectReqBody))
+		rejReq.Header.Set("Content-Type", "application/json")
+		rejReq.AddCookie(managerCookie)
+
+		rejRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rejRR, rejReq)
+
+		if rejRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on reject, got %d: %s", rejRR.Code, rejRR.Body.String())
+		}
+
+		var rejectedWT models.WeeklyTimesheet
+		_ = json.NewDecoder(rejRR.Body).Decode(&rejectedWT)
+		if rejectedWT.Status != models.WeeklyTimesheetStatusRejected {
+			t.Errorf("expected rejected status, got %s", rejectedWT.Status)
+		}
+		if rejectedWT.RejectionReason != "Needs review: Please confirm assembly task code" {
+			t.Errorf("expected rejection reason to be saved, got %s", rejectedWT.RejectionReason)
+		}
+	})
+
+	t.Run("Worker_Resubmits_And_Manager_Approves", func(t *testing.T) {
+		// Worker can edit rejected timesheet and re-submit
+		resubmitReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/submit", timesheetID), nil)
+		resubmitReq.AddCookie(workerCookie)
+		resubmitRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(resubmitRR, resubmitReq)
+		if resubmitRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on worker re-submit, got %d", resubmitRR.Code)
+		}
+
+		// Manager approves
+		approveReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/approve", timesheetID), nil)
+		approveReq.AddCookie(managerCookie)
+		approveRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(approveRR, approveReq)
+		if approveRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on approve, got %d: %s", approveRR.Code, approveRR.Body.String())
+		}
+
+		var approvedWT models.WeeklyTimesheet
+		_ = json.NewDecoder(approveRR.Body).Decode(&approvedWT)
+		if approvedWT.Status != models.WeeklyTimesheetStatusApproved {
+			t.Errorf("expected approved status, got %s", approvedWT.Status)
+		}
+		if approvedWT.ApprovedAt == nil {
+			t.Errorf("expected approved_at timestamp to be set")
+		}
+
+		// Approved timesheet cannot be withdrawn by worker
+		withdrawReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/withdraw", timesheetID), nil)
+		withdrawReq.AddCookie(workerCookie)
+		withdrawRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(withdrawRR, withdrawReq)
+		if withdrawRR.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 when attempting to withdraw approved timesheet, got %d", withdrawRR.Code)
+		}
+	})
+
+	// Cleanup test weekly timesheet
+	_, _ = db.DB.Exec("DELETE FROM time_entries WHERE weekly_timesheet_id = $1", timesheetID)
+	_, _ = db.DB.Exec("DELETE FROM weekly_timesheets WHERE id = $1", timesheetID)
+}
+

@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -288,24 +290,39 @@ func handleCreateTimeEntry(w http.ResponseWriter, r *http.Request) {
 		workDate = time.Now().Format("2006-01-02")
 	}
 
+	// Ensure weekly timesheet exists and link
+	var weeklyTimesheetID uuid.UUID
+	_ = db.DB.QueryRowContext(r.Context(), `
+		INSERT INTO weekly_timesheets (user_id, week_start_date, status, total_hours, created_at, updated_at)
+		VALUES ($1, date_trunc('week', $2::date)::date, 'draft', 0.00, NOW(), NOW())
+		ON CONFLICT (user_id, week_start_date) DO UPDATE
+		SET updated_at = weekly_timesheets.updated_at
+		RETURNING id
+	`, userUUID, workDate).Scan(&weeklyTimesheetID)
+
 	insertQuery := `
 		INSERT INTO time_entries (
-			user_id, machine_id, entry_type, project_task_id, rework_item_id, defect_id,
+			user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, rework_item_id, defect_id,
 			work_date, hours_spent, work_description, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-		RETURNING id, user_id, machine_id, entry_type, project_task_id, rework_item_id, defect_id,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+		RETURNING id, user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, rework_item_id, defect_id,
 		          work_date, hours_spent, work_description, created_at, updated_at
 	`
 
 	var entry models.TimeEntry
-	var mID, taskID, rwID, defID uuid.NullUUID
+	var mID, taskID, rwID, defID, wtID uuid.NullUUID
 	var wDate time.Time
 
+	var wtIDParam *uuid.UUID
+	if weeklyTimesheetID != uuid.Nil {
+		wtIDParam = &weeklyTimesheetID
+	}
+
 	err = db.DB.QueryRowContext(r.Context(), insertQuery,
-		userUUID, machineID, req.EntryType, req.ProjectTaskID, req.ReworkItemID, req.DefectID,
+		userUUID, wtIDParam, machineID, req.EntryType, req.ProjectTaskID, req.ReworkItemID, req.DefectID,
 		workDate, req.HoursSpent, req.WorkDescription,
 	).Scan(
-		&entry.ID, &entry.UserID, &mID, &entry.EntryType, &taskID, &rwID, &defID,
+		&entry.ID, &entry.UserID, &wtID, &mID, &entry.EntryType, &taskID, &rwID, &defID,
 		&wDate, &entry.HoursSpent, &entry.WorkDescription, &entry.CreatedAt, &entry.UpdatedAt,
 	)
 	if err != nil {
@@ -314,6 +331,18 @@ func handleCreateTimeEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 	entry.WorkDate = wDate.Format("2006-01-02")
+	if wtID.Valid {
+		entry.WeeklyTimesheetID = &wtID.UUID
+	}
+	if weeklyTimesheetID != uuid.Nil {
+		_, _ = db.DB.ExecContext(r.Context(), `
+			UPDATE weekly_timesheets
+			SET total_hours = (SELECT COALESCE(SUM(hours_spent), 0.00) FROM time_entries WHERE weekly_timesheet_id = $1),
+			    updated_at = NOW()
+			WHERE id = $1
+		`, weeklyTimesheetID)
+	}
+
 	if mID.Valid {
 		entry.MachineID = &mID.UUID
 		_ = db.DB.QueryRowContext(r.Context(), `SELECT order_number FROM machines WHERE id = $1`, mID.UUID).Scan(&entry.OrderNumber)
@@ -452,12 +481,12 @@ func handleDeleteTimeEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch entry to verify ownership and check rework linkage
+	// Fetch entry to verify ownership and check rework / weekly timesheet linkage
 	var ownerID uuid.UUID
-	var rwID uuid.NullUUID
+	var rwID, wtID uuid.NullUUID
 	err = db.DB.QueryRowContext(r.Context(), `
-		SELECT user_id, rework_item_id FROM time_entries WHERE id = $1
-	`, entryID).Scan(&ownerID, &rwID)
+		SELECT user_id, rework_item_id, weekly_timesheet_id FROM time_entries WHERE id = $1
+	`, entryID).Scan(&ownerID, &rwID, &wtID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			respondError(w, http.StatusNotFound, "Time entry not found", nil)
@@ -496,6 +525,16 @@ func handleDeleteTimeEntry(w http.ResponseWriter, r *http.Request) {
 			    updated_at = NOW()
 			WHERE id = $1
 		`, rwID.UUID)
+	}
+
+	// Recalculate weekly timesheet total hours if linked
+	if wtID.Valid {
+		_, _ = db.DB.ExecContext(r.Context(), `
+			UPDATE weekly_timesheets
+			SET total_hours = (SELECT COALESCE(SUM(hours_spent), 0.00) FROM time_entries WHERE weekly_timesheet_id = $1),
+			    updated_at = NOW()
+			WHERE id = $1
+		`, wtID.UUID)
 	}
 
 	BroadcastEvent("time_entry_deleted", map[string]string{"id": entryID.String()})
@@ -844,3 +883,679 @@ func handleDeleteDepartmentTask(w http.ResponseWriter, r *http.Request) {
 	BroadcastEvent("department_task_deleted", map[string]string{"id": taskID.String(), "department": t.Department})
 	respondJSON(w, http.StatusOK, map[string]string{"message": "Department task deactivated successfully"})
 }
+
+// fetchWeeklyTimesheet retrieves a weekly timesheet along with all linked time entries.
+func fetchWeeklyTimesheet(ctx context.Context, timesheetID uuid.UUID) (*models.WeeklyTimesheet, error) {
+	query := `
+		SELECT 
+			wt.id, wt.user_id, u.username, COALESCE(u.email, ''), COALESCE(u.department, ''),
+			to_char(wt.week_start_date, 'YYYY-MM-DD'),
+			wt.status, wt.total_hours, COALESCE(wt.notes, ''),
+			wt.submitted_at, wt.submitted_by,
+			wt.approved_at, wt.approved_by, COALESCE(appr.username, ''),
+			COALESCE(wt.rejection_reason, ''),
+			wt.created_at, wt.updated_at
+		FROM weekly_timesheets wt
+		JOIN users u ON wt.user_id = u.id
+		LEFT JOIN users appr ON wt.approved_by = appr.id
+		WHERE wt.id = $1
+	`
+	var wt models.WeeklyTimesheet
+	var submittedBy, approvedBy uuid.NullUUID
+	err := db.DB.QueryRowContext(ctx, query, timesheetID).Scan(
+		&wt.ID, &wt.UserID, &wt.UserName, &wt.UserEmail, &wt.Department,
+		&wt.WeekStartDate,
+		&wt.Status, &wt.TotalHours, &wt.Notes,
+		&wt.SubmittedAt, &submittedBy,
+		&wt.ApprovedAt, &approvedBy, &wt.ApproverName,
+		&wt.RejectionReason,
+		&wt.CreatedAt, &wt.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if submittedBy.Valid {
+		wt.SubmittedBy = &submittedBy.UUID
+	}
+	if approvedBy.Valid {
+		wt.ApprovedBy = &approvedBy.UUID
+	}
+
+	entriesQuery := `
+		SELECT 
+			te.id, te.user_id, u.username, te.weekly_timesheet_id, te.machine_id, COALESCE(m.order_number, ''),
+			te.entry_type, te.project_task_id, COALESCE(pt.task_name, ''),
+			COALESCE(pt.department, ''),
+			te.rework_item_id, COALESCE(rw.part_number, ''),
+			te.defect_id,
+			to_char(te.work_date, 'YYYY-MM-DD'), te.hours_spent, COALESCE(te.work_description, ''),
+			te.created_at, te.updated_at
+		FROM time_entries te
+		JOIN users u ON te.user_id = u.id
+		LEFT JOIN machines m ON te.machine_id = m.id
+		LEFT JOIN project_tasks pt ON te.project_task_id = pt.id
+		LEFT JOIN rework_items rw ON te.rework_item_id = rw.id
+		WHERE te.weekly_timesheet_id = $1
+		ORDER BY te.work_date ASC, te.created_at ASC
+	`
+	rows, err := db.DB.QueryContext(ctx, entriesQuery, timesheetID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	wt.Entries = make([]models.TimeEntry, 0)
+	for rows.Next() {
+		var e models.TimeEntry
+		var wtID, mID, taskID, rwID, defID uuid.NullUUID
+		err := rows.Scan(
+			&e.ID, &e.UserID, &e.UserName, &wtID, &mID, &e.OrderNumber,
+			&e.EntryType, &taskID, &e.TaskName,
+			&e.Department,
+			&rwID, &e.ReworkPartNum,
+			&defID,
+			&e.WorkDate, &e.HoursSpent, &e.WorkDescription,
+			&e.CreatedAt, &e.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if wtID.Valid {
+			e.WeeklyTimesheetID = &wtID.UUID
+		}
+		if mID.Valid {
+			e.MachineID = &mID.UUID
+		}
+		if taskID.Valid {
+			e.ProjectTaskID = &taskID.UUID
+		}
+		if rwID.Valid {
+			e.ReworkItemID = &rwID.UUID
+		}
+		if defID.Valid {
+			e.DefectID = &defID.UUID
+		}
+		wt.Entries = append(wt.Entries, e)
+	}
+
+	return &wt, nil
+}
+
+// handleGetWeeklyTimesheet fetches or initialises the authenticated user's weekly timesheet.
+func handleGetWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
+	authUserID := getAuthenticatedUserID(r)
+	if authUserID == "" {
+		respondError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	userUUID, err := uuid.Parse(authUserID)
+	if err != nil {
+		respondError(w, http.StatusUnauthorized, "Invalid user identity", err)
+		return
+	}
+
+	targetUserID := userUUID
+	targetUserParam := r.URL.Query().Get("user_id")
+	if targetUserParam != "" {
+		if parsedTarget, err := uuid.Parse(targetUserParam); err == nil && parsedTarget != userUUID {
+			user, ok := r.Context().Value(UserContextKey).(*models.User)
+			if !ok || user == nil || user.Role == nil {
+				respondError(w, http.StatusForbidden, "Forbidden", nil)
+				return
+			}
+			role := strings.ToLower(*user.Role)
+			if role != "admin" && role != "manager" && role != "lead" {
+				respondError(w, http.StatusForbidden, "Forbidden: Only leads and managers can view other workers' timesheets", nil)
+				return
+			}
+			targetUserID = parsedTarget
+		}
+	}
+
+	weekStartParam := r.URL.Query().Get("week_start")
+	var weekStartDate string
+	if weekStartParam != "" {
+		if err := db.DB.QueryRowContext(r.Context(), `SELECT to_char(date_trunc('week', $1::date)::date, 'YYYY-MM-DD')`, weekStartParam).Scan(&weekStartDate); err != nil {
+			respondError(w, http.StatusBadRequest, "Invalid week_start date format (expected YYYY-MM-DD)", err)
+			return
+		}
+	} else {
+		if err := db.DB.QueryRowContext(r.Context(), `SELECT to_char(date_trunc('week', CURRENT_DATE)::date, 'YYYY-MM-DD')`).Scan(&weekStartDate); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to determine current week", err)
+			return
+		}
+	}
+
+	// Ensure weekly_timesheets record exists (upsert draft)
+	var timesheetID uuid.UUID
+	upsertQuery := `
+		INSERT INTO weekly_timesheets (user_id, week_start_date, status, total_hours, created_at, updated_at)
+		VALUES ($1, $2::date, 'draft', 0.00, NOW(), NOW())
+		ON CONFLICT (user_id, week_start_date) DO UPDATE
+		SET updated_at = weekly_timesheets.updated_at
+		RETURNING id
+	`
+	if err := db.DB.QueryRowContext(r.Context(), upsertQuery, targetUserID, weekStartDate).Scan(&timesheetID); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to load weekly timesheet", err)
+		return
+	}
+
+	wt, err := fetchWeeklyTimesheet(r.Context(), timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch weekly timesheet details", err)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, wt)
+}
+
+// handleSaveWeeklyTimesheet saves entries and notes for a draft/rejected weekly timesheet.
+func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	timesheetID, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid timesheet ID", err)
+		return
+	}
+
+	var req models.WeeklyTimesheetSaveRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	authUserID := getAuthenticatedUserID(r)
+	if authUserID == "" {
+		respondError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	var ownerID uuid.UUID
+	var status string
+	var weekStartDate time.Time
+	err = db.DB.QueryRowContext(r.Context(), `
+		SELECT user_id, status, week_start_date FROM weekly_timesheets WHERE id = $1
+	`, timesheetID).Scan(&ownerID, &status, &weekStartDate)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondError(w, http.StatusNotFound, "Weekly timesheet not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to query timesheet", err)
+		return
+	}
+
+	user, _ := r.Context().Value(UserContextKey).(*models.User)
+	isAdminOrManager := false
+	if user != nil && user.Role != nil {
+		r := strings.ToLower(*user.Role)
+		if r == "admin" || r == "manager" {
+			isAdminOrManager = true
+		}
+	}
+	if ownerID.String() != authUserID && !isAdminOrManager {
+		respondError(w, http.StatusForbidden, "Forbidden: You cannot modify another user's timesheet", nil)
+		return
+	}
+
+	if status == string(models.WeeklyTimesheetStatusSubmitted) || status == string(models.WeeklyTimesheetStatusApproved) {
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("Cannot modify timesheet with status '%s'. Withdraw it or request rejection first.", status), nil)
+		return
+	}
+
+	weekEnd := weekStartDate.AddDate(0, 0, 7)
+	for _, entry := range req.Entries {
+		if entry.HoursSpent <= 0 || entry.HoursSpent > 24 {
+			respondError(w, http.StatusBadRequest, "Each entry hours_spent must be greater than 0 and at most 24", nil)
+			return
+		}
+		wDate, err := time.Parse("2006-01-02", entry.WorkDate)
+		if err != nil {
+			respondError(w, http.StatusBadRequest, fmt.Sprintf("Invalid work_date format: %s", entry.WorkDate), err)
+			return
+		}
+		if wDate.Before(weekStartDate) || !wDate.Before(weekEnd) {
+			respondError(w, http.StatusBadRequest, fmt.Sprintf("work_date %s is outside of timesheet week [%s to %s]", entry.WorkDate, weekStartDate.Format("2006-01-02"), weekStartDate.AddDate(0, 0, 6).Format("2006-01-02")), nil)
+			return
+		}
+	}
+
+	tx, err := db.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to begin transaction", err)
+		return
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	if req.Notes != nil {
+		if _, err := tx.ExecContext(r.Context(), `UPDATE weekly_timesheets SET notes = $1, updated_at = NOW() WHERE id = $2`, *req.Notes, timesheetID); err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to update timesheet notes", err)
+			return
+		}
+	}
+
+	existingRows, err := tx.QueryContext(r.Context(), `SELECT id FROM time_entries WHERE weekly_timesheet_id = $1`, timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to query existing entries", err)
+		return
+	}
+	existingIDs := make(map[uuid.UUID]bool)
+	for existingRows.Next() {
+		var eid uuid.UUID
+		if err := existingRows.Scan(&eid); err == nil {
+			existingIDs[eid] = true
+		}
+	}
+	existingRows.Close()
+
+	keptIDs := make(map[uuid.UUID]bool)
+
+	for _, item := range req.Entries {
+		entryType := item.EntryType
+		if entryType == "" {
+			entryType = models.TimeEntryTypeProduction
+		}
+
+		machineID := item.MachineID
+		if machineID == nil && item.ProjectTaskID != nil {
+			var mID uuid.UUID
+			if err := tx.QueryRowContext(r.Context(), `SELECT machine_id FROM project_tasks WHERE id = $1`, item.ProjectTaskID).Scan(&mID); err == nil {
+				machineID = &mID
+			}
+		}
+
+		if item.ID != nil && existingIDs[*item.ID] {
+			_, err = tx.ExecContext(r.Context(), `
+				UPDATE time_entries
+				SET machine_id = $1, entry_type = $2, project_task_id = $3,
+				    work_date = $4::date, hours_spent = $5, work_description = $6, updated_at = NOW()
+				WHERE id = $7 AND weekly_timesheet_id = $8
+			`, machineID, entryType, item.ProjectTaskID, item.WorkDate, item.HoursSpent, item.WorkDescription, *item.ID, timesheetID)
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, "Failed to update entry", err)
+				return
+			}
+			keptIDs[*item.ID] = true
+		} else {
+			var newID uuid.UUID
+			err = tx.QueryRowContext(r.Context(), `
+				INSERT INTO time_entries (
+					user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id,
+					work_date, hours_spent, work_description, created_at, updated_at
+				) VALUES ($1, $2, $3, $4, $5, $6::date, $7, $8, NOW(), NOW())
+				RETURNING id
+			`, ownerID, timesheetID, machineID, entryType, item.ProjectTaskID, item.WorkDate, item.HoursSpent, item.WorkDescription).Scan(&newID)
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, "Failed to insert entry", err)
+				return
+			}
+			keptIDs[newID] = true
+		}
+	}
+
+	for eid := range existingIDs {
+		if !keptIDs[eid] {
+			if _, err := tx.ExecContext(r.Context(), `DELETE FROM time_entries WHERE id = $1 AND weekly_timesheet_id = $2`, eid, timesheetID); err != nil {
+				respondError(w, http.StatusInternalServerError, "Failed to delete removed entry", err)
+				return
+			}
+		}
+	}
+
+	_, err = tx.ExecContext(r.Context(), `
+		UPDATE weekly_timesheets
+		SET total_hours = (SELECT COALESCE(SUM(hours_spent), 0.00) FROM time_entries WHERE weekly_timesheet_id = $1),
+		    updated_at = NOW()
+		WHERE id = $1
+	`, timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to recalculate timesheet total hours", err)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to commit timesheet updates", err)
+		return
+	}
+
+	wt, err := fetchWeeklyTimesheet(r.Context(), timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch updated timesheet", err)
+		return
+	}
+
+	BroadcastEvent("weekly_timesheet_updated", wt)
+	respondJSON(w, http.StatusOK, wt)
+}
+
+// handleSubmitWeeklyTimesheet transitions a timesheet from draft/rejected to submitted.
+func handleSubmitWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	timesheetID, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid timesheet ID", err)
+		return
+	}
+
+	authUserID := getAuthenticatedUserID(r)
+	if authUserID == "" {
+		respondError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	var ownerID uuid.UUID
+	var status string
+	var totalHours float64
+	err = db.DB.QueryRowContext(r.Context(), `
+		SELECT user_id, status, total_hours FROM weekly_timesheets WHERE id = $1
+	`, timesheetID).Scan(&ownerID, &status, &totalHours)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondError(w, http.StatusNotFound, "Weekly timesheet not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to query timesheet", err)
+		return
+	}
+
+	user, _ := r.Context().Value(UserContextKey).(*models.User)
+	isAdminOrManager := false
+	if user != nil && user.Role != nil {
+		r := strings.ToLower(*user.Role)
+		if r == "admin" || r == "manager" {
+			isAdminOrManager = true
+		}
+	}
+	if ownerID.String() != authUserID && !isAdminOrManager {
+		respondError(w, http.StatusForbidden, "Forbidden: You cannot submit another user's timesheet", nil)
+		return
+	}
+
+	if status != string(models.WeeklyTimesheetStatusDraft) && status != string(models.WeeklyTimesheetStatusRejected) {
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("Cannot submit timesheet with status '%s'", status), nil)
+		return
+	}
+
+	if totalHours <= 0 {
+		respondError(w, http.StatusBadRequest, "Cannot submit timesheet with 0 hours logged", nil)
+		return
+	}
+
+	_, err = db.DB.ExecContext(r.Context(), `
+		UPDATE weekly_timesheets
+		SET status = 'submitted', submitted_at = NOW(), submitted_by = $1, rejection_reason = NULL, updated_at = NOW()
+		WHERE id = $2
+	`, authUserUUID, timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to submit timesheet", err)
+		return
+	}
+
+	wt, err := fetchWeeklyTimesheet(r.Context(), timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch submitted timesheet", err)
+		return
+	}
+
+	BroadcastEvent("weekly_timesheet_submitted", wt)
+	respondJSON(w, http.StatusOK, wt)
+}
+
+// handleWithdrawWeeklyTimesheet returns a submitted timesheet back to draft.
+func handleWithdrawWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	timesheetID, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid timesheet ID", err)
+		return
+	}
+
+	authUserID := getAuthenticatedUserID(r)
+	if authUserID == "" {
+		respondError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	var ownerID uuid.UUID
+	var status string
+	err = db.DB.QueryRowContext(r.Context(), `
+		SELECT user_id, status FROM weekly_timesheets WHERE id = $1
+	`, timesheetID).Scan(&ownerID, &status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondError(w, http.StatusNotFound, "Weekly timesheet not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to query timesheet", err)
+		return
+	}
+
+	user, _ := r.Context().Value(UserContextKey).(*models.User)
+	isAdminOrManager := false
+	if user != nil && user.Role != nil {
+		r := strings.ToLower(*user.Role)
+		if r == "admin" || r == "manager" {
+			isAdminOrManager = true
+		}
+	}
+	if ownerID.String() != authUserID && !isAdminOrManager {
+		respondError(w, http.StatusForbidden, "Forbidden: You cannot withdraw another user's timesheet", nil)
+		return
+	}
+
+	if status != string(models.WeeklyTimesheetStatusSubmitted) {
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("Cannot withdraw timesheet with status '%s'. Only 'submitted' timesheets can be withdrawn.", status), nil)
+		return
+	}
+
+	_, err = db.DB.ExecContext(r.Context(), `
+		UPDATE weekly_timesheets
+		SET status = 'draft', submitted_at = NULL, submitted_by = NULL, updated_at = NOW()
+		WHERE id = $1
+	`, timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to withdraw timesheet", err)
+		return
+	}
+
+	wt, err := fetchWeeklyTimesheet(r.Context(), timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch withdrawn timesheet", err)
+		return
+	}
+
+	BroadcastEvent("weekly_timesheet_withdrawn", wt)
+	respondJSON(w, http.StatusOK, wt)
+}
+
+// handleGetTimesheetApprovals allows leads, managers, and admins to list timesheets for review.
+func handleGetTimesheetApprovals(w http.ResponseWriter, r *http.Request) {
+	deptFilter := r.URL.Query().Get("department")
+	statusFilter := r.URL.Query().Get("status")
+	weekStartFilter := r.URL.Query().Get("week_start")
+
+	user, _ := r.Context().Value(UserContextKey).(*models.User)
+	if user != nil && user.Role != nil && strings.ToLower(*user.Role) == "lead" && deptFilter == "" && user.Department != nil {
+		deptFilter = *user.Department
+	}
+
+	query := `
+		SELECT 
+			wt.id, wt.user_id, u.username, COALESCE(u.email, ''), COALESCE(u.department, ''),
+			to_char(wt.week_start_date, 'YYYY-MM-DD') as week_start_date,
+			wt.status, wt.total_hours, COALESCE(wt.notes, ''),
+			wt.submitted_at, wt.submitted_by,
+			wt.approved_at, wt.approved_by, COALESCE(appr.username, ''),
+			COALESCE(wt.rejection_reason, ''),
+			wt.created_at, wt.updated_at
+		FROM weekly_timesheets wt
+		JOIN users u ON wt.user_id = u.id
+		LEFT JOIN users appr ON wt.approved_by = appr.id
+		WHERE 1=1
+	`
+	var args []interface{}
+	argIdx := 1
+
+	if deptFilter != "" {
+		query += fmt.Sprintf(" AND u.department = $%d", argIdx)
+		args = append(args, deptFilter)
+		argIdx++
+	}
+	if statusFilter != "" {
+		query += fmt.Sprintf(" AND wt.status = $%d", argIdx)
+		args = append(args, statusFilter)
+		argIdx++
+	}
+	if weekStartFilter != "" {
+		query += fmt.Sprintf(" AND wt.week_start_date = $%d::date", argIdx)
+		args = append(args, weekStartFilter)
+	}
+
+	query += " ORDER BY wt.week_start_date DESC, u.username ASC"
+
+	rows, err := db.DB.QueryContext(r.Context(), query, args...)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch timesheet approvals", err)
+		return
+	}
+	defer rows.Close()
+
+	list := make([]models.WeeklyTimesheet, 0)
+	for rows.Next() {
+		var wt models.WeeklyTimesheet
+		var submittedBy, approvedBy uuid.NullUUID
+		err := rows.Scan(
+			&wt.ID, &wt.UserID, &wt.UserName, &wt.UserEmail, &wt.Department,
+			&wt.WeekStartDate,
+			&wt.Status, &wt.TotalHours, &wt.Notes,
+			&wt.SubmittedAt, &submittedBy,
+			&wt.ApprovedAt, &approvedBy, &wt.ApproverName,
+			&wt.RejectionReason,
+			&wt.CreatedAt, &wt.UpdatedAt,
+		)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Error scanning timesheet approval", err)
+			return
+		}
+		if submittedBy.Valid {
+			wt.SubmittedBy = &submittedBy.UUID
+		}
+		if approvedBy.Valid {
+			wt.ApprovedBy = &approvedBy.UUID
+		}
+		list = append(list, wt)
+	}
+
+	respondJSON(w, http.StatusOK, list)
+}
+
+// handleApproveWeeklyTimesheet records lead/manager approval for a submitted timesheet.
+func handleApproveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	timesheetID, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid timesheet ID", err)
+		return
+	}
+
+	authUserID := getAuthenticatedUserID(r)
+	if authUserID == "" {
+		respondError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	authUserUUID, _ := uuid.Parse(authUserID)
+
+	var status string
+	err = db.DB.QueryRowContext(r.Context(), `SELECT status FROM weekly_timesheets WHERE id = $1`, timesheetID).Scan(&status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondError(w, http.StatusNotFound, "Weekly timesheet not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to query timesheet", err)
+		return
+	}
+
+	if status != string(models.WeeklyTimesheetStatusSubmitted) {
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("Cannot approve timesheet with status '%s'. Only 'submitted' timesheets can be approved.", status), nil)
+		return
+	}
+
+	_, err = db.DB.ExecContext(r.Context(), `
+		UPDATE weekly_timesheets
+		SET status = 'approved', approved_at = NOW(), approved_by = $1, rejection_reason = NULL, updated_at = NOW()
+		WHERE id = $2
+	`, authUserUUID, timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to approve timesheet", err)
+		return
+	}
+
+	wt, err := fetchWeeklyTimesheet(r.Context(), timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch approved timesheet", err)
+		return
+	}
+
+	BroadcastEvent("weekly_timesheet_approved", wt)
+	respondJSON(w, http.StatusOK, wt)
+}
+
+// handleRejectWeeklyTimesheet records lead/manager rejection with a mandatory reason.
+func handleRejectWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	timesheetID, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid timesheet ID", err)
+		return
+	}
+
+	var req models.RejectTimesheetRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+	if strings.TrimSpace(req.Reason) == "" {
+		respondError(w, http.StatusBadRequest, "A rejection reason is required", nil)
+		return
+	}
+
+	var status string
+	err = db.DB.QueryRowContext(r.Context(), `SELECT status FROM weekly_timesheets WHERE id = $1`, timesheetID).Scan(&status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			respondError(w, http.StatusNotFound, "Weekly timesheet not found", nil)
+			return
+		}
+		respondError(w, http.StatusInternalServerError, "Failed to query timesheet", err)
+		return
+	}
+
+	if status != string(models.WeeklyTimesheetStatusSubmitted) && status != string(models.WeeklyTimesheetStatusApproved) {
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("Cannot reject timesheet with status '%s'. Only 'submitted' or 'approved' timesheets can be rejected.", status), nil)
+		return
+	}
+
+	_, err = db.DB.ExecContext(r.Context(), `
+		UPDATE weekly_timesheets
+		SET status = 'rejected', rejection_reason = $1, approved_at = NULL, approved_by = NULL, updated_at = NOW()
+		WHERE id = $2
+	`, strings.TrimSpace(req.Reason), timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to reject timesheet", err)
+		return
+	}
+
+	wt, err := fetchWeeklyTimesheet(r.Context(), timesheetID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to fetch rejected timesheet", err)
+		return
+	}
+
+	BroadcastEvent("weekly_timesheet_rejected", wt)
+	respondJSON(w, http.StatusOK, wt)
+}
+

@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useTimesheetData } from "../../../hooks/useTimesheetData";
 import { TimesheetLogModal } from "../../../components/TimesheetLogModal";
+import { WeeklyTimesheetGrid } from "../../../components/WeeklyTimesheetGrid";
+import { TimesheetApprovalsTable } from "../../../components/TimesheetApprovalsTable";
 import { Machine, CreateProjectTaskRequest, CreateDepartmentTaskRequest } from "../../../types";
 import { fetchApi } from "../../../lib/api";
 import styles from "./timesheet.module.css";
@@ -32,7 +34,7 @@ export default function TimesheetPage() {
   const { user, isAdmin, hasRole } = useAuth();
   const isLeadOrManager = isAdmin || hasRole(["manager", "lead"]);
 
-  const [activeTab, setActiveTab] = useState<"my_time" | "project_variance" | "quoting_review" | "dept_catalog">("my_time");
+  const [activeTab, setActiveTab] = useState<"my_time" | "project_variance" | "quoting_review" | "dept_catalog" | "approvals">("my_time");
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedMachineId, setSelectedMachineId] = useState<string>("");
 
@@ -360,7 +362,7 @@ export default function TimesheetPage() {
               className={`${styles.toggleBtn} ${activeTab === "my_time" ? styles.toggleBtnActive : ""}`}
               onClick={() => setActiveTab("my_time")}
             >
-              👤 My Time
+              👤 Weekly Timesheet
             </button>
             <button
               className={`${styles.toggleBtn} ${activeTab === "project_variance" ? styles.toggleBtnActive : ""}`}
@@ -382,6 +384,12 @@ export default function TimesheetPage() {
                 >
                   📑 Quoting Audit
                 </button>
+                <button
+                  className={`${styles.toggleBtn} ${activeTab === "approvals" ? styles.toggleBtnActive : ""}`}
+                  onClick={() => setActiveTab("approvals")}
+                >
+                  ✅ Approvals
+                </button>
               </>
             )}
           </div>
@@ -397,40 +405,17 @@ export default function TimesheetPage() {
         </div>
       </div>
 
-      {/* TAB 1: MY TIME (Worker View) */}
+      {/* TAB 1: WEEKLY TIMESHEET (Worker View) */}
       {activeTab === "my_time" && (
         <>
-          <div className={styles.kpiGrid}>
-            <div className={styles.kpiCard}>
-              <div className={styles.kpiLabel}>Today&apos;s Hours</div>
-              <div className={styles.kpiValue}>{workerMetrics.todayHours.toFixed(2)}h</div>
-              <div className={styles.kpiSub}>Logged for today</div>
-            </div>
-            <div className={styles.kpiCard}>
-              <div className={styles.kpiLabel}>Total Recent Hours</div>
-              <div className={styles.kpiValue}>{workerMetrics.totalWeekHours.toFixed(2)}h</div>
-              <div className={styles.kpiSub}>Active pay period entries</div>
-            </div>
-            <div className={styles.kpiCard}>
-              <div className={styles.kpiLabel}>Production Build</div>
-              <div className={styles.kpiValue} style={{ color: "var(--vtr-theme-primary, #00e5ff)" }}>
-                {workerMetrics.prodHours.toFixed(2)}h
-              </div>
-              <div className={styles.kpiSub}>Allocated to standard tasks</div>
-            </div>
-            <div className={styles.kpiCard}>
-              <div className={styles.kpiLabel}>Rework & Issues</div>
-              <div className={styles.kpiValue} style={{ color: "#ff7043" }}>
-                {(workerMetrics.reworkHours + workerMetrics.issueHours).toFixed(2)}h
-              </div>
-              <div className={styles.kpiSub}>
-                Rework: {workerMetrics.reworkHours.toFixed(1)}h | Issues: {workerMetrics.issueHours.toFixed(1)}h
-              </div>
-            </div>
-          </div>
+          <WeeklyTimesheetGrid
+            machines={machines}
+            departmentTasks={departmentTasks}
+            onOpenSingleLogModal={() => setIsLogModalOpen(true)}
+          />
 
           {/* Time Ledger Table */}
-          <div className={styles.contentCard}>
+          <div className={styles.contentCard} style={{ marginTop: "1.25rem" }}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardTitle}>
                 <span>📋</span> Your Logged Time Entries
@@ -1132,6 +1117,16 @@ export default function TimesheetPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* TAB 5: TIMESHEET APPROVALS DESK (Lead / Management View) */}
+      {activeTab === "approvals" && (
+        <TimesheetApprovalsTable
+          userDepartment={user?.department}
+          isManagerOrAdmin={isAdmin || hasRole(["manager"])}
+          machines={machines}
+          departmentTasks={departmentTasks}
+        />
       )}
 
       {/* Global Time Logging Modal */}

@@ -6,6 +6,8 @@ import {
   MachineLaborSummary,
   ProjectTask,
   DepartmentTask,
+  WeeklyTimesheet,
+  WeeklyTimesheetSaveRequest,
   CreateTimeEntryRequest,
   CreateProjectTaskRequest,
   UpdateTaskQuoteRequest,
@@ -15,6 +17,8 @@ import {
 
 export function useTimesheetData(selectedMachineId?: string) {
   const [myEntries, setMyEntries] = useState<TimeEntry[]>([]);
+  const [weeklyTimesheet, setWeeklyTimesheet] = useState<WeeklyTimesheet | null>(null);
+  const [approvals, setApprovals] = useState<WeeklyTimesheet[]>([]);
   const [machineSummary, setMachineSummary] = useState<MachineLaborSummary | null>(null);
   const [quotingReview, setQuotingReview] = useState<MachineLaborSummary[]>([]);
   const [departmentTasks, setDepartmentTasks] = useState<DepartmentTask[]>([]);
@@ -164,6 +168,125 @@ export function useTimesheetData(selectedMachineId?: string) {
     return created;
   };
 
+  const fetchWeeklyTimesheet = useCallback(async (weekStart?: string, userId?: string): Promise<WeeklyTimesheet | null> => {
+    try {
+      setLoading(true);
+      const params: Record<string, string> = {};
+      if (weekStart) params.week_start = weekStart;
+      if (userId) params.user_id = userId;
+      const data = await fetchApi<WeeklyTimesheet>('timesheets/weekly', { params });
+      setWeeklyTimesheet(data);
+      return data;
+    } catch (err) {
+      console.error('Failed to load weekly timesheet', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const saveWeeklyTimesheet = async (id: string, req: WeeklyTimesheetSaveRequest): Promise<WeeklyTimesheet> => {
+    const data = await fetchApi<WeeklyTimesheet>(`timesheets/weekly/${id}/save`, {
+      method: 'PUT',
+      body: JSON.stringify(req),
+    });
+    setWeeklyTimesheet(data);
+    return data;
+  };
+
+  const submitWeeklyTimesheet = async (id: string): Promise<WeeklyTimesheet> => {
+    const data = await fetchApi<WeeklyTimesheet>(`timesheets/weekly/${id}/submit`, {
+      method: 'POST',
+    });
+    setWeeklyTimesheet(data);
+    return data;
+  };
+
+  const withdrawWeeklyTimesheet = async (id: string): Promise<WeeklyTimesheet> => {
+    const data = await fetchApi<WeeklyTimesheet>(`timesheets/weekly/${id}/withdraw`, {
+      method: 'POST',
+    });
+    setWeeklyTimesheet(data);
+    return data;
+  };
+
+  const fetchApprovals = useCallback(async (filters?: { department?: string; status?: string; week_start?: string }): Promise<WeeklyTimesheet[]> => {
+    try {
+      const params: Record<string, string> = {};
+      if (filters?.department) params.department = filters.department;
+      if (filters?.status) params.status = filters.status;
+      if (filters?.week_start) params.week_start = filters.week_start;
+      const data = await fetchApi<WeeklyTimesheet[]>('timesheets/approvals', { params });
+      setApprovals(data || []);
+      return data || [];
+    } catch (err) {
+      console.error('Failed to load timesheet approvals', err);
+      return [];
+    }
+  }, []);
+
+  const approveWeeklyTimesheet = async (id: string): Promise<WeeklyTimesheet> => {
+    const data = await fetchApi<WeeklyTimesheet>(`timesheets/weekly/${id}/approve`, {
+      method: 'POST',
+    });
+    setApprovals(prev => prev.map(t => t.id === id ? data : t));
+    if (weeklyTimesheet && weeklyTimesheet.id === id) {
+      setWeeklyTimesheet(data);
+    }
+    return data;
+  };
+
+  const rejectWeeklyTimesheet = async (id: string, reason: string): Promise<WeeklyTimesheet> => {
+    const data = await fetchApi<WeeklyTimesheet>(`timesheets/weekly/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+    setApprovals(prev => prev.map(t => t.id === id ? data : t));
+    if (weeklyTimesheet && weeklyTimesheet.id === id) {
+      setWeeklyTimesheet(data);
+    }
+    return data;
+  };
+
+  // SSE listeners for weekly timesheet lifecycle
+  useSSE('weekly_timesheet_updated', (updated: WeeklyTimesheet) => {
+    if (weeklyTimesheet && weeklyTimesheet.id === updated.id) {
+      setWeeklyTimesheet(updated);
+    }
+    setApprovals(prev => prev.map(t => t.id === updated.id ? updated : t));
+  });
+
+  useSSE('weekly_timesheet_submitted', (updated: WeeklyTimesheet) => {
+    if (weeklyTimesheet && weeklyTimesheet.id === updated.id) {
+      setWeeklyTimesheet(updated);
+    }
+    setApprovals(prev => {
+      const exists = prev.some(t => t.id === updated.id);
+      return exists ? prev.map(t => t.id === updated.id ? updated : t) : [updated, ...prev];
+    });
+  });
+
+  useSSE('weekly_timesheet_withdrawn', (updated: WeeklyTimesheet) => {
+    if (weeklyTimesheet && weeklyTimesheet.id === updated.id) {
+      setWeeklyTimesheet(updated);
+    }
+    setApprovals(prev => prev.map(t => t.id === updated.id ? updated : t));
+  });
+
+  useSSE('weekly_timesheet_approved', (updated: WeeklyTimesheet) => {
+    if (weeklyTimesheet && weeklyTimesheet.id === updated.id) {
+      setWeeklyTimesheet(updated);
+    }
+    setApprovals(prev => prev.map(t => t.id === updated.id ? updated : t));
+  });
+
+  useSSE('weekly_timesheet_rejected', (updated: WeeklyTimesheet) => {
+    if (weeklyTimesheet && weeklyTimesheet.id === updated.id) {
+      setWeeklyTimesheet(updated);
+    }
+    setApprovals(prev => prev.map(t => t.id === updated.id ? updated : t));
+  });
+
   const updateDepartmentTask = async (id: string, req: UpdateDepartmentTaskRequest): Promise<DepartmentTask> => {
     const updated = await fetchApi<DepartmentTask>(`department-tasks/${id}`, {
       method: 'PUT',
@@ -180,11 +303,20 @@ export function useTimesheetData(selectedMachineId?: string) {
 
   return {
     myEntries,
+    weeklyTimesheet,
+    approvals,
     machineSummary,
     quotingReview,
     departmentTasks,
     loading,
     fetchMyEntries,
+    fetchWeeklyTimesheet,
+    saveWeeklyTimesheet,
+    submitWeeklyTimesheet,
+    withdrawWeeklyTimesheet,
+    fetchApprovals,
+    approveWeeklyTimesheet,
+    rejectWeeklyTimesheet,
     fetchMachineSummary,
     fetchQuotingReview,
     fetchDepartmentTasks,
@@ -197,3 +329,4 @@ export function useTimesheetData(selectedMachineId?: string) {
     deleteDepartmentTask,
   };
 }
+
