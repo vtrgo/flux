@@ -98,6 +98,7 @@ export function WeeklyTimesheetGrid({
   } = useTimesheetData();
 
   const [rows, setRows] = useState<GridRow[]>([createBlankRow()]);
+  const [pendingFocusRowKey, setPendingFocusRowKey] = useState<string | null>(null);
   const [notes, setNotes] = useState<string>('');
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -308,9 +309,24 @@ export function WeeklyTimesheetGrid({
   // Add a blank row directly into the grid
   const handleAddRow = () => {
     if (isLocked) return;
-    setRows(prev => [...prev, createBlankRow()]);
+    const newRow = createBlankRow();
+    setPendingFocusRowKey(newRow.rowKey);
+    setRows(prev => [...prev, newRow]);
     setIsDirty(true);
   };
+
+  // Automatically focus the Machine select on newly created row
+  useEffect(() => {
+    if (pendingFocusRowKey) {
+      const el = document.querySelector<HTMLSelectElement>(
+        `select[data-row-key="${pendingFocusRowKey}"][aria-label="Machine / Order #"]`
+      );
+      if (el) {
+        el.focus();
+      }
+      setPendingFocusRowKey(null);
+    }
+  }, [pendingFocusRowKey, rows]);
 
   // Remove row handler (always maintain at least 1 row)
   const handleRemoveRow = (rowKey: string) => {
@@ -484,16 +500,6 @@ export function WeeklyTimesheetGrid({
 
           {!readOnlyUserView && (
             <>
-              {!isLocked && (
-                <button
-                  className={styles.btnSecondary}
-                  onClick={handleAddRow}
-                  type="button"
-                  title="Add a new row to the timesheet"
-                >
-                  ➕ Add Row
-                </button>
-              )}
               <button
                 className={styles.btnPrimary}
                 onClick={handleSaveDraft}
@@ -606,6 +612,7 @@ export function WeeklyTimesheetGrid({
                         {!isLocked ? (
                           <select
                             aria-label="Machine / Order #"
+                            data-row-key={row.rowKey}
                             className={styles.rowSelect}
                             value={row.machine_id || (row.task_name && !row.machine_id ? 'none' : '')}
                             onChange={e => handleMachineChange(row.rowKey, e.target.value)}
@@ -759,6 +766,30 @@ export function WeeklyTimesheetGrid({
                     </tr>
                   );
                 })
+              )}
+              {!isLocked && (
+                <tr
+                  className={styles.newRowSlot}
+                  onClick={handleAddRow}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleAddRow();
+                    }
+                  }}
+                  aria-label="Add row"
+                  title="Click to insert a new row"
+                >
+                  <td colSpan={weekDays.length + 5} className={styles.newRowSlotCell}>
+                    <div className={styles.newRowSlotContent}>
+                      <span className={styles.newRowSlotIcon}>➕</span>
+                      <span className={styles.newRowSlotLabel}>Add Row</span>
+                      <span className={styles.newRowSlotHint}>— Click space to insert a new time record</span>
+                    </div>
+                  </td>
+                </tr>
               )}
             </tbody>
             {rows.length > 0 && (

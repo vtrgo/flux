@@ -261,9 +261,13 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    const addRowBtn = screen.getByText('➕ Add Row');
+    // Verify Add Row button is no longer on the top side
+    expect(screen.queryByTitle('Add a new row to the timesheet')).not.toBeInTheDocument();
+
+    // Space just below the last row in the grid creates a new row
+    const addRowSlot = screen.getByLabelText(/Add row/i);
     await act(async () => {
-      fireEvent.click(addRowBtn);
+      fireEvent.click(addRowSlot);
     });
 
     // Ensure machines are loaded and present in the inline select options

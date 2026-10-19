@@ -388,3 +388,67 @@
   outline: none;
   border-color: var(--vtr-theme-primary, #00e5ff);
 }
+
+.newRowSlot {
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.015);
+  transition: all 0.15s ease;
+}
+
+.newRowSlot:hover {
+  background: rgba(0, 229, 255, 0.06);
+}
+
+.newRowSlot:focus-visible {
+  outline: 2px solid var(--vtr-theme-primary, #00e5ff);
+  outline-offset: -2px;
+}
+
+.newRowSlotCell {
+  padding: 0.75rem 1rem !important;
+  text-align: left;
+  border-top: 1px dashed var(--border-color, #444) !important;
+  border-bottom: 1px dashed var(--border-color, #444) !important;
+}
+
+.newRowSlotContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary, #aaa);
+  font-size: 0.85rem;
+  font-weight: 600;
+  user-select: none;
+}
+
+.newRowSlot:hover .newRowSlotContent {
+  color: var(--vtr-theme-primary, #00e5ff);
+}
+
+.newRowSlotIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.newRowSlot:hover .newRowSlotIcon {
+  background: var(--vtr-theme-primary, #00e5ff);
+  color: #000;
+}
+
+.newRowSlotLabel {
+  font-weight: 600;
+}
+
+.newRowSlotHint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
