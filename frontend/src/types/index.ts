@@ -384,3 +384,77 @@ export interface UpdateReworkItemRequest {
   assembler_id?: string;
 }
 
+export type TimeEntryType = 'production' | 'rework' | 'issue_fix' | 'indirect';
+
+export interface ProjectTask {
+  id: string;
+  machine_id: string;
+  order_number?: string;
+  task_code: string;
+  task_name: string;
+  department: string;
+  quoted_hours: number;
+  actual_hours: number;
+  variance: number;
+  status: 'open' | 'completed' | 'blocked';
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TimeEntry {
+  id: string;
+  user_id: string;
+  user_name?: string;
+  machine_id?: string;
+  order_number?: string;
+  entry_type: TimeEntryType;
+  project_task_id?: string;
+  task_name?: string;
+  rework_item_id?: string;
+  rework_part_number?: string;
+  defect_id?: string;
+  work_date: string;
+  hours_spent: number;
+  work_description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MachineLaborSummary {
+  machine_id: string;
+  order_number: string;
+  model_type: string;
+  status: string;
+  total_quoted_hours: number;
+  total_production_hours: number;
+  total_rework_hours: number;
+  total_issue_fix_hours: number;
+  total_actual_hours: number;
+  production_variance: number;
+  tasks?: ProjectTask[];
+}
+
+export interface CreateProjectTaskRequest {
+  task_code: string;
+  task_name: string;
+  department: string;
+  quoted_hours: number;
+}
+
+export interface UpdateTaskQuoteRequest {
+  quoted_hours?: number;
+  status?: string;
+}
+
+export interface CreateTimeEntryRequest {
+  machine_id?: string;
+  entry_type: TimeEntryType;
+  project_task_id?: string;
+  rework_item_id?: string;
+  defect_id?: string;
+  work_date?: string;
+  hours_spent: number;
+  work_description?: string;
+}
+

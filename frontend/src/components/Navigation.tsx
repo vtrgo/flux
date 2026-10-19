@@ -46,6 +46,12 @@ export function Navigation() {
       >
         Rework Tracker
       </Link>
+      <Link 
+        href="/timesheet" 
+        className={getClassName("/timesheet")}
+      >
+        Timesheet
+      </Link>
 
       <div className={styles.dropdownContainer}>
         <button className={isDepartmentActive ? "vtr-btn vtr-btn-active" : "vtr-btn"} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

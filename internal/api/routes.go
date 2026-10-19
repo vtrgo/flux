@@ -104,6 +104,16 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/rework/controls", handleCreateControlsSchematicRework)
 	mux.HandleFunc("PUT /api/rework/controls/{id}", handleUpdateControlsSchematicRework)
 
+	// Timesheet and Foundational Labor Endpoints
+	mux.HandleFunc("GET /api/machines/{id}/tasks", handleGetMachineTasks)
+	mux.Handle("POST /api/machines/{id}/tasks", RequireRole("admin", "manager")(http.HandlerFunc(handleCreateProjectTask)))
+	mux.Handle("PUT /api/tasks/{task_id}/quote", RequireRole("admin", "manager")(http.HandlerFunc(handleUpdateTaskQuote)))
+	mux.HandleFunc("POST /api/time-entries", handleCreateTimeEntry)
+	mux.HandleFunc("GET /api/time-entries/my", handleGetMyTimeEntries)
+	mux.HandleFunc("DELETE /api/time-entries/{id}", handleDeleteTimeEntry)
+	mux.HandleFunc("GET /api/machines/{id}/labor-summary", handleGetMachineLaborSummary)
+	mux.HandleFunc("GET /api/timesheets/quoting-review", handleGetQuotingReviewReport)
+
 	mux.HandleFunc("GET /api/logs", handleGetLogs)
 	mux.HandleFunc("GET /api/system/version", handleGetSystemVersion)
 	mux.HandleFunc("GET /api/system/timezone", handleGetTimezone)
