@@ -6,6 +6,9 @@ import {
   calendarDateToUtcNoon,
   toCalendarDateInput,
   formatTimestamp,
+  getSundayOfWeek,
+  getWeekDays,
+  formatWeekRange,
 } from './dateUtils';
 
 describe('dateUtils - F.A.T. and Days Late', () => {
@@ -85,5 +88,28 @@ describe('dateUtils - F.A.T. and Days Late', () => {
     const formatted = formatTimestamp(ts, 'America/Toronto');
     expect(formatted).toContain('Sep 15, 2026');
     expect(formatted).toContain('12:00 PM');
+  });
+
+  it('determines the Sunday of the week correctly', () => {
+    // 2026-10-18 is Sunday
+    expect(getSundayOfWeek('2026-10-18')).toBe('2026-10-18');
+    // 2026-10-19 is Monday -> Sunday is 2026-10-18
+    expect(getSundayOfWeek('2026-10-19')).toBe('2026-10-18');
+    // 2026-10-24 is Saturday -> Sunday is 2026-10-18
+    expect(getSundayOfWeek('2026-10-24')).toBe('2026-10-18');
+  });
+
+  it('generates 7 days starting with Sunday', () => {
+    const days = getWeekDays('2026-10-18');
+    expect(days).toHaveLength(7);
+    expect(days[0].dayName).toBe('Sun');
+    expect(days[0].dateStr).toBe('2026-10-18');
+    expect(days[6].dayName).toBe('Sat');
+    expect(days[6].dateStr).toBe('2026-10-24');
+  });
+
+  it('formats week range from Sunday to Saturday', () => {
+    const range = formatWeekRange('2026-10-18');
+    expect(range).toBe('Oct 18 – Oct 24, 2026');
   });
 });

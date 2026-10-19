@@ -177,10 +177,11 @@ export function formatTimestamp(dateString?: string | null, timezone: string = D
 }
 
 /**
- * Returns the ISO Monday (YYYY-MM-DD) for a given date or string.
- * If omitted, defaults to the Monday of the current week.
+/**
+ * Returns the Sunday (YYYY-MM-DD) for a given date or string (the first day of the work week).
+ * If omitted, defaults to Sunday of the current week.
  */
-export function getMondayOfWeek(input?: Date | string): string {
+export function getSundayOfWeek(input?: Date | string): string {
   let d: Date;
   if (!input) {
     d = new Date();
@@ -191,21 +192,27 @@ export function getMondayOfWeek(input?: Date | string): string {
     d = new Date(input);
   }
 
-  const dayOfWeek = d.getUTCDay(); // 0 is Sunday, 1 is Monday, ...
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diff, 12, 0, 0));
+  const dayOfWeek = d.getUTCDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
+  const sunday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dayOfWeek, 12, 0, 0));
 
-  const y = monday.getUTCFullYear();
-  const m = String(monday.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(monday.getUTCDate()).padStart(2, '0');
+  const y = sunday.getUTCFullYear();
+  const m = String(sunday.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(sunday.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
 /**
- * Adds or subtracts weeks to a YYYY-MM-DD Monday date.
+ * Returns the week start date (Sunday). Kept as an alias for backwards compatibility.
  */
-export function addWeeks(mondayStr: string, weeks: number): string {
-  const [y, m, d] = mondayStr.split('-').map(Number);
+export function getMondayOfWeek(input?: Date | string): string {
+  return getSundayOfWeek(input);
+}
+
+/**
+ * Adds or subtracts weeks to a YYYY-MM-DD week start date.
+ */
+export function addWeeks(weekStartStr: string, weeks: number): string {
+  const [y, m, d] = weekStartStr.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d + weeks * 7, 12, 0, 0));
   const newY = date.getUTCFullYear();
   const newM = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -215,18 +222,18 @@ export function addWeeks(mondayStr: string, weeks: number): string {
 
 export interface WeekDayInfo {
   dateStr: string;   // 'YYYY-MM-DD'
-  dayName: string;   // 'Mon', 'Tue', ...
-  fullName: string;  // 'Monday', ...
-  shortDate: string; // 'Oct 19'
+  dayName: string;   // 'Sun', 'Mon', ...
+  fullName: string;  // 'Sunday', ...
+  shortDate: string; // 'Oct 18'
 }
 
 /**
- * Returns the 7 days of the work week starting on Monday.
+ * Returns the 7 days of the work week starting on Sunday.
  */
-export function getWeekDays(mondayStr: string): WeekDayInfo[] {
-  const [y, m, d] = mondayStr.split('-').map(Number);
-  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const fullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+export function getWeekDays(weekStartStr: string): WeekDayInfo[] {
+  const [y, m, d] = weekStartStr.split('-').map(Number);
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fullNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return Array.from({ length: 7 }, (_, i) => {
@@ -245,10 +252,10 @@ export function getWeekDays(mondayStr: string): WeekDayInfo[] {
 }
 
 /**
- * Formats a week range (e.g. "Oct 19 – Oct 25, 2026").
+ * Formats a week range (e.g. "Oct 18 – Oct 24, 2026").
  */
-export function formatWeekRange(mondayStr: string): string {
-  const days = getWeekDays(mondayStr);
+export function formatWeekRange(weekStartStr: string): string {
+  const days = getWeekDays(weekStartStr);
   const start = days[0];
   const end = days[6];
   const endYear = end.dateStr.split('-')[0];

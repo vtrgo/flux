@@ -579,11 +579,11 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 	managerCookie := createTestRoleCookie(t, "manager")
 	workerCookie := createTestRoleCookie(t, "user")
 
-	weekMonday := "2026-10-19"
+	weekSunday := "2026-10-18"
 	var timesheetID uuid.UUID
 
 	t.Run("Get_Weekly_Timesheet_Initializes_Draft", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/timesheets/weekly?week_start=%s", weekMonday), nil)
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/timesheets/weekly?week_start=%s", weekSunday), nil)
 		req.AddCookie(workerCookie)
 
 		rr := httptest.NewRecorder()
@@ -604,8 +604,8 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 		if wt.TotalHours != 0.0 {
 			t.Errorf("expected 0 total hours, got %v", wt.TotalHours)
 		}
-		if wt.WeekStartDate != weekMonday {
-			t.Errorf("expected week_start %s, got %s", weekMonday, wt.WeekStartDate)
+		if wt.WeekStartDate != weekSunday {
+			t.Errorf("expected week_start %s, got %s", weekSunday, wt.WeekStartDate)
 		}
 		timesheetID = wt.ID
 	})

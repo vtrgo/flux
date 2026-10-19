@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { fetchApi } from '../lib/api';
 import { useTimesheetData } from '../hooks/useTimesheetData';
-import { getMondayOfWeek, addWeeks, getWeekDays, formatWeekRange } from '../lib/dateUtils';
+import { getSundayOfWeek, addWeeks, getWeekDays, formatWeekRange } from '../lib/dateUtils';
 import {
   Machine,
   DepartmentTask,
@@ -42,14 +42,26 @@ const INDIRECT_TASKS = [
   'Shop Floor Support',
 ];
 
+const createBlankRow = (): GridRow => ({
+  rowKey: `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  machine_id: '',
+  order_number: '',
+  project_task_id: '',
+  task_name: '',
+  department: '',
+  entry_type: 'production',
+  days: {},
+  descriptions: {},
+});
+
 export function WeeklyTimesheetGrid({
   machines,
   departmentTasks,
   initialWeekStart,
   readOnlyUserView = false,
 }: WeeklyTimesheetGridProps) {
-  const [currentWeekMonday, setCurrentWeekMonday] = useState<string>(() =>
-    initialWeekStart ? getMondayOfWeek(initialWeekStart) : getMondayOfWeek()
+  const [currentWeekSunday, setCurrentWeekSunday] = useState<string>(() =>
+    initialWeekStart ? getSundayOfWeek(initialWeekStart) : getSundayOfWeek()
   );
 
   const {
@@ -61,58 +73,27 @@ export function WeeklyTimesheetGrid({
     withdrawWeeklyTimesheet,
   } = useTimesheetData();
 
-  const [rows, setRows] = useState<GridRow[]>([]);
+  const [rows, setRows] = useState<GridRow[]>([createBlankRow()]);
   const [notes, setNotes] = useState<string>('');
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Add row bar state
-  const [showAddRow, setShowAddRow] = useState<boolean>(false);
-  const [newRowMachineId, setNewRowMachineId] = useState<string>('');
-  const [newRowTaskIdentifier, setNewRowTaskIdentifier] = useState<string>('');
-  const [newRowEntryType, setNewRowEntryType] = useState<TimeEntryType>('production');
+  // Cache allocated tasks per machine to support inline selects on multiple rows
+  const [machineTasksCache, setMachineTasksCache] = useState<Record<string, ProjectTask[]>>({});
 
-  // Machine-specific allocated tasks quoted by team lead
-  const [machineTasks, setMachineTasks] = useState<ProjectTask[]>([]);
-  const [loadingMachineTasks, setLoadingMachineTasks] = useState<boolean>(false);
-
-  const weekDays = useMemo(() => getWeekDays(currentWeekMonday), [currentWeekMonday]);
-  const isCurrentWeek = useMemo(() => getMondayOfWeek() === currentWeekMonday, [currentWeekMonday]);
+  const weekDays = useMemo(() => getWeekDays(currentWeekSunday), [currentWeekSunday]);
+  const isCurrentWeek = useMemo(() => getSundayOfWeek() === currentWeekSunday, [currentWeekSunday]);
 
   // Load weekly timesheet whenever the selected week changes
   useEffect(() => {
-    fetchWeeklyTimesheet(currentWeekMonday);
-  }, [currentWeekMonday, fetchWeeklyTimesheet]);
-
-  // Fetch machine allocated tasks when a machine is selected in Add Row
-  useEffect(() => {
-    if (!newRowMachineId) {
-      setMachineTasks([]);
-      setNewRowTaskIdentifier(INDIRECT_TASKS[0]);
-      return;
-    }
-    setLoadingMachineTasks(true);
-    fetchApi<ProjectTask[]>(`machines/${newRowMachineId}/tasks`)
-      .then(tasks => {
-        setMachineTasks(tasks || []);
-        if (tasks && tasks.length > 0) {
-          setNewRowTaskIdentifier(`task:${tasks[0].id}`);
-        } else {
-          setNewRowTaskIdentifier('');
-        }
-      })
-      .catch(err => {
-        console.error('Failed to load tasks for machine', err);
-        setMachineTasks([]);
-      })
-      .finally(() => setLoadingMachineTasks(false));
-  }, [newRowMachineId]);
+    fetchWeeklyTimesheet(currentWeekSunday);
+  }, [currentWeekSunday, fetchWeeklyTimesheet]);
 
   // Sync state when weeklyTimesheet loads
   useEffect(() => {
     if (!weeklyTimesheet || Array.isArray(weeklyTimesheet)) {
-      setRows([]);
+      setRows([createBlankRow()]);
       setNotes('');
       setIsDirty(false);
       return;
@@ -138,7 +119,7 @@ export function WeeklyTimesheetGrid({
           project_task_id: entry.project_task_id,
           task_name: entry.task_name || 'General Task',
           department: entry.department,
-          entry_type: entry.entry_type,
+          entry_type: entry.entry_type || 'production',
           days: {},
           descriptions: {},
         });
@@ -151,9 +132,25 @@ export function WeeklyTimesheetGrid({
       }
     });
 
-    setRows(Array.from(rowMap.values()));
+    const list = Array.from(rowMap.values());
+    setRows(list.length === 0 ? [createBlankRow()] : list);
     setIsDirty(false);
   }, [weeklyTimesheet, machines]);
+
+  // Pre-load machine tasks for any machine IDs present in rows
+  useEffect(() => {
+    rows.forEach(r => {
+      if (r.machine_id && r.machine_id !== 'none' && !machineTasksCache[r.machine_id]) {
+        fetchApi<ProjectTask[]>(`machines/${r.machine_id}/tasks`)
+          .then(tasks => {
+            setMachineTasksCache(prev => ({ ...prev, [r.machine_id!]: tasks || [] }));
+          })
+          .catch(err => {
+            console.error('Failed to load tasks for machine', r.machine_id, err);
+          });
+      }
+    });
+  }, [rows, machineTasksCache]);
 
   const isLocked = useMemo(() => {
     if (readOnlyUserView) return true;
@@ -164,17 +161,103 @@ export function WeeklyTimesheetGrid({
   // Handlers for week navigation
   const handlePrevWeek = () => {
     if (isDirty && !window.confirm('You have unsaved changes. Discard and switch week?')) return;
-    setCurrentWeekMonday(prev => addWeeks(prev, -1));
+    setCurrentWeekSunday(prev => addWeeks(prev, -1));
   };
 
   const handleNextWeek = () => {
     if (isDirty && !window.confirm('You have unsaved changes. Discard and switch week?')) return;
-    setCurrentWeekMonday(prev => addWeeks(prev, 1));
+    setCurrentWeekSunday(prev => addWeeks(prev, 1));
   };
 
   const handleThisWeek = () => {
     if (isDirty && !window.confirm('You have unsaved changes. Discard and switch week?')) return;
-    setCurrentWeekMonday(getMondayOfWeek());
+    setCurrentWeekSunday(getSundayOfWeek());
+  };
+
+  // Inline row changes
+  const handleMachineChange = async (rowKey: string, machineId: string) => {
+    if (isLocked) return;
+    const selectedMachine = machines.find(m => m.id === machineId);
+    const entryType: TimeEntryType = machineId && machineId !== 'none' ? 'production' : 'indirect';
+    const defaultDept = machineId && machineId !== 'none' ? 'assembly' : 'shop';
+
+    if (machineId && machineId !== 'none' && !machineTasksCache[machineId]) {
+      try {
+        const tasks = await fetchApi<ProjectTask[]>(`machines/${machineId}/tasks`);
+        setMachineTasksCache(prev => ({ ...prev, [machineId]: tasks || [] }));
+      } catch (err) {
+        console.error('Failed to load tasks for machine', machineId, err);
+      }
+    }
+
+    setRows(prev =>
+      prev.map(r => {
+        if (r.rowKey !== rowKey) return r;
+        return {
+          ...r,
+          machine_id: machineId === 'none' ? undefined : (machineId || undefined),
+          order_number: selectedMachine?.order_number,
+          project_task_id: undefined,
+          task_name: machineId === 'none' ? INDIRECT_TASKS[0] : '',
+          department: defaultDept,
+          entry_type: entryType,
+        };
+      })
+    );
+    setIsDirty(true);
+  };
+
+  const handleTaskChange = (rowKey: string, taskIdentifier: string) => {
+    if (isLocked) return;
+    setRows(prev =>
+      prev.map(r => {
+        if (r.rowKey !== rowKey) return r;
+        let projectTaskId: string | undefined;
+        let taskName = r.task_name;
+        let department = r.department;
+
+        if (taskIdentifier.startsWith('task:')) {
+          const taskId = taskIdentifier.replace('task:', '');
+          const tasks = r.machine_id ? machineTasksCache[r.machine_id] : undefined;
+          const found = tasks?.find(t => t.id === taskId);
+          if (found) {
+            projectTaskId = found.id;
+            taskName = found.task_name;
+            department = found.department;
+          }
+        } else if (taskIdentifier.startsWith('dept:')) {
+          const code = taskIdentifier.replace('dept:', '');
+          const found = departmentTasks.find(t => t.task_code === code);
+          if (found) {
+            projectTaskId = undefined;
+            taskName = found.task_name;
+            department = found.department;
+          }
+        } else if (taskIdentifier.startsWith('task_name:')) {
+          taskName = taskIdentifier.replace('task_name:', '');
+          projectTaskId = undefined;
+        } else if (taskIdentifier) {
+          taskName = taskIdentifier;
+          projectTaskId = undefined;
+        }
+
+        return {
+          ...r,
+          project_task_id: projectTaskId,
+          task_name: taskName,
+          department,
+        };
+      })
+    );
+    setIsDirty(true);
+  };
+
+  const handleTypeChange = (rowKey: string, type: TimeEntryType) => {
+    if (isLocked) return;
+    setRows(prev =>
+      prev.map(r => (r.rowKey === rowKey ? { ...r, entry_type: type } : r))
+    );
+    setIsDirty(true);
   };
 
   // Cell change handler
@@ -198,64 +281,20 @@ export function WeeklyTimesheetGrid({
     setIsDirty(true);
   };
 
-  // Add row handler
+  // Add a blank row directly into the grid
   const handleAddRow = () => {
     if (isLocked) return;
-    let selectedMachine: Machine | undefined;
-    if (newRowMachineId) {
-      selectedMachine = machines.find(m => m.id === newRowMachineId);
-    }
-
-    let projectTaskId: string | undefined;
-    let taskName = 'General Labor';
-    let department = 'assembly';
-
-    if (!newRowMachineId) {
-      taskName = newRowTaskIdentifier || INDIRECT_TASKS[0];
-      department = 'shop';
-    } else if (newRowTaskIdentifier.startsWith('task:')) {
-      const taskId = newRowTaskIdentifier.replace('task:', '');
-      const found = machineTasks.find(t => t.id === taskId);
-      if (found) {
-        projectTaskId = found.id;
-        taskName = found.task_name;
-        department = found.department;
-      }
-    } else if (newRowTaskIdentifier.startsWith('dept:')) {
-      const code = newRowTaskIdentifier.replace('dept:', '');
-      const found = departmentTasks.find(t => t.task_code === code);
-      if (found) {
-        taskName = found.task_name;
-        department = found.department;
-      }
-    } else if (newRowTaskIdentifier) {
-      taskName = newRowTaskIdentifier;
-    }
-
-    const rowKey = `${newRowMachineId || 'none'}:${projectTaskId || taskName}:${newRowEntryType}-${Date.now()}`;
-
-    const newRow: GridRow = {
-      rowKey,
-      machine_id: newRowMachineId || undefined,
-      order_number: selectedMachine?.order_number,
-      project_task_id: projectTaskId,
-      task_name: taskName,
-      department,
-      entry_type: newRowEntryType,
-      days: {},
-      descriptions: {},
-    };
-
-    setRows(prev => [...prev, newRow]);
+    setRows(prev => [...prev, createBlankRow()]);
     setIsDirty(true);
-    setShowAddRow(false);
-    setNewRowTaskIdentifier('');
   };
 
-  // Remove row handler
+  // Remove row handler (always maintain at least 1 row)
   const handleRemoveRow = (rowKey: string) => {
     if (isLocked) return;
-    setRows(prev => prev.filter(r => r.rowKey !== rowKey));
+    setRows(prev => {
+      const filtered = prev.filter(r => r.rowKey !== rowKey);
+      return filtered.length === 0 ? [createBlankRow()] : filtered;
+    });
     setIsDirty(true);
   };
 
@@ -263,16 +302,17 @@ export function WeeklyTimesheetGrid({
   const buildSavePayload = useCallback((): WeeklyTimesheetSaveItem[] => {
     const items: WeeklyTimesheetSaveItem[] = [];
     rows.forEach(row => {
+      const taskName = row.task_name || (row.machine_id ? 'General Production' : 'General Labor');
       Object.entries(row.days).forEach(([dateStr, hours]) => {
         if (hours > 0) {
           items.push({
-            machine_id: row.machine_id,
+            machine_id: row.machine_id && row.machine_id !== 'none' ? row.machine_id : undefined,
             entry_type: row.entry_type,
-            project_task_id: row.project_task_id,
+            project_task_id: row.project_task_id || undefined,
             department: row.department,
             work_date: dateStr,
             hours_spent: hours,
-            work_description: row.descriptions[dateStr] || row.task_name,
+            work_description: row.descriptions[dateStr] || taskName,
           });
         }
       });
@@ -300,7 +340,7 @@ export function WeeklyTimesheetGrid({
     }
   };
 
-  // Submit Timesheet
+  // Submit for Approval
   const handleSubmit = async () => {
     if (!weeklyTimesheet || isLocked) return;
 
@@ -308,12 +348,13 @@ export function WeeklyTimesheetGrid({
       (acc, r) => acc + Object.values(r.days).reduce((s, h) => s + (h || 0), 0),
       0
     );
+
     if (totalHours <= 0) {
-      toast.error('Cannot submit timesheet with 0 hours logged');
+      toast.error('Cannot submit an empty timesheet. Please log hours first.');
       return;
     }
 
-    if (!window.confirm(`Submit timesheet for ${totalHours.toFixed(1)} hours? You will not be able to edit while awaiting approval.`)) {
+    if (!window.confirm(`Submit timesheet for week ${formatWeekRange(currentWeekSunday)} (${totalHours.toFixed(1)} hrs total)? This will lock editing until reviewed.`)) {
       return;
     }
 
@@ -326,7 +367,7 @@ export function WeeklyTimesheetGrid({
       });
       await submitWeeklyTimesheet(weeklyTimesheet.id);
       setIsDirty(false);
-      toast.success('Timesheet submitted for review!');
+      toast.success('Timesheet submitted for team lead approval');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to submit timesheet';
       toast.error(msg);
@@ -335,14 +376,16 @@ export function WeeklyTimesheetGrid({
     }
   };
 
-  // Withdraw Timesheet
+  // Withdraw timesheet back to draft
   const handleWithdraw = async () => {
-    if (!weeklyTimesheet) return;
-    if (!window.confirm('Withdraw timesheet back to draft?')) return;
+    if (!weeklyTimesheet || weeklyTimesheet.status !== 'submitted') return;
+    if (!window.confirm('Withdraw this submitted timesheet back to draft to edit your hours?')) {
+      return;
+    }
     try {
       setSubmitting(true);
       await withdrawWeeklyTimesheet(weeklyTimesheet.id);
-      toast.info('Timesheet withdrawn to draft');
+      toast.success('Timesheet withdrawn back to draft');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to withdraw timesheet';
       toast.error(msg);
@@ -351,231 +394,135 @@ export function WeeklyTimesheetGrid({
     }
   };
 
-  // Totals calculations
+  // Daily totals calculation
   const dayTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     weekDays.forEach(day => {
-      totals[day.dateStr] = rows.reduce((sum, r) => sum + (r.days[day.dateStr] || 0), 0);
+      totals[day.dateStr] = rows.reduce((acc, row) => acc + (row.days[day.dateStr] || 0), 0);
     });
     return totals;
-  }, [weekDays, rows]);
+  }, [rows, weekDays]);
 
   const grandTotal = useMemo(() => {
     return Object.values(dayTotals).reduce((sum, h) => sum + h, 0);
   }, [dayTotals]);
 
-  const status = weeklyTimesheet?.status || 'draft';
-
   return (
     <div className={styles.container}>
-      {/* Top Header & Navigation */}
+      {/* Top Bar: Week Switcher & Status Controls */}
       <div className={styles.topBar}>
         <div className={styles.weekNav}>
-          <button className={styles.navBtn} onClick={handlePrevWeek} title="Previous Week">
-            ◀ Prev
+          <button
+            className={styles.navBtn}
+            onClick={handlePrevWeek}
+            title="Previous Week"
+            type="button"
+          >
+            ◀ Prev Week
           </button>
-          <span className={styles.weekLabel}>{formatWeekRange(currentWeekMonday)}</span>
-          <button className={styles.navBtn} onClick={handleNextWeek} title="Next Week">
-            Next ▶
+          <span className={styles.weekLabel}>{formatWeekRange(currentWeekSunday)}</span>
+          <button
+            className={styles.navBtn}
+            onClick={handleNextWeek}
+            title="Next Week"
+            type="button"
+          >
+            Next Week ▶
           </button>
           {!isCurrentWeek && (
-            <button className={styles.navBtn} onClick={handleThisWeek} title="Current Week">
-              This Week
+            <button
+              className={styles.navBtn}
+              onClick={handleThisWeek}
+              title="Jump to Current Week"
+              type="button"
+            >
+              Current Week
             </button>
           )}
         </div>
 
         <div className={styles.statusAndActions}>
-          <span
-            className={`${styles.statusBadge} ${
-              status === 'submitted'
-                ? styles.statusSubmitted
-                : status === 'approved'
-                ? styles.statusApproved
-                : status === 'rejected'
-                ? styles.statusRejected
-                : styles.statusDraft
-            }`}
-          >
-            {status === 'submitted'
-              ? 'Submitted'
-              : status === 'approved'
-              ? 'Approved'
-              : status === 'rejected'
-              ? 'Rejected'
-              : 'Draft'}
-          </span>
+          {weeklyTimesheet && (
+            <span
+              className={`${styles.statusBadge} ${
+                weeklyTimesheet.status === 'approved'
+                  ? styles.statusApproved
+                  : weeklyTimesheet.status === 'submitted'
+                  ? styles.statusSubmitted
+                  : weeklyTimesheet.status === 'rejected'
+                  ? styles.statusRejected
+                  : styles.statusDraft
+              }`}
+            >
+              {weeklyTimesheet.status.toUpperCase()}
+            </span>
+          )}
 
-          {!isLocked && (
+          {!readOnlyUserView && (
             <>
-              <button
-                className={styles.btnSecondary}
-                onClick={() => setShowAddRow(prev => !prev)}
-                type="button"
-              >
-                {showAddRow ? 'Cancel' : '➕ Add Row'}
-              </button>
+              {!isLocked && (
+                <button
+                  className={styles.btnSecondary}
+                  onClick={handleAddRow}
+                  type="button"
+                  title="Add a new row to the timesheet"
+                >
+                  ➕ Add Row
+                </button>
+              )}
               <button
                 className={styles.btnPrimary}
                 onClick={handleSaveDraft}
-                disabled={saving || !isDirty}
+                disabled={isLocked || saving || !isDirty}
                 type="button"
               >
                 {saving ? 'Saving...' : isDirty ? 'Save Draft *' : 'Save Draft'}
               </button>
-              <button
-                className={styles.btnSubmit}
-                onClick={handleSubmit}
-                disabled={submitting || grandTotal <= 0}
-                type="button"
-              >
-                {submitting ? 'Submitting...' : 'Submit Timesheet'}
-              </button>
+              {weeklyTimesheet?.status === 'submitted' ? (
+                <button
+                  className={styles.btnSecondary}
+                  onClick={handleWithdraw}
+                  disabled={submitting}
+                  type="button"
+                >
+                  ↩ Withdraw
+                </button>
+              ) : (
+                <button
+                  className={styles.btnSuccess}
+                  onClick={handleSubmit}
+                  disabled={isLocked || submitting || grandTotal <= 0}
+                  type="button"
+                  title="Submit timesheet to Lead for approval"
+                >
+                  {submitting ? 'Submitting...' : 'Submit Timesheet'}
+                </button>
+              )}
             </>
-          )}
-
-          {status === 'submitted' && !readOnlyUserView && (
-            <button
-              className={styles.btnWithdraw}
-              onClick={handleWithdraw}
-              disabled={submitting}
-              type="button"
-            >
-              Withdraw to Draft
-            </button>
           )}
         </div>
       </div>
 
-      {/* Status Notice Banners */}
-      {status === 'submitted' && (
+      {/* Lockout / Status Banners */}
+      {weeklyTimesheet?.status === 'submitted' && (
         <div className={`${styles.banner} ${styles.bannerSubmitted}`}>
           <span>
-            ⏳ <strong>Submitted:</strong> This weekly timesheet is currently awaiting team lead or manager review.
+            ⏳ <strong>Timesheet Submitted:</strong> This timesheet is currently awaiting team lead review and is locked.
           </span>
-          {!readOnlyUserView && (
-            <button className={styles.btnWithdraw} onClick={handleWithdraw}>
-              Withdraw to Edit
-            </button>
-          )}
         </div>
       )}
-
-      {status === 'approved' && (
+      {weeklyTimesheet?.status === 'approved' && (
         <div className={`${styles.banner} ${styles.bannerApproved}`}>
           <span>
-            ✅ <strong>Approved:</strong> Verified by{' '}
-            <strong>{weeklyTimesheet?.approver_name || 'Team Lead'}</strong>
-            {weeklyTimesheet?.approved_at ? ` on ${new Date(weeklyTimesheet.approved_at).toLocaleDateString()}` : ''}.
+            ✅ <strong>Timesheet Approved:</strong> This timesheet has been approved and permanently locked into payroll ledger.
           </span>
         </div>
       )}
-
-      {status === 'rejected' && (
+      {weeklyTimesheet?.status === 'rejected' && (
         <div className={`${styles.banner} ${styles.bannerRejected}`}>
           <span>
             ❌ <strong>Rejection Notice:</strong> {weeklyTimesheet?.rejection_reason || 'Please review your logged hours and re-submit.'}
           </span>
-        </div>
-      )}
-
-      {/* Add Row Toolbar */}
-      {showAddRow && !isLocked && (
-        <div className={styles.addRowModal}>
-          <div className={styles.addRowField}>
-            <label htmlFor="new-row-machine">Machine / Order #</label>
-            <select
-              id="new-row-machine"
-              className={styles.addRowSelect}
-              value={newRowMachineId}
-              onChange={e => {
-                const val = e.target.value;
-                setNewRowMachineId(val);
-                if (!val) {
-                  setNewRowEntryType('indirect');
-                } else {
-                  setNewRowEntryType('production');
-                }
-              }}
-            >
-              <option value="">None (Indirect / General Shop)</option>
-              {machines.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.order_number} ({m.model_type})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.addRowField}>
-            <label htmlFor="new-row-task">Task / Allocation Target</label>
-            {newRowMachineId ? (
-              <select
-                id="new-row-task"
-                className={styles.addRowSelect}
-                value={newRowTaskIdentifier}
-                onChange={e => setNewRowTaskIdentifier(e.target.value)}
-                disabled={loadingMachineTasks}
-              >
-                <option value="">Select a task...</option>
-                {machineTasks.length > 0 && (
-                  <optgroup label="📋 Quoted Tasks Allocated by Lead">
-                    {machineTasks.map(t => (
-                      <option key={t.id} value={`task:${t.id}`}>
-                        [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                <optgroup label="🏢 Core Department Tasks">
-                  {departmentTasks
-                    .filter(t => t.is_active)
-                    .map(t => (
-                      <option key={t.id} value={`dept:${t.task_code}`}>
-                        [{t.department}] {t.task_name} (Default: {t.default_quoted_hours}h)
-                      </option>
-                    ))}
-                </optgroup>
-              </select>
-            ) : (
-              <select
-                id="new-row-task"
-                className={styles.addRowSelect}
-                value={newRowTaskIdentifier}
-                onChange={e => setNewRowTaskIdentifier(e.target.value)}
-              >
-                {INDIRECT_TASKS.map(task => (
-                  <option key={task} value={task}>
-                    {task}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          <div className={styles.addRowField}>
-            <label htmlFor="new-row-type">Type</label>
-            <select
-              id="new-row-type"
-              className={styles.addRowSelect}
-              value={newRowEntryType}
-              onChange={e => setNewRowEntryType(e.target.value as TimeEntryType)}
-            >
-              <option value="production">Production</option>
-              <option value="rework">Rework</option>
-              <option value="issue_fix">Issue Fix</option>
-              <option value="indirect">Indirect</option>
-            </select>
-          </div>
-
-          <button
-            className={styles.btnPrimary}
-            onClick={handleAddRow}
-            disabled={!newRowTaskIdentifier}
-            type="button"
-          >
-            Add to Grid
-          </button>
         </div>
       )}
 
@@ -585,9 +532,9 @@ export function WeeklyTimesheetGrid({
           <table className={styles.matrixTable}>
             <thead>
               <tr>
-                <th style={{ minWidth: '130px' }}>Machine #</th>
-                <th style={{ minWidth: '200px' }}>Task Description</th>
-                <th style={{ minWidth: '90px' }}>Type</th>
+                <th style={{ minWidth: '180px' }}>Machine #</th>
+                <th style={{ minWidth: '240px' }}>Task Description</th>
+                <th style={{ minWidth: '105px' }}>Type</th>
                 {weekDays.map(day => (
                   <th
                     key={day.dateStr}
@@ -608,48 +555,136 @@ export function WeeklyTimesheetGrid({
                     Loading weekly timesheet...
                   </td>
                 </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
-                    No time logged for this week yet. Click <strong>➕ Add Row</strong> to select a machine task and log hours.
-                  </td>
-                </tr>
               ) : (
                 rows.map(row => {
                   const rowTotal = Object.values(row.days).reduce((s, h) => s + (h || 0), 0);
+                  const selectedMachineTasks = row.machine_id ? machineTasksCache[row.machine_id] || [] : [];
+
                   return (
                     <tr key={row.rowKey}>
+                      {/* Machine Selection */}
                       <td>
-                        <strong>{row.order_number || 'Indirect / Shop'}</strong>
+                        {!isLocked ? (
+                          <select
+                            aria-label="Machine / Order #"
+                            className={styles.rowSelect}
+                            value={row.machine_id || (row.task_name && !row.machine_id ? 'none' : '')}
+                            onChange={e => handleMachineChange(row.rowKey, e.target.value)}
+                          >
+                            <option value="">Select Machine...</option>
+                            <option value="none">None (Indirect / General Shop)</option>
+                            {machines.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {m.order_number} ({m.model_type})
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <strong>{row.order_number || 'Indirect / Shop'}</strong>
+                        )}
                       </td>
+
+                      {/* Task Selection */}
                       <td>
-                        <div>{row.task_name}</div>
-                        {row.department && (
-                          <span style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase' }}>
-                            {row.department}
+                        {!isLocked ? (
+                          row.machine_id && row.machine_id !== 'none' ? (
+                            <select
+                              aria-label="Task / Allocation Target"
+                              className={styles.rowSelect}
+                              value={
+                                row.project_task_id
+                                  ? `task:${row.project_task_id}`
+                                  : row.task_name
+                                  ? `task_name:${row.task_name}`
+                                  : ''
+                              }
+                              onChange={e => handleTaskChange(row.rowKey, e.target.value)}
+                            >
+                              <option value="">Select a task...</option>
+                              {selectedMachineTasks.length > 0 && (
+                                <optgroup label="📋 Quoted Tasks Allocated by Lead">
+                                  {selectedMachineTasks.map(t => (
+                                    <option key={t.id} value={`task:${t.id}`}>
+                                      [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              )}
+                              <optgroup label="🏢 Core Department Tasks">
+                                {departmentTasks
+                                  .filter(t => t.is_active)
+                                  .map(t => (
+                                    <option key={t.id} value={`dept:${t.task_code}`}>
+                                      [{t.department}] {t.task_name} (Default: {t.default_quoted_hours}h)
+                                    </option>
+                                  ))}
+                              </optgroup>
+                            </select>
+                          ) : (
+                            <select
+                              aria-label="Task / Allocation Target"
+                              className={styles.rowSelect}
+                              value={row.task_name || ''}
+                              onChange={e => handleTaskChange(row.rowKey, e.target.value)}
+                            >
+                              <option value="">Select indirect task...</option>
+                              <optgroup label="🛠️ Indirect Shop Tasks">
+                                {INDIRECT_TASKS.map(task => (
+                                  <option key={task} value={task}>
+                                    {task}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            </select>
+                          )
+                        ) : (
+                          <div>
+                            <div>{row.task_name || 'General Task'}</div>
+                            {row.department && (
+                              <span style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase' }}>
+                                {row.department}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Type Selection */}
+                      <td>
+                        {!isLocked ? (
+                          <select
+                            aria-label="Type"
+                            className={styles.rowTypeSelect}
+                            value={row.entry_type}
+                            onChange={e => handleTypeChange(row.rowKey, e.target.value as TimeEntryType)}
+                          >
+                            <option value="production">Production</option>
+                            <option value="rework">Rework</option>
+                            <option value="issue_fix">Issue Fix</option>
+                            <option value="indirect">Indirect</option>
+                          </select>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              textTransform: 'uppercase',
+                              fontWeight: 700,
+                              color:
+                                row.entry_type === 'production'
+                                  ? '#00e5ff'
+                                  : row.entry_type === 'rework'
+                                  ? '#ff7043'
+                                  : row.entry_type === 'issue_fix'
+                                  ? '#ffca28'
+                                  : '#aaa',
+                            }}
+                          >
+                            {row.entry_type}
                           </span>
                         )}
                       </td>
-                      <td>
-                        <span
-                          style={{
-                            fontSize: '0.75rem',
-                            textTransform: 'uppercase',
-                            fontWeight: 700,
-                            color:
-                              row.entry_type === 'production'
-                                ? '#00e5ff'
-                                : row.entry_type === 'rework'
-                                ? '#ff7043'
-                                : row.entry_type === 'issue_fix'
-                                ? '#ffca28'
-                                : '#aaa',
-                          }}
-                        >
-                          {row.entry_type}
-                        </span>
-                      </td>
 
+                      {/* Day Hour Inputs across Sunday -> Saturday */}
                       {weekDays.map(day => {
                         const val = row.days[day.dateStr];
                         return (
@@ -659,7 +694,7 @@ export function WeeklyTimesheetGrid({
                               step="0.25"
                               min="0"
                               max="24"
-                              aria-label={`${row.task_name} on ${day.fullName}`}
+                              aria-label={`${row.task_name || 'Task'} on ${day.fullName}`}
                               className={styles.cellInput}
                               value={val !== undefined && val !== 0 ? val : ''}
                               placeholder="—"

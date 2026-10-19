@@ -28,13 +28,13 @@ CREATE INDEX IF NOT EXISTS idx_time_entries_weekly_timesheet ON time_entries(wee
 INSERT INTO weekly_timesheets (user_id, week_start_date, status, total_hours, created_at, updated_at)
 SELECT 
     user_id,
-    date_trunc('week', work_date)::date as week_start_date,
+    (work_date - EXTRACT(DOW FROM work_date)::integer * INTERVAL '1 day')::date as week_start_date,
     'draft' as status,
     COALESCE(SUM(hours_spent), 0.00) as total_hours,
     NOW(),
     NOW()
 FROM time_entries
-GROUP BY user_id, date_trunc('week', work_date)::date
+GROUP BY user_id, (work_date - EXTRACT(DOW FROM work_date)::integer * INTERVAL '1 day')::date
 ON CONFLICT (user_id, week_start_date) DO UPDATE
 SET total_hours = EXCLUDED.total_hours;
 
@@ -42,4 +42,4 @@ UPDATE time_entries te
 SET weekly_timesheet_id = wt.id
 FROM weekly_timesheets wt
 WHERE te.user_id = wt.user_id
-  AND date_trunc('week', te.work_date)::date = wt.week_start_date;
+  AND (te.work_date - EXTRACT(DOW FROM te.work_date)::integer * INTERVAL '1 day')::date = wt.week_start_date;

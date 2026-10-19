@@ -190,8 +190,8 @@ describe('TimesheetPage', () => {
     });
 
     expect(screen.getByText('Timesheet & Quoting Hub')).toBeInTheDocument();
-    expect(screen.getByText('Mechanical Assembly')).toBeInTheDocument();
-    expect(screen.getAllByText('production').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Mechanical Assembly/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/production/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText('4.5h').length).toBeGreaterThan(0);
     expect(screen.getByText('Total Logged This Week:')).toBeInTheDocument();
     expect(screen.getByText('4.50 hrs')).toBeInTheDocument();
@@ -256,7 +256,7 @@ describe('TimesheetPage', () => {
     );
   });
 
-  it('allows adding a new row to weekly timesheet matrix with allocated machine tasks', async () => {
+  it('allows adding a new row to weekly timesheet matrix with inline machine and task selection', async () => {
     await act(async () => {
       render(<TimesheetPage />);
     });
@@ -266,35 +266,33 @@ describe('TimesheetPage', () => {
       fireEvent.click(addRowBtn);
     });
 
-    // Form inputs should be visible
-    expect(screen.getByText('Machine / Order #')).toBeInTheDocument();
-    expect(screen.getByText('Task / Allocation Target')).toBeInTheDocument();
+    // Ensure machines are loaded and present in the inline select options
+    expect(await screen.findAllByText(/M-1001 \(Centrifugal Feeder\)/i)).not.toHaveLength(0);
 
-    // Ensure machines are loaded
-    expect(await screen.findByText(/M-1001 \(Centrifugal Feeder\)/i)).toBeInTheDocument();
-
-    // Select Machine M-1001
-    const machineSelect = screen.getByLabelText(/Machine \/ Order #/i);
+    // Select Machine M-1001 on the newly added row (index 1)
+    const machineSelects = screen.getAllByLabelText(/Machine \/ Order #/i);
+    expect(machineSelects.length).toBe(2);
     await act(async () => {
-      fireEvent.change(machineSelect, { target: { value: 'm-1' } });
+      fireEvent.change(machineSelects[1], { target: { value: 'm-1' } });
     });
 
-    // Machine tasks should be loaded asynchronously and displayed
-    expect(await screen.findByText(/\[assembly\] Mechanical Assembly \(Quoted: 40h\)/i)).toBeInTheDocument();
+    // Machine tasks should be loaded asynchronously and displayed in task select
+    expect(await screen.findAllByText(/\[assembly\] Mechanical Assembly \(Quoted: 40h\)/i)).not.toHaveLength(0);
 
-    // Select the task and click Add to Grid
-    const taskSelect = screen.getByLabelText(/Task \/ Allocation Target/i);
+    // Select the task on newly added row
+    const taskSelects = screen.getAllByLabelText(/Task \/ Allocation Target/i);
     await act(async () => {
-      fireEvent.change(taskSelect, { target: { value: 'task:task-1' } });
+      fireEvent.change(taskSelects[1], { target: { value: 'task:task-1' } });
     });
 
-    const addToGridBtn = screen.getByText('Add to Grid');
+    // User can directly add hours across the week (Sunday is day 1)
+    const mondayInputs = screen.getAllByLabelText(/Mechanical Assembly on Monday/i);
     await act(async () => {
-      fireEvent.click(addToGridBtn);
+      fireEvent.change(mondayInputs[1], { target: { value: '3.5' } });
     });
 
-    // Should now have Mechanical Assembly rows in the grid
-    expect(screen.getAllByText('Mechanical Assembly').length).toBeGreaterThan(0);
+    // Should now have 3.5h row total
+    expect(screen.getAllByText('3.5h').length).toBeGreaterThan(0);
   });
 
   it('supports project-level department scope and distills task options', async () => {
@@ -387,7 +385,7 @@ describe('TimesheetPage', () => {
     // Weekly grid controls
     expect(screen.getByText('Submit Timesheet')).toBeInTheDocument();
     expect(screen.getByText('Save Draft')).toBeInTheDocument();
-    expect(screen.getAllByText('Draft').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/DRAFT/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Total Logged This Week:')).toBeInTheDocument();
   });
 

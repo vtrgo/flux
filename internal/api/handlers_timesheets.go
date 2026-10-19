@@ -294,7 +294,7 @@ func handleCreateTimeEntry(w http.ResponseWriter, r *http.Request) {
 	var weeklyTimesheetID uuid.UUID
 	_ = db.DB.QueryRowContext(r.Context(), `
 		INSERT INTO weekly_timesheets (user_id, week_start_date, status, total_hours, created_at, updated_at)
-		VALUES ($1, date_trunc('week', $2::date)::date, 'draft', 0.00, NOW(), NOW())
+		VALUES ($1, ($2::date - EXTRACT(DOW FROM $2::date)::integer * INTERVAL '1 day')::date, 'draft', 0.00, NOW(), NOW())
 		ON CONFLICT (user_id, week_start_date) DO UPDATE
 		SET updated_at = weekly_timesheets.updated_at
 		RETURNING id
@@ -1015,12 +1015,12 @@ func handleGetWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 	weekStartParam := r.URL.Query().Get("week_start")
 	var weekStartDate string
 	if weekStartParam != "" {
-		if err := db.DB.QueryRowContext(r.Context(), `SELECT to_char(date_trunc('week', $1::date)::date, 'YYYY-MM-DD')`, weekStartParam).Scan(&weekStartDate); err != nil {
+		if err := db.DB.QueryRowContext(r.Context(), `SELECT to_char(($1::date - EXTRACT(DOW FROM $1::date)::integer * INTERVAL '1 day')::date, 'YYYY-MM-DD')`, weekStartParam).Scan(&weekStartDate); err != nil {
 			respondError(w, http.StatusBadRequest, "Invalid week_start date format (expected YYYY-MM-DD)", err)
 			return
 		}
 	} else {
-		if err := db.DB.QueryRowContext(r.Context(), `SELECT to_char(date_trunc('week', CURRENT_DATE)::date, 'YYYY-MM-DD')`).Scan(&weekStartDate); err != nil {
+		if err := db.DB.QueryRowContext(r.Context(), `SELECT to_char((CURRENT_DATE - EXTRACT(DOW FROM CURRENT_DATE)::integer * INTERVAL '1 day')::date, 'YYYY-MM-DD')`).Scan(&weekStartDate); err != nil {
 			respondError(w, http.StatusInternalServerError, "Failed to determine current week", err)
 			return
 		}
