@@ -443,26 +443,25 @@ export function TimesheetApprovalsTable({
           <table className={styles.matrixTable}>
             <thead>
               <tr>
-                <th style={{ minWidth: '150px' }}>Worker</th>
-                <th style={{ minWidth: '110px' }}>Department</th>
-                <th style={{ minWidth: '180px' }}>Work Week</th>
+                <th style={{ minWidth: '160px' }}>Worker</th>
+                <th style={{ minWidth: '120px' }}>Department</th>
                 <th style={{ minWidth: '90px', textAlign: 'right' }}>Total Hours</th>
                 <th style={{ minWidth: '100px', textAlign: 'center' }}>Status</th>
                 <th style={{ minWidth: '140px' }}>Saved / Updated</th>
-                <th style={{ minWidth: '180px' }}>Notes / Approver</th>
+                <th style={{ minWidth: '220px' }}>Notes / Approver</th>
                 <th style={{ minWidth: '180px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading && approvals.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
                     Loading timesheet approvals for {selectedWeek ? formatWeekRange(selectedWeek) : 'all work weeks'}...
                   </td>
                 </tr>
               ) : approvals.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
                     <div style={{ color: '#ccc' }}>
                       No timesheets found for {selectedWeek ? `work week ${formatWeekRange(selectedWeek)}` : 'the selected filters'}.
                     </div>
@@ -500,9 +499,6 @@ export function TimesheetApprovalsTable({
                           <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#aaa' }}>
                             {ts.department || '—'}
                           </span>
-                        </td>
-                        <td>
-                          <strong>{formatWeekRange(ts.week_start_date)}</strong>
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--vtr-theme-primary, #00e5ff)' }}>
                           {formatHours(ts.total_hours)} hrs
@@ -665,7 +661,7 @@ export function TimesheetApprovalsTable({
                       {isInspecting && (
                         <tr key={`${ts.id}-details`}>
                           <td
-                            colSpan={8}
+                            colSpan={7}
                             style={{
                               padding: '1.25rem 1.5rem',
                               background: '#161616',
