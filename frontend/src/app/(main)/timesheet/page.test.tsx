@@ -521,7 +521,7 @@ describe('TimesheetPage', () => {
       fireEvent.click(approvalsTabBtn);
     });
 
-    expect(screen.getByLabelText('Work Week')).toBeInTheDocument();
+    expect(screen.getByText('◀ Prev Week')).toBeInTheDocument();
     expect(screen.getByLabelText('Department')).toBeInTheDocument();
     expect(screen.getByText('🔄 Refresh List')).toBeInTheDocument();
     expect(screen.getByText('Approve')).toBeInTheDocument();
@@ -586,11 +586,9 @@ describe('TimesheetPage', () => {
       fireEvent.click(approvalsTabBtn);
     });
 
-    // Verify Work Week navigation & selection controls
+    // Verify Work Week navigation controls
     expect(screen.getByText('◀ Prev Week')).toBeInTheDocument();
     expect(screen.getByText('Next Week ▶')).toBeInTheDocument();
-    const weekSelect = screen.getByLabelText('Work Week');
-    expect(weekSelect).toBeInTheDocument();
 
     // Verify Department & Status filters and Refresh button
     const deptSelect = screen.getByLabelText('Department');

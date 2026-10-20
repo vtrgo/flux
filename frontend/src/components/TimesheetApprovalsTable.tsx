@@ -78,33 +78,6 @@ export function TimesheetApprovalsTable({
     setSelectedWeek(getSundayOfWeek());
   };
 
-  const weekOptions = useMemo(() => {
-    const currentSunday = getSundayOfWeek();
-    const options = [];
-    const nextSunday = addWeeks(currentSunday, 1);
-    options.push({
-      value: nextSunday,
-      label: `${formatWeekRange(nextSunday)} (Next Week)`,
-    });
-    options.push({
-      value: currentSunday,
-      label: `${formatWeekRange(currentSunday)} (Current Week)`,
-    });
-    for (let i = 1; i <= 8; i++) {
-      const pastSunday = addWeeks(currentSunday, -i);
-      options.push({
-        value: pastSunday,
-        label: `${formatWeekRange(pastSunday)} (${i} wk${i > 1 ? 's' : ''} ago)`,
-      });
-    }
-    return options;
-  }, []);
-
-  const isCustomWeek = useMemo(
-    () => Boolean(selectedWeek && !weekOptions.some(o => o.value === selectedWeek)),
-    [selectedWeek, weekOptions]
-  );
-
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -269,41 +242,6 @@ export function TimesheetApprovalsTable({
               {DEPARTMENTS.map(d => (
                 <option key={d.id} value={d.id}>
                   {d.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label
-              htmlFor="week-filter-select"
-              style={{ fontSize: '0.75rem', fontWeight: 600, color: '#aaa', whiteSpace: 'nowrap' }}
-            >
-              Work Week:
-            </label>
-            <select
-              id="week-filter-select"
-              aria-label="Work Week"
-              style={{
-                background: 'rgba(0, 0, 0, 0.4)',
-                border: '1px solid var(--border-color, #444)',
-                borderRadius: '6px',
-                color: '#fff',
-                padding: '0.45rem 0.75rem',
-                fontSize: '0.85rem',
-              }}
-              value={selectedWeek}
-              onChange={e => setSelectedWeek(e.target.value)}
-            >
-              <option value="">All Work Weeks</option>
-              {isCustomWeek && (
-                <option value={selectedWeek}>
-                  {formatWeekRange(selectedWeek)} (Selected)
-                </option>
-              )}
-              {weekOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
                 </option>
               ))}
             </select>
