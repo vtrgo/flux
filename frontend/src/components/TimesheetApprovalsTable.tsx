@@ -58,8 +58,8 @@ export function TimesheetApprovalsTable({
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [processingAction, setProcessingAction] = useState<boolean>(false);
 
-  // Inspect modal state
-  const [inspectingTimesheet, setInspectingTimesheet] = useState<WeeklyTimesheet | null>(null);
+  // Expanded inline child row state
+  const [expandedTimesheet, setExpandedTimesheet] = useState<WeeklyTimesheet | null>(null);
 
   const isCurrentWeek = useMemo(
     () => selectedWeek === getSundayOfWeek(),
@@ -140,7 +140,7 @@ export function TimesheetApprovalsTable({
   }, [loadData]);
 
   useEffect(() => {
-    setInspectingTimesheet(null);
+    setExpandedTimesheet(null);
   }, [selectedWeek, deptFilter]);
 
   const handleApprove = async (ts: WeeklyTimesheet) => {
@@ -479,12 +479,12 @@ export function TimesheetApprovalsTable({
                 </tr>
               ) : (
                 approvals.map(ts => {
-                  const isInspecting = inspectingTimesheet?.id === ts.id;
+                  const isExpanded = expandedTimesheet?.id === ts.id;
                   return (
                     <React.Fragment key={ts.id}>
                       <tr
                         style={
-                          isInspecting
+                          isExpanded
                             ? { background: 'rgba(0, 229, 255, 0.05)', borderLeft: '3px solid var(--vtr-theme-primary, #00e5ff)' }
                             : undefined
                         }
@@ -621,19 +621,19 @@ export function TimesheetApprovalsTable({
                             )}
                             <button
                               style={{
-                                background: isInspecting ? 'var(--vtr-theme-primary, #00e5ff)' : 'rgba(255, 255, 255, 0.08)',
-                                color: isInspecting ? '#000' : '#fff',
+                                background: isExpanded ? 'var(--vtr-theme-primary, #00e5ff)' : 'rgba(255, 255, 255, 0.08)',
+                                color: isExpanded ? '#000' : '#fff',
                                 border: '1px solid #444',
                                 borderRadius: '4px',
                                 padding: '0.3rem 0.6rem',
                                 fontSize: '0.75rem',
-                                fontWeight: isInspecting ? 700 : 400,
+                                fontWeight: isExpanded ? 700 : 400,
                                 cursor: 'pointer',
                               }}
-                              onClick={() => setInspectingTimesheet(isInspecting ? null : ts)}
+                              onClick={() => setExpandedTimesheet(isExpanded ? null : ts)}
                               type="button"
                             >
-                              {isInspecting ? 'Hide Details' : 'Review'}
+                              {isExpanded ? 'Hide Details' : 'Review'}
                             </button>
                             {isAdminUser && (
                               <button
@@ -658,7 +658,7 @@ export function TimesheetApprovalsTable({
                           </div>
                         </td>
                       </tr>
-                      {isInspecting && (
+                      {isExpanded && (
                         <tr key={`${ts.id}-details`}>
                           <td
                             colSpan={7}

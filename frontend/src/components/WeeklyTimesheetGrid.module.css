@@ -240,8 +240,8 @@
 }
 
 .cellInput:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  opacity: 0.85;
+  cursor: default;
   background: transparent;
   border-color: transparent;
 }
