@@ -166,6 +166,7 @@ export function ReworkModal({
         assembler_id: "",
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, editingItem, preselectedSalesOrderId, preselectedMachineId, preselectedDefectId]);
 
   if (!isOpen) return null;
