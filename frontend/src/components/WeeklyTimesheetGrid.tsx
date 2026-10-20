@@ -22,6 +22,7 @@ interface WeeklyTimesheetGridProps {
   readOnlyUserView?: boolean;
   userDepartment?: string;
   targetUserId?: string;
+  hideDateNav?: boolean;
 }
 
 interface GridRow {
@@ -80,6 +81,7 @@ export function WeeklyTimesheetGrid({
   readOnlyUserView = false,
   userDepartment,
   targetUserId,
+  hideDateNav = false,
 }: WeeklyTimesheetGridProps) {
   const { user: authUser } = useAuth();
   const effectiveDepartment = useMemo(() => {
@@ -423,61 +425,61 @@ export function WeeklyTimesheetGrid({
   return (
     <div className={styles.container}>
       {/* Top Bar: Week Switcher & Status Controls */}
-      <div className={styles.topBar}>
-        <div className={styles.weekNav}>
-          <button
-            className={styles.navBtn}
-            onClick={handlePrevWeek}
-            title="Previous Week"
-            type="button"
-          >
-            ◀ Prev Week
-          </button>
-          <span className={styles.weekLabel}>{formatWeekRange(currentWeekSunday)}</span>
-          <button
-            className={styles.navBtn}
-            onClick={handleNextWeek}
-            title="Next Week"
-            type="button"
-          >
-            Next Week ▶
-          </button>
-          {!isCurrentWeek && (
+      {!hideDateNav && !readOnlyUserView && (
+        <div className={styles.topBar}>
+          <div className={styles.weekNav}>
             <button
               className={styles.navBtn}
-              onClick={handleThisWeek}
-              title="Jump to Current Week"
+              onClick={handlePrevWeek}
+              title="Previous Week"
               type="button"
             >
-              Current Week
+              ◀ Prev Week
             </button>
-          )}
-        </div>
-
-        <div className={styles.statusAndActions}>
-          {weeklyTimesheet && (
-            <span
-              className={`${styles.statusBadge} ${
-                weeklyTimesheet.status === 'approved'
-                  ? styles.statusApproved
-                  : weeklyTimesheet.status === 'rejected'
-                  ? styles.statusRejected
-                  : weeklyTimesheet.total_hours > 0
-                  ? styles.statusSubmitted
-                  : styles.statusDraft
-              }`}
+            <span className={styles.weekLabel}>{formatWeekRange(currentWeekSunday)}</span>
+            <button
+              className={styles.navBtn}
+              onClick={handleNextWeek}
+              title="Next Week"
+              type="button"
             >
-              {weeklyTimesheet.status === 'approved'
-                ? 'APPROVED'
-                : weeklyTimesheet.status === 'rejected'
-                ? 'REJECTED'
-                : weeklyTimesheet.total_hours > 0
-                ? 'SAVED'
-                : 'DRAFT'}
-            </span>
-          )}
+              Next Week ▶
+            </button>
+            {!isCurrentWeek && (
+              <button
+                className={styles.navBtn}
+                onClick={handleThisWeek}
+                title="Jump to Current Week"
+                type="button"
+              >
+                Current Week
+              </button>
+            )}
+          </div>
 
-          {!readOnlyUserView && (
+          <div className={styles.statusAndActions}>
+            {weeklyTimesheet && (
+              <span
+                className={`${styles.statusBadge} ${
+                  weeklyTimesheet.status === 'approved'
+                    ? styles.statusApproved
+                    : weeklyTimesheet.status === 'rejected'
+                    ? styles.statusRejected
+                    : weeklyTimesheet.total_hours > 0
+                    ? styles.statusSubmitted
+                    : styles.statusDraft
+                }`}
+              >
+                {weeklyTimesheet.status === 'approved'
+                  ? 'APPROVED'
+                  : weeklyTimesheet.status === 'rejected'
+                  ? 'REJECTED'
+                  : weeklyTimesheet.total_hours > 0
+                  ? 'SAVED'
+                  : 'DRAFT'}
+              </span>
+            )}
+
             <button
               className={styles.btnPrimary}
               onClick={handleSaveTimesheet}
@@ -490,19 +492,19 @@ export function WeeklyTimesheetGrid({
                 ? 'Save Changes *'
                 : 'Save Timesheet'}
             </button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Lockout / Status Banners */}
-      {weeklyTimesheet?.status === 'approved' && (
+      {!readOnlyUserView && weeklyTimesheet?.status === 'approved' && (
         <div className={`${styles.banner} ${styles.bannerApproved}`}>
           <span>
             ✅ <strong>Timesheet Approved</strong>
           </span>
         </div>
       )}
-      {weeklyTimesheet?.status === 'rejected' && (
+      {!readOnlyUserView && weeklyTimesheet?.status === 'rejected' && (
         <div className={`${styles.banner} ${styles.bannerRejected}`}>
           <span>
             ❌ <strong>Rejection Notice:</strong> {weeklyTimesheet?.rejection_reason || 'Please review your logged hours and re-submit.'}
@@ -784,25 +786,27 @@ export function WeeklyTimesheetGrid({
           </table>
         </div>
 
-        {/* Notes Section */}
+        {/* Notes & Summary Section */}
         <div className={styles.bottomSection}>
-          <div className={styles.notesGroup}>
-            <label htmlFor="timesheet-notes">Weekly Timesheet Notes & Remarks</label>
-            <textarea
-              id="timesheet-notes"
-              className={styles.notesTextarea}
-              rows={2}
-              placeholder="Add any context or notes for the lead reviewer..."
-              value={notes}
-              disabled={isLocked}
-              onChange={e => {
-                setNotes(e.target.value);
-                setIsDirty(true);
-              }}
-            />
-          </div>
+          {!readOnlyUserView && (
+            <div className={styles.notesGroup}>
+              <label htmlFor="timesheet-notes">Weekly Timesheet Notes & Remarks</label>
+              <textarea
+                id="timesheet-notes"
+                className={styles.notesTextarea}
+                rows={2}
+                placeholder="Add any context or notes for the lead reviewer..."
+                value={notes}
+                disabled={isLocked}
+                onChange={e => {
+                  setNotes(e.target.value);
+                  setIsDirty(true);
+                }}
+              />
+            </div>
+          )}
 
-          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.25rem', marginLeft: 'auto' }}>
             <span style={{ fontSize: '0.85rem', color: '#888' }}>Total Logged This Week:</span>
             <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--vtr-theme-primary, #00e5ff)' }}>
               {grandTotal.toFixed(2)} hrs

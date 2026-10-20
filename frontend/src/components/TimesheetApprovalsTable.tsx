@@ -663,111 +663,20 @@ export function TimesheetApprovalsTable({
                           <td
                             colSpan={7}
                             style={{
-                              padding: '1.25rem 1.5rem',
-                              background: '#161616',
+                              padding: '1rem 1.25rem',
+                              background: '#151515',
                               borderTop: '1px solid rgba(0, 229, 255, 0.3)',
                               borderBottom: '2px solid #333',
                             }}
                           >
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: '0.75rem',
-                                marginBottom: '1.25rem',
-                                paddingBottom: '0.75rem',
-                                borderBottom: '1px solid #333',
-                              }}
-                            >
-                              <div>
-                                <h3 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  <span>📋</span> Reviewing Timesheet: {ts.user_name} ({formatWeekRange(ts.week_start_date)})
-                                </h3>
-                                <div style={{ fontSize: '0.85rem', color: '#aaa', marginTop: '0.35rem' }}>
-                                  Status:{' '}
-                                  <strong
-                                    style={{
-                                      color:
-                                        ts.status === 'approved'
-                                          ? '#00e676'
-                                          : ts.status === 'rejected'
-                                          ? '#ff5252'
-                                          : '#00e5ff',
-                                      textTransform: 'uppercase',
-                                    }}
-                                  >
-                                    {ts.status === 'draft' ? (ts.total_hours > 0 ? 'PENDING' : 'DRAFT') : ts.status}
-                                  </strong>{' '}
-                                  | Total Hours: <strong>{formatHours(ts.total_hours)} hrs</strong>
-                                </div>
-                              </div>
-                              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                                {ts.status !== 'approved' && (
-                                  <>
-                                    <button
-                                      style={{
-                                        background: '#00c853',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        padding: '0.45rem 0.9rem',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 700,
-                                        cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
-                                        opacity: ts.total_hours > 0 ? 1 : 0.5,
-                                      }}
-                                      onClick={async () => {
-                                        await handleApprove(ts);
-                                        setInspectingTimesheet(null);
-                                      }}
-                                      disabled={processingAction || ts.total_hours <= 0}
-                                      type="button"
-                                    >
-                                      Approve
-                                    </button>
-                                    <button
-                                      style={{
-                                        background: 'rgba(255, 68, 68, 0.2)',
-                                        color: '#ff5252',
-                                        border: '1px solid rgba(255, 68, 68, 0.4)',
-                                        borderRadius: '4px',
-                                        padding: '0.45rem 0.9rem',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 700,
-                                        cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
-                                        opacity: ts.total_hours > 0 ? 1 : 0.5,
-                                      }}
-                                      onClick={() => {
-                                        setRejectingTimesheet(ts);
-                                        setRejectionReason('');
-                                      }}
-                                      disabled={processingAction || ts.total_hours <= 0}
-                                      type="button"
-                                    >
-                                      Reject
-                                    </button>
-                                  </>
-                                )}
-                                <button
-                                  className={styles.btnSecondary}
-                                  onClick={() => setInspectingTimesheet(null)}
-                                  type="button"
-                                >
-                                  Close ✕
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Worker Notes & Remarks */}
+                            {/* Worker Comments / Remarks */}
                             <div
                               style={{
                                 background: 'rgba(255, 255, 255, 0.03)',
                                 border: '1px solid #333',
                                 borderRadius: '6px',
-                                padding: '0.75rem 1rem',
-                                marginBottom: '1rem',
+                                padding: '0.65rem 0.9rem',
+                                marginBottom: '0.85rem',
                               }}
                             >
                               <div
@@ -776,21 +685,21 @@ export function TimesheetApprovalsTable({
                                   fontWeight: 700,
                                   color: 'var(--vtr-theme-primary, #00e5ff)',
                                   textTransform: 'uppercase',
-                                  marginBottom: '0.35rem',
+                                  marginBottom: '0.25rem',
                                   letterSpacing: '0.5px',
                                 }}
                               >
-                                💬 Worker Notes & Remarks:
+                                💬 Worker Comments:
                               </div>
                               <div
                                 style={{
                                   color: ts.notes ? '#fff' : '#888',
-                                  fontSize: '0.875rem',
+                                  fontSize: '0.85rem',
                                   fontStyle: ts.notes ? 'normal' : 'italic',
                                   whiteSpace: 'pre-wrap',
                                 }}
                               >
-                                {ts.notes ? ts.notes : 'No worker notes or remarks recorded for this timesheet period.'}
+                                {ts.notes ? ts.notes : 'No worker comments entered for this work week.'}
                               </div>
                             </div>
 
@@ -801,8 +710,8 @@ export function TimesheetApprovalsTable({
                                   background: 'rgba(255, 82, 82, 0.1)',
                                   border: '1px solid rgba(255, 82, 82, 0.3)',
                                   borderRadius: '6px',
-                                  padding: '0.75rem 1rem',
-                                  marginBottom: '1rem',
+                                  padding: '0.65rem 0.9rem',
+                                  marginBottom: '0.85rem',
                                 }}
                               >
                                 <div
@@ -816,13 +725,13 @@ export function TimesheetApprovalsTable({
                                 >
                                   ⚠️ Previous Rejection Reason:
                                 </div>
-                                <div style={{ color: '#fff', fontSize: '0.875rem' }}>
+                                <div style={{ color: '#fff', fontSize: '0.85rem' }}>
                                   {ts.rejection_reason}
                                 </div>
                               </div>
                             )}
 
-                            {/* Embedded Read-only User Timesheet Grid */}
+                            {/* Task/Machine Daily Hours Breakdown */}
                             <WeeklyTimesheetGrid
                               machines={machines}
                               departmentTasks={departmentTasks}
@@ -830,6 +739,7 @@ export function TimesheetApprovalsTable({
                               readOnlyUserView={true}
                               userDepartment={ts.department}
                               targetUserId={ts.user_id}
+                              hideDateNav={true}
                             />
                           </td>
                         </tr>

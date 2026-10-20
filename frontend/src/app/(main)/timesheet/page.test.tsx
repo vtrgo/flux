@@ -528,29 +528,27 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('Reject')).toBeInTheDocument();
     expect(screen.getByText('Review')).toBeInTheDocument();
 
-    // Click Review button to expand child row for that worker
+    // Click Review button to expand child breakdown for that worker
     const reviewBtn = screen.getByText('Review');
     await act(async () => {
       fireEvent.click(reviewBtn);
     });
 
-    // Inline child row should expand with the worker's name, remarks, and read-only view
-    expect(screen.getByText(/Reviewing Timesheet:/i)).toBeInTheDocument();
-    expect(screen.getByText(/💬 Worker Notes & Remarks:/i)).toBeInTheDocument();
+    // Inline child row should expand with worker comments and simplified breakdown without redundant meta header or date controls
+    expect(screen.getByText(/💬 Worker Comments:/i)).toBeInTheDocument();
     expect(screen.getAllByText('Draft note').length).toBeGreaterThan(0);
-    expect(screen.getByText('Close ✕')).toBeInTheDocument();
-
-    // Verify inline review action header has Approve and Reject, but NOT Delete
-    const closeBtn = screen.getByText('Close ✕');
-    const modalActionGroup = closeBtn.parentElement;
-    expect(modalActionGroup).not.toBeNull();
-    expect(within(modalActionGroup!).queryByText(/Delete/i)).not.toBeInTheDocument();
-
-    // Verify closing the inline review row collapses the child details
-    await act(async () => {
-      fireEvent.click(closeBtn);
-    });
     expect(screen.queryByText(/Reviewing Timesheet:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Close ✕')).not.toBeInTheDocument();
+
+    // Verify row button toggles to Hide Details
+    const hideBtn = screen.getByText('Hide Details');
+    await act(async () => {
+      fireEvent.click(hideBtn);
+    });
+
+    // Verify collapsing details hides worker comments and restores Review button
+    expect(screen.queryByText(/💬 Worker Comments:/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Review')).toBeInTheDocument();
   });
 
   it('shows delete button only for admins in the approvals view and hides it for managers', async () => {
