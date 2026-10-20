@@ -660,6 +660,81 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 		}
 	})
 
+	t.Run("Save_Weekly_Timesheet_Preserves_Entry_IDs_On_Update", func(t *testing.T) {
+		// First fetch current entries
+		getReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/timesheets/weekly?week_start=%s", weekSunday), nil)
+		getReq.AddCookie(workerCookie)
+		getRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(getRR, getReq)
+
+		var currentWT models.WeeklyTimesheet
+		_ = json.NewDecoder(getRR.Body).Decode(&currentWT)
+		if len(currentWT.Entries) == 0 {
+			t.Fatalf("expected entries to exist for update test")
+		}
+
+		existingEntryID := currentWT.Entries[0].ID
+
+		// Update entry 0 with new hours and add a new entry
+		updateReq := models.WeeklyTimesheetSaveRequest{
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					ID:              &existingEntryID,
+					MachineID:       &machineID,
+					ProjectTaskID:   &taskID,
+					EntryType:       models.TimeEntryTypeProduction,
+					WorkDate:        "2026-10-19",
+					HoursSpent:      5.0, // Modified from 4.5 to 5.0
+					WorkDescription: "Updated mounting notes",
+				},
+				{
+					MachineID:       &machineID,
+					ProjectTaskID:   &taskID,
+					EntryType:       models.TimeEntryTypeProduction,
+					WorkDate:        "2026-10-21", // Wednesday
+					HoursSpent:      2.0,
+					WorkDescription: "Sensor cabling",
+				},
+			},
+		}
+
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", timesheetID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(workerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+		}
+
+		var updatedWT models.WeeklyTimesheet
+		_ = json.NewDecoder(rr.Body).Decode(&updatedWT)
+
+		if updatedWT.TotalHours != 7.0 {
+			t.Errorf("expected 7.0 total hours (5.0 + 2.0), got %v", updatedWT.TotalHours)
+		}
+
+		// Verify existing entry preserved its ID and updated in-place
+		var foundExisting bool
+		for _, e := range updatedWT.Entries {
+			if e.ID == existingEntryID {
+				foundExisting = true
+				if e.HoursSpent != 5.0 {
+					t.Errorf("expected updated hours 5.0, got %v", e.HoursSpent)
+				}
+				if e.WorkDescription != "Updated mounting notes" {
+					t.Errorf("expected updated description, got %s", e.WorkDescription)
+				}
+			}
+		}
+		if !foundExisting {
+			t.Errorf("expected existing entry ID %s to be preserved in-place", existingEntryID)
+		}
+	})
+
 	t.Run("Save_Weekly_Timesheet_Validates_Hours_And_Date", func(t *testing.T) {
 		// Test hours > 24
 		saveReq := models.WeeklyTimesheetSaveRequest{

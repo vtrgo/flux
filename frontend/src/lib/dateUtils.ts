@@ -182,10 +182,18 @@ export function formatTimestamp(dateString?: string | null, timezone: string = D
  * If omitted, defaults to Sunday of the current week.
  */
 export function getSundayOfWeek(input?: Date | string): string {
-  let d: Date;
   if (!input) {
-    d = new Date();
-  } else if (typeof input === 'string') {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const day = now.getDate();
+    const dow = now.getDay(); // 0 is Sunday, ..., 6 is Saturday
+    const sunday = new Date(Date.UTC(y, m, day - dow, 12, 0, 0));
+    return `${sunday.getUTCFullYear()}-${String(sunday.getUTCMonth() + 1).padStart(2, '0')}-${String(sunday.getUTCDate()).padStart(2, '0')}`;
+  }
+
+  let d: Date;
+  if (typeof input === 'string') {
     const [y, m, day] = input.split('T')[0].split('-').map(Number);
     d = new Date(Date.UTC(y, m - 1, day, 12, 0, 0));
   } else {

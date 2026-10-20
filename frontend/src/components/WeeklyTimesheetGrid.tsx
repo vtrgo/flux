@@ -34,6 +34,7 @@ interface GridRow {
   entry_type: TimeEntryType;
   days: Record<string, number>; // dateStr -> hours
   descriptions: Record<string, string>; // dateStr -> description
+  entry_ids?: Record<string, string>; // dateStr -> time_entry id
 }
 
 const INDIRECT_TASKS = [
@@ -56,6 +57,7 @@ const createBlankRow = (): GridRow => ({
   entry_type: 'production',
   days: {},
   descriptions: {},
+  entry_ids: {},
 });
 
 function matchesDepartment(taskDept?: string, userDept?: string): boolean {
@@ -150,6 +152,7 @@ export function WeeklyTimesheetGrid({
           entry_type: entry.entry_type || 'production',
           days: {},
           descriptions: {},
+          entry_ids: {},
         });
       }
 
@@ -157,6 +160,10 @@ export function WeeklyTimesheetGrid({
       row.days[entry.work_date] = (row.days[entry.work_date] || 0) + entry.hours_spent;
       if (entry.work_description) {
         row.descriptions[entry.work_date] = entry.work_description;
+      }
+      if (entry.id) {
+        row.entry_ids = row.entry_ids || {};
+        row.entry_ids[entry.work_date] = entry.id;
       }
     });
 
@@ -365,6 +372,7 @@ export function WeeklyTimesheetGrid({
       Object.entries(row.days).forEach(([dateStr, hours]) => {
         if (hours > 0) {
           items.push({
+            id: row.entry_ids?.[dateStr] || undefined,
             machine_id: row.machine_id && row.machine_id !== 'none' ? row.machine_id : undefined,
             entry_type: row.entry_type,
             project_task_id: row.project_task_id || undefined,
