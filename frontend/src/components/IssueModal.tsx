@@ -24,6 +24,7 @@ import { useUsers } from "../hooks/useUsers";
 import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
 import { Authorize } from "./Authorize";
 import { NCRModal } from "./NCRModal";
+import { ReworkModal } from "./ReworkModal";
 
 export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality', preselectedMachineId }: IssueModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -31,6 +32,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNCRModalOpen, setIsNCRModalOpen] = useState(false);
+  const [isReworkModalOpen, setIsReworkModalOpen] = useState(false);
   const defaultRoutedDept = defaultAssignedDept === 'quality' ? '' : defaultAssignedDept;
   const { users } = useUsers();
   const [sendNotification, setSendNotification] = useState(false);
@@ -47,14 +49,15 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   });
 
   useAppHotkeys('escape', () => {
-    if (isOpen && !isNCRModalOpen) {
+    if (isOpen && !isNCRModalOpen && !isReworkModalOpen) {
       onClose();
     }
-  }, { enableOnFormTags: true }, [isOpen, isNCRModalOpen, onClose]);
+  }, { enableOnFormTags: true }, [isOpen, isNCRModalOpen, isReworkModalOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
       setIsNCRModalOpen(false);
+      setIsReworkModalOpen(false);
     }
   }, [isOpen]);
 
@@ -412,6 +415,23 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                     </button>
                   )}
                 </Authorize>
+                <Authorize roles={['admin', 'manager', 'lead', 'supervisor']}>
+                  {editingDefect && (
+                    <button
+                      type="button"
+                      className="vtr-btn"
+                      onClick={() => setIsReworkModalOpen(true)}
+                      style={{
+                        backgroundColor: "rgba(255, 112, 67, 0.15)",
+                        color: "#ff7043",
+                        borderColor: "#ff7043",
+                      }}
+                      title="Escalate this issue into an active SOP 1-003 Rework Traveler"
+                    >
+                      ESCALATE TO REWORK
+                    </button>
+                  )}
+                </Authorize>
               </div>
               <div className={styles.footerRight}>
                 <button
@@ -442,6 +462,21 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         upgradeFromDefect={editingDefect}
         onSaved={() => {
           setIsNCRModalOpen(false);
+          onClose();
+        }}
+      />
+    )}
+
+    {editingDefect && isReworkModalOpen && (
+      <ReworkModal
+        isOpen={isReworkModalOpen}
+        onClose={() => setIsReworkModalOpen(false)}
+        preselectedDefectId={editingDefect.id}
+        preselectedMachineId={editingDefect.machine_id}
+        initialDefect={editingDefect}
+        onSaved={() => {
+          setIsReworkModalOpen(false);
+          toast.success("Rework traveler created and linked to issue");
           onClose();
         }}
       />

@@ -28,6 +28,17 @@ vi.mock('./NCRModal', () => ({
     ) : null
   ))
 }));
+vi.mock('./ReworkModal', () => ({
+  ReworkModal: vi.fn(({ isOpen, initialDefect, onClose, onSaved }: any) => (
+    isOpen ? (
+      <div data-testid="mock-rework-modal">
+        <span>Rework Defect: {initialDefect?.id}</span>
+        <button onClick={onSaved}>Save Mock Rework</button>
+        <button onClick={onClose}>Cancel Mock Rework</button>
+      </div>
+    ) : null
+  ))
+}));
 
 describe('IssueModal Assignee Department Filtering', () => {
   const mockUsers = [
@@ -449,6 +460,48 @@ describe('IssueModal Assignee Department Filtering', () => {
 
     await act(async () => {
       fireEvent.click(closeBtn);
+    });
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('renders ESCALATE TO REWORK button when editing an issue and opens ReworkModal with linked defect', async () => {
+    const mockDefect = {
+      id: 'def-escalate-1',
+      machine_id: 'mach-1',
+      source_department: 'quality',
+      assigned_department: 'assembly',
+      description: 'Misaligned fixture needs new milled adapter',
+      severity: 'critical',
+      status: 'open',
+    };
+
+    const onClose = vi.fn();
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={onClose}
+          editingDefect={mockDefect as any}
+        />
+      );
+    });
+
+    const escalateBtn = screen.getByRole('button', { name: /ESCALATE TO REWORK/i });
+    expect(escalateBtn).toBeInTheDocument();
+
+    // Click escalate to open ReworkModal
+    await act(async () => {
+      fireEvent.click(escalateBtn);
+    });
+
+    expect(screen.getByTestId('mock-rework-modal')).toBeInTheDocument();
+    expect(screen.getByText('Rework Defect: def-escalate-1')).toBeInTheDocument();
+
+    // Saving mock rework triggers onSaved and closes modal
+    const saveReworkBtn = screen.getByRole('button', { name: /Save Mock Rework/i });
+    await act(async () => {
+      fireEvent.click(saveReworkBtn);
     });
 
     expect(onClose).toHaveBeenCalled();

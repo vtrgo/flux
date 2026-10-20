@@ -412,6 +412,40 @@ func handleCreateReworkItem(w http.ResponseWriter, r *http.Request) {
 		BroadcastEvent("rework_created", createdItem)
 	}
 
+	// If spawned from an issue/defect, record audit note on linked defect and broadcast update
+	if req.DefectID != nil && *req.DefectID != "" {
+		if defUUID, err := uuid.Parse(*req.DefectID); err == nil {
+			noteAppend := fmt.Sprintf("\n[Escalated to Rework Order: %s]", req.PartNumber)
+			var updatedDefect models.Defect
+			_ = db.DB.QueryRow(`
+				WITH updated AS (
+					UPDATE defects 
+					SET notes = COALESCE(notes, '') || $2
+					WHERE id = $1
+					RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
+					          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+				)
+				SELECT u_tbl.*, 
+				       COALESCE(m.order_number, '') as order_number,
+				       u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name
+				FROM updated u_tbl
+				LEFT JOIN machines m ON u_tbl.machine_id = m.id
+				LEFT JOIN users u ON u_tbl.assigned_user_id = u.id
+				LEFT JOIN users c ON u_tbl.created_by_user_id = c.id
+				LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
+				LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
+			`, defUUID, noteAppend).Scan(
+				&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment, &updatedDefect.AssignedUserID, &updatedDefect.CreatedByUserID, &updatedDefect.FixedByUserID, &updatedDefect.VerifiedByUserID, &updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes, &updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt, &updatedDefect.DueDate,
+				&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature,
+				&updatedDefect.OrderNumber,
+				&updatedDefect.AssignedUserName, &updatedDefect.CreatedByUserName, &updatedDefect.FixedByUserName, &updatedDefect.VerifiedByUserName,
+			)
+			if updatedDefect.ID != uuid.Nil {
+				BroadcastEvent("defect_updated", updatedDefect)
+			}
+		}
+	}
+
 	respondJSON(w, http.StatusCreated, createdItem)
 }
 
@@ -686,11 +720,51 @@ func handleUpdateReworkItem(w http.ResponseWriter, r *http.Request) {
 
 	// If transitioning to complete, auto-mark linked defect as fixed
 	if existing.Status == "complete" && existing.DefectID != nil {
-		_, _ = db.DB.Exec(`
-			UPDATE defects 
-			SET status = 'fixed', resolved_at = NOW() 
-			WHERE id = $1 AND status = 'open'
-		`, *existing.DefectID)
+		var resolvedByStr string = "System (Rework Completed)"
+		var resolvedByUUID *uuid.UUID
+		if authUserID != "" {
+			if u, err := uuid.Parse(authUserID); err == nil {
+				resolvedByUUID = &u
+				var uname string
+				if err := db.DB.QueryRow(`SELECT username FROM users WHERE id = $1`, u).Scan(&uname); err == nil && uname != "" {
+					resolvedByStr = uname
+				}
+			}
+		}
+
+		autoNote := fmt.Sprintf("\n[Auto-Resolved via Rework Part %s]", existing.PartNumber)
+		var updatedDefect models.Defect
+		_ = db.DB.QueryRow(`
+			WITH updated AS (
+				UPDATE defects 
+				SET status = 'fixed',
+				    resolved_at = NOW(),
+				    resolved_by = $2,
+				    fixed_by_user_id = $3,
+				    notes = COALESCE(notes, '') || $4
+				WHERE id = $1 AND status = 'open'
+				RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
+				          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+			)
+			SELECT u_tbl.*, 
+			       COALESCE(m.order_number, '') as order_number,
+			       u.username as assigned_user_name, c.username as created_by_user_name, f.username as fixed_by_user_name, v.username as verified_by_user_name
+			FROM updated u_tbl
+			LEFT JOIN machines m ON u_tbl.machine_id = m.id
+			LEFT JOIN users u ON u_tbl.assigned_user_id = u.id
+			LEFT JOIN users c ON u_tbl.created_by_user_id = c.id
+			LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
+			LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
+		`, *existing.DefectID, resolvedByStr, resolvedByUUID, autoNote).Scan(
+			&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment, &updatedDefect.AssignedUserID, &updatedDefect.CreatedByUserID, &updatedDefect.FixedByUserID, &updatedDefect.VerifiedByUserID, &updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes, &updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt, &updatedDefect.DueDate,
+			&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature,
+			&updatedDefect.OrderNumber,
+			&updatedDefect.AssignedUserName, &updatedDefect.CreatedByUserName, &updatedDefect.FixedByUserName, &updatedDefect.VerifiedByUserName,
+		)
+		if updatedDefect.ID != uuid.Nil {
+			BroadcastEvent("defect_updated", updatedDefect)
+			slog.Info("Cascaded rework completion to linked defect", "rework_id", existing.ID, "defect_id", updatedDefect.ID, "part_number", existing.PartNumber)
+		}
 	}
 
 	updatedItem, err := fetchReworkItemByID(uuid.MustParse(id))

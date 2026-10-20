@@ -5,7 +5,7 @@ import { fetchApi } from "../lib/api";
 import styles from "./ReworkModal.module.css";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { toast } from "sonner";
-import { ReworkItem, SalesOrder, Machine, ReworkPartType, ReworkStatus } from "../types";
+import { ReworkItem, SalesOrder, Machine, ReworkPartType, ReworkStatus, Defect } from "../types";
 import { useUsers } from "../hooks/useUsers";
 
 interface ReworkModalProps {
@@ -16,6 +16,7 @@ interface ReworkModalProps {
   preselectedSalesOrderId?: string;
   preselectedMachineId?: string;
   preselectedDefectId?: string;
+  initialDefect?: Defect | null;
 }
 
 export function ReworkModal({
@@ -26,6 +27,7 @@ export function ReworkModal({
   preselectedSalesOrderId,
   preselectedMachineId,
   preselectedDefectId,
+  initialDefect,
 }: ReworkModalProps) {
   const { users } = useUsers();
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
@@ -128,13 +130,13 @@ export function ReworkModal({
       });
     } else {
       setFormData({
-        sales_order_id: preselectedSalesOrderId || "",
-        machine_id: preselectedMachineId || "",
-        defect_id: preselectedDefectId || "",
+        sales_order_id: preselectedSalesOrderId || (initialDefect?.machine_id ? machines.find(m => m.id === initialDefect.machine_id)?.sales_order_id || "" : ""),
+        machine_id: preselectedMachineId || initialDefect?.machine_id || "",
+        defect_id: preselectedDefectId || initialDefect?.id || "",
         project_number: "",
         sub_assembly: "",
         part_number: "",
-        description: "",
+        description: initialDefect?.description ? `Rework: ${initialDefect.description}` : "",
         revision: "A",
         material: "",
         qty: 1,
@@ -142,7 +144,7 @@ export function ReworkModal({
         mech_designer_id: "",
         pm_released_to_id: "",
         pdm_vault_released: false,
-        reason_for_rework: "",
+        reason_for_rework: initialDefect?.description ? `Escalated from Quality Issue: ${initialDefect.description}` : "",
         date_released_to_mfg: "",
         requested_completion_date: "",
         pm_delivered_to: "",
