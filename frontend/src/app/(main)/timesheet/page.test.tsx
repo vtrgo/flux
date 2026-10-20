@@ -577,6 +577,67 @@ describe('TimesheetPage', () => {
     expect(screen.queryByText(/Delete/i)).not.toBeInTheDocument();
   });
 
+  it('refactors approvals into a work week view with week selection, department filtering, and list refresh', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const approvalsTabBtn = screen.getByText('✅ Approvals');
+    await act(async () => {
+      fireEvent.click(approvalsTabBtn);
+    });
+
+    // Verify Work Week navigation & selection controls
+    expect(screen.getByText('◀ Prev Week')).toBeInTheDocument();
+    expect(screen.getByText('Next Week ▶')).toBeInTheDocument();
+    const weekSelect = screen.getByLabelText('Work Week');
+    expect(weekSelect).toBeInTheDocument();
+
+    // Verify Department & Status filters and Refresh button
+    const deptSelect = screen.getByLabelText('Department');
+    expect(deptSelect).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Refresh List/i })).toBeInTheDocument();
+
+    // Change Department filter to assembly
+    await act(async () => {
+      fireEvent.change(deptSelect, { target: { value: 'assembly' } });
+    });
+
+    // Navigate to previous work week via Prev Week button
+    const prevWeekBtn = screen.getByText('◀ Prev Week');
+    await act(async () => {
+      fireEvent.click(prevWeekBtn);
+    });
+
+    // Verify fetchApi was called for timesheets/approvals with department and week_start parameters
+    expect(fetchApi).toHaveBeenCalledWith(
+      'timesheets/approvals',
+      expect.objectContaining({
+        params: expect.objectContaining({
+          department: 'assembly',
+          week_start: expect.any(String),
+        }),
+      })
+    );
+
+    // Click Refresh List button
+    const refreshBtn = screen.getByRole('button', { name: /Refresh List/i });
+    await act(async () => {
+      fireEvent.click(refreshBtn);
+    });
+
+    // Verify fetchApi was called again on refresh
+    expect(fetchApi).toHaveBeenCalledWith(
+      'timesheets/approvals',
+      expect.objectContaining({
+        params: expect.objectContaining({
+          department: 'assembly',
+          week_start: expect.any(String),
+        }),
+      })
+    );
+  });
+
   it('displays clean Timesheet Approved banner without lengthy payroll text when approved', async () => {
     (fetchApi as any).mockImplementation((endpoint: string) => {
       if (endpoint.startsWith('timesheets/weekly')) {

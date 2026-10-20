@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { WeeklyTimesheet, Machine, DepartmentTask } from '../types';
-import { formatWeekRange, formatHours } from '../lib/dateUtils';
+import { getSundayOfWeek, addWeeks, formatWeekRange, formatHours } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { WeeklyTimesheetGrid } from './WeeklyTimesheetGrid';
 import styles from './WeeklyTimesheetGrid.module.css';
@@ -46,6 +46,8 @@ export function TimesheetApprovalsTable({
     deleteWeeklyTimesheet,
   } = useTimesheetData();
 
+  // Work week filter state: defaults to current work week Sunday
+  const [selectedWeek, setSelectedWeek] = useState<string>(() => getSundayOfWeek());
   const [deptFilter, setDeptFilter] = useState<string>(
     !isManagerOrAdmin && userDepartment ? userDepartment : ''
   );
@@ -60,23 +62,88 @@ export function TimesheetApprovalsTable({
   // Inspect modal state
   const [inspectingTimesheet, setInspectingTimesheet] = useState<WeeklyTimesheet | null>(null);
 
+  const isCurrentWeek = useMemo(
+    () => selectedWeek === getSundayOfWeek(),
+    [selectedWeek]
+  );
+
+  const handlePrevWeek = () => {
+    setSelectedWeek(prev => addWeeks(prev || getSundayOfWeek(), -1));
+  };
+
+  const handleNextWeek = () => {
+    setSelectedWeek(prev => addWeeks(prev || getSundayOfWeek(), 1));
+  };
+
+  const handleThisWeek = () => {
+    setSelectedWeek(getSundayOfWeek());
+  };
+
+  const weekOptions = useMemo(() => {
+    const currentSunday = getSundayOfWeek();
+    const options = [];
+    const nextSunday = addWeeks(currentSunday, 1);
+    options.push({
+      value: nextSunday,
+      label: `${formatWeekRange(nextSunday)} (Next Week)`,
+    });
+    options.push({
+      value: currentSunday,
+      label: `${formatWeekRange(currentSunday)} (Current Week)`,
+    });
+    for (let i = 1; i <= 8; i++) {
+      const pastSunday = addWeeks(currentSunday, -i);
+      options.push({
+        value: pastSunday,
+        label: `${formatWeekRange(pastSunday)} (${i} wk${i > 1 ? 's' : ''} ago)`,
+      });
+    }
+    return options;
+  }, []);
+
+  const isCustomWeek = useMemo(
+    () => Boolean(selectedWeek && !weekOptions.some(o => o.value === selectedWeek)),
+    [selectedWeek, weekOptions]
+  );
+
+  // Summary KPIs for current work week view
+  const metrics = useMemo(() => {
+    const totalTimesheets = approvals.length;
+    const pendingApprovals = approvals.filter(
+      ts => ts.status !== 'approved' && ts.status !== 'rejected' && ts.total_hours > 0
+    ).length;
+    const approvedCount = approvals.filter(ts => ts.status === 'approved').length;
+    const totalHours = approvals.reduce((acc, ts) => acc + (ts.total_hours || 0), 0);
+    return {
+      totalTimesheets,
+      pendingApprovals,
+      approvedCount,
+      totalHours,
+    };
+  }, [approvals]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       await fetchApprovals({
         department: deptFilter || undefined,
         status: statusFilter || undefined,
+        week_start: selectedWeek || undefined,
       });
     } catch (err) {
       console.error('Failed to load approvals', err);
     } finally {
       setLoading(false);
     }
-  }, [deptFilter, statusFilter, fetchApprovals]);
+  }, [deptFilter, statusFilter, selectedWeek, fetchApprovals]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    setInspectingTimesheet(null);
+  }, [selectedWeek, deptFilter, statusFilter]);
 
   const handleApprove = async (ts: WeeklyTimesheet) => {
     if (!window.confirm(`Approve timesheet for ${ts.user_name || 'worker'} (${formatHours(ts.total_hours)} hrs)?`)) {
@@ -139,7 +206,7 @@ export function TimesheetApprovalsTable({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* Filters Bar */}
+      {/* Work Week Navigation Bar */}
       <div
         style={{
           display: 'flex',
@@ -153,12 +220,100 @@ export function TimesheetApprovalsTable({
           padding: '0.85rem 1.25rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            className={styles.navBtn}
+            onClick={handlePrevWeek}
+            title="Previous Work Week"
+            type="button"
+          >
+            ◀ Prev Week
+          </button>
+          <span
+            style={{
+              fontSize: '1rem',
+              fontWeight: 700,
+              color: '#fff',
+              minWidth: '220px',
+              textAlign: 'center',
+            }}
+          >
+            📅 {selectedWeek ? formatWeekRange(selectedWeek) : 'All Work Weeks'}
+          </span>
+          <button
+            className={styles.navBtn}
+            onClick={handleNextWeek}
+            title="Next Work Week"
+            type="button"
+          >
+            Next Week ▶
+          </button>
+          {!isCurrentWeek && (
+            <button
+              className={styles.navBtn}
+              onClick={handleThisWeek}
+              title="Jump to Current Work Week"
+              type="button"
+              style={{ marginLeft: '0.25rem' }}
+            >
+              Today / Current Week
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#aaa', whiteSpace: 'nowrap' }}>
+            Work Week:
+          </label>
+          <select
+            aria-label="Work Week"
+            style={{
+              background: 'rgba(0, 0, 0, 0.4)',
+              border: '1px solid var(--border-color, #444)',
+              borderRadius: '6px',
+              color: '#fff',
+              padding: '0.45rem 0.75rem',
+              fontSize: '0.85rem',
+            }}
+            value={selectedWeek}
+            onChange={e => setSelectedWeek(e.target.value)}
+          >
+            <option value="">All Work Weeks</option>
+            {isCustomWeek && (
+              <option value={selectedWeek}>
+                {formatWeekRange(selectedWeek)} (Selected)
+              </option>
+            )}
+            {weekOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Scope Filters & Controls Toolbar */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+          background: 'var(--vtr-theme-surface, #1e1e1e)',
+          border: '1px solid var(--border-color, #333)',
+          borderRadius: '8px',
+          padding: '0.85rem 1.25rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
           <div>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#aaa', display: 'block', marginBottom: '0.25rem' }}>
               Department
             </label>
             <select
+              aria-label="Department"
               style={{
                 background: 'rgba(0, 0, 0, 0.4)',
                 border: '1px solid var(--border-color, #444)',
@@ -184,6 +339,7 @@ export function TimesheetApprovalsTable({
               Status
             </label>
             <select
+              aria-label="Status"
               style={{
                 background: 'rgba(0, 0, 0, 0.4)',
                 border: '1px solid var(--border-color, #444)',
@@ -213,6 +369,93 @@ export function TimesheetApprovalsTable({
         </button>
       </div>
 
+      {/* Week Pulse / Metrics Strip */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '1rem',
+        }}
+      >
+        <div
+          style={{
+            background: 'var(--vtr-theme-surface, #1e1e1e)',
+            border: '1px solid var(--border-color, #333)',
+            borderRadius: '8px',
+            padding: '0.75rem 1rem',
+          }}
+        >
+          <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
+            Work Week
+          </div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', marginTop: '0.25rem' }}>
+            {selectedWeek ? formatWeekRange(selectedWeek) : 'All Weeks Combined'}
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'var(--vtr-theme-surface, #1e1e1e)',
+            border: '1px solid var(--border-color, #333)',
+            borderRadius: '8px',
+            padding: '0.75rem 1rem',
+          }}
+        >
+          <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
+            Pending Review
+          </div>
+          <div
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              color: metrics.pendingApprovals > 0 ? '#ffca28' : '#00e676',
+              marginTop: '0.25rem',
+            }}
+          >
+            {metrics.pendingApprovals}
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'var(--vtr-theme-surface, #1e1e1e)',
+            border: '1px solid var(--border-color, #333)',
+            borderRadius: '8px',
+            padding: '0.75rem 1rem',
+          }}
+        >
+          <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
+            Approved Timesheets
+          </div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#00e676', marginTop: '0.25rem' }}>
+            {metrics.approvedCount}
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'var(--vtr-theme-surface, #1e1e1e)',
+            border: '1px solid var(--border-color, #333)',
+            borderRadius: '8px',
+            padding: '0.75rem 1rem',
+          }}
+        >
+          <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
+            Total Labor In View
+          </div>
+          <div
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 800,
+              color: 'var(--vtr-theme-primary, #00e5ff)',
+              marginTop: '0.25rem',
+            }}
+          >
+            {formatHours(metrics.totalHours)} hrs
+          </div>
+        </div>
+      </div>
+
       {/* Approvals Table */}
       <div
         style={{
@@ -239,14 +482,26 @@ export function TimesheetApprovalsTable({
             <tbody>
               {loading && approvals.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
-                    Loading timesheet approvals...
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
+                    Loading timesheet approvals for {selectedWeek ? formatWeekRange(selectedWeek) : 'all work weeks'}...
                   </td>
                 </tr>
               ) : approvals.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
-                    No timesheets matching the selected filters.
+                    <div style={{ color: '#ccc' }}>
+                      No timesheets found for {selectedWeek ? `work week ${formatWeekRange(selectedWeek)}` : 'the selected filters'}.
+                    </div>
+                    {selectedWeek && (
+                      <button
+                        className={styles.btnSecondary}
+                        onClick={() => setSelectedWeek('')}
+                        style={{ marginTop: '0.75rem', fontSize: '0.8rem' }}
+                        type="button"
+                      >
+                        View All Work Weeks
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (

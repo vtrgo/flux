@@ -1703,7 +1703,7 @@ func handleGetTimesheetApprovals(w http.ResponseWriter, r *http.Request) {
 		argIdx++
 	}
 	if weekStartFilter != "" {
-		query += fmt.Sprintf(" AND wt.week_start_date = $%d::date", argIdx)
+		query += fmt.Sprintf(" AND (wt.week_start_date = $%d::date OR (wt.week_start_date >= ($%d::date - EXTRACT(DOW FROM $%d::date)::integer * INTERVAL '1 day')::date AND wt.week_start_date < ($%d::date - EXTRACT(DOW FROM $%d::date)::integer * INTERVAL '1 day' + INTERVAL '7 days')::date))", argIdx, argIdx, argIdx, argIdx, argIdx)
 		args = append(args, weekStartFilter)
 	}
 
