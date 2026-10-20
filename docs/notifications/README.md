@@ -22,7 +22,7 @@ The notification system consists of two primary delivery pathways:
          │ POST /api/machines/{id}/defects (or POST /api/ncrs)
          │ { send_notification: true, ... }
          ▼
-[ Go Backend: handlers_quality.go ]
+[ Go Backend: handlers_defects.go / handlers_ncrs.go ]
          │
          ├──────────────────────────────────┐
          ▼                                  ▼
