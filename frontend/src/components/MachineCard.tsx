@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Machine, DefectSummary } from '../types';
+import { useRouter } from 'next/navigation';
+import { Machine, DefectSummary, MachineFATReadinessResponse } from '../types';
 import { ACTIVE_DEPARTMENTS } from '../lib/departments';
 import { Authorize } from './Authorize';
 import { calculateDaysLate, formatFatDate } from '../lib/dateUtils';
 import { useDateTime } from '../contexts/DateTimeContext';
+import { useMachineFATReadiness } from '../hooks/useMachineFATReadiness';
 import styles from './MachineCard.module.css';
 
 interface MachineCardProps {
@@ -12,10 +14,16 @@ interface MachineCardProps {
   defectSummaries: DefectSummary[];
   onDelete: (e: React.MouseEvent, id: string) => void;
   onSelectDept: (machineId: string, dept: string) => void;
+  initialReadiness?: MachineFATReadinessResponse;
 }
 
-const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDept }: MachineCardProps) => {
+const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDept, initialReadiness }: MachineCardProps) => {
+  const router = useRouter();
   const { timezone } = useDateTime();
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const { readiness: fetchedReadiness, loading: loadingReadiness } = useMachineFATReadiness(initialReadiness ? undefined : machine.id);
+  const readiness = initialReadiness || fetchedReadiness;
+
   const machineSummaries = defectSummaries.filter(s => s.machine_id === machine.id);
   const machineDaysLate = calculateDaysLate(machine.fat_date, timezone);
   
@@ -52,6 +60,140 @@ const MachineCard = React.memo(({ machine, defectSummaries, onDelete, onSelectDe
             Created by: {machine.created_by_user_name}
           </div>
         )}
+
+        {/* FAT Readiness Shield & Blocker Breakdown Popover */}
+        <div className={styles.fatReadinessSection}>
+          <button
+            type="button"
+            className={`${styles.fatShieldBtn} ${
+              loadingReadiness && !readiness
+                ? styles.fatShieldLoading
+                : readiness?.can_proceed
+                ? styles.fatShieldReady
+                : styles.fatShieldBlocked
+            }`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsPopoverOpen(prev => !prev);
+            }}
+            aria-label="FAT Readiness Status"
+            aria-expanded={isPopoverOpen}
+          >
+            <span className={styles.shieldIcon}>
+              {loadingReadiness && !readiness ? '⏳' : readiness?.can_proceed ? '🛡️' : '⚠️'}
+            </span>
+            <span className={styles.shieldStatusText}>
+              {loadingReadiness && !readiness
+                ? 'Assessing FAT Readiness...'
+                : readiness?.can_proceed
+                ? 'FAT READY • ALL SOP GATES PASSED'
+                : `FAT BLOCKED • ${(readiness?.blockers || []).length} QUALITY BLOCKER${(readiness?.blockers || []).length === 1 ? '' : 'S'}`}
+            </span>
+            <span className={styles.shieldDetailsLink}>
+              {isPopoverOpen ? 'Hide Blockers ▲' : 'Inspect Blockers ▼'}
+            </span>
+          </button>
+
+          {isPopoverOpen && readiness && (
+            <div
+              className={styles.fatPopover}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <div className={styles.popoverHeader}>
+                <div className={styles.popoverTitleRow}>
+                  <span className={styles.popoverTitle}>FAT Readiness: {machine.order_number}</span>
+                  <button
+                    type="button"
+                    className={styles.popoverCloseBtn}
+                    onClick={() => setIsPopoverOpen(false)}
+                    aria-label="Close Popover"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div
+                  className={
+                    readiness.can_proceed
+                      ? styles.popoverStatusReady
+                      : styles.popoverStatusBlocked
+                  }
+                >
+                  {readiness.can_proceed ? (
+                    <span>✅ Cleared for Factory Acceptance Testing</span>
+                  ) : (
+                    <span>⛔ Blocked by Quality & Rework SOP Controls</span>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.statPills}>
+                <div className={`${styles.statPill} ${readiness.open_issues > 0 ? styles.statPillAlert : ''}`}>
+                  <span className={styles.statPillLabel}>Unverified Issues:</span>
+                  <span className={styles.statPillValue}>{readiness.open_issues}</span>
+                </div>
+                <div className={`${styles.statPill} ${readiness.open_ncrs > 0 ? styles.statPillAlert : ''}`}>
+                  <span className={styles.statPillLabel}>Active NCRs:</span>
+                  <span className={styles.statPillValue}>{readiness.open_ncrs}</span>
+                </div>
+                <div className={`${styles.statPill} ${readiness.active_rework > 0 ? styles.statPillAlert : ''}`}>
+                  <span className={styles.statPillLabel}>Active Rework:</span>
+                  <span className={styles.statPillValue}>{readiness.active_rework}</span>
+                </div>
+              </div>
+
+              {readiness.can_proceed ? (
+                <div className={styles.popoverReadyMessage}>
+                  All quality inspections, Non-Conformance Reports, and shop floor rework travelers are 100% resolved and verified.
+                </div>
+              ) : (
+                <div className={styles.popoverBlockers}>
+                  <div className={styles.blockersHeader}>Pre-FAT Quality Blockers:</div>
+                  <ul className={styles.blockerList}>
+                    {readiness.blockers.map((blocker, idx) => (
+                      <li key={idx} className={styles.blockerItem}>
+                        <span className={styles.blockerIcon}>🛑</span>
+                        <span className={styles.blockerText}>{blocker}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className={styles.popoverFooter}>
+                {readiness.active_rework > 0 && (
+                  <button
+                    type="button"
+                    className={styles.popoverActionLink}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/rework');
+                    }}
+                  >
+                    Open Rework Orders &rarr;
+                  </button>
+                )}
+                {readiness.open_ncrs > 0 && (
+                  <button
+                    type="button"
+                    className={styles.popoverActionLink}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      router.push('/ncrs');
+                    }}
+                  >
+                    Review Active NCRs &rarr;
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         
         <div className={styles.summaryBadge}>
           <span style={{ color: totalOpen > 0 ? 'var(--accent-red)' : 'inherit' }}>Open: {totalOpen}</span>

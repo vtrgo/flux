@@ -135,3 +135,235 @@
 .statClosed {
   color: var(--vtr-theme-neutral);
 }
+
+/* FAT Readiness Shield & Interactive Popover */
+.fatReadinessSection {
+  margin: 0.75rem 0;
+  position: relative;
+}
+
+.fatShieldBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  font-family: var(--font-mono, monospace);
+}
+
+.fatShieldReady {
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: #00e5ff;
+}
+
+.fatShieldReady:hover {
+  background: rgba(0, 229, 255, 0.16);
+  border-color: #00e5ff;
+}
+
+.fatShieldBlocked {
+  background: rgba(255, 82, 82, 0.12);
+  border: 1px solid rgba(255, 82, 82, 0.5);
+  color: #ff5252;
+}
+
+.fatShieldBlocked:hover {
+  background: rgba(255, 82, 82, 0.2);
+  border-color: #ff5252;
+}
+
+.fatShieldLoading {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color, #333);
+  color: var(--text-secondary, #888);
+}
+
+.shieldIcon {
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+}
+
+.shieldStatusText {
+  flex: 1;
+  text-align: left;
+}
+
+.shieldDetailsLink {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.fatPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--vtr-theme-surface, #1e1e1e);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  cursor: default;
+}
+
+.popoverHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.popoverTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.popoverTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  text-transform: uppercase;
+}
+
+.popoverCloseBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.popoverCloseBtn:hover {
+  color: var(--text-primary, #fff);
+}
+
+.popoverStatusReady {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #00e5ff;
+}
+
+.popoverStatusBlocked {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ff5252;
+}
+
+.statPills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.statPill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color, #333);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.statPillAlert {
+  border-color: rgba(255, 82, 82, 0.4);
+  background: rgba(255, 82, 82, 0.08);
+}
+
+.statPillLabel {
+  color: var(--text-secondary, #888);
+}
+
+.statPillValue {
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+}
+
+.popoverReadyMessage {
+  font-size: 0.8rem;
+  color: #81c784;
+  line-height: 1.4;
+  padding: 0.5rem;
+  background: rgba(129, 199, 132, 0.08);
+  border-radius: 4px;
+}
+
+.popoverBlockers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.blockersHeader {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary, #888);
+  text-transform: uppercase;
+}
+
+.blockerList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.blockerItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-primary, #ddd);
+}
+
+.blockerIcon {
+  font-size: 0.8rem;
+  margin-top: 1px;
+}
+
+.blockerText {
+  flex: 1;
+}
+
+.popoverFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color, #333);
+}
+
+.popoverActionLink {
+  font-size: 0.75rem;
+  color: var(--vtr-theme-primary, #00e5ff);
+  text-decoration: none;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.popoverActionLink:hover {
+  text-decoration: underline;
+}
