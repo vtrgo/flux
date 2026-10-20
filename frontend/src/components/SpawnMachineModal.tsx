@@ -4,7 +4,8 @@ import React, { useState } from "react";
 import { fetchApi } from "../lib/api";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { calendarDateToUtcNoon } from "../lib/dateUtils";
-import styles from "../app/(main)/kickoff/kickoff.module.css";
+import { Modal } from "./ui/Modal";
+import formStyles from "./ui/Form.module.css";
 
 interface SpawnMachineModalProps {
   isOpen: boolean;
@@ -27,12 +28,10 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
     setNewMachineLead("");
   };
 
-  useAppHotkeys('escape', () => {
-    if (isOpen) {
-      onClose();
-      resetForm();
-    }
-  }, { enableOnFormTags: true }, [isOpen, onClose]);
+  const handleClose = () => {
+    onClose();
+    resetForm();
+  };
 
   const spawnMachine = async () => {
     if (!newMachineModel || !newMachineSN) return;
@@ -67,84 +66,59 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
     }
   }, { enableOnFormTags: true }, [isOpen, newMachineModel, newMachineSN, orderId]);
 
-  if (!isOpen) return null;
-
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        background: 'rgba(0, 0, 0, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999
-      }} 
-      onClick={() => { onClose(); resetForm(); }}
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Spawn Machine"
+      subtitle={`Project / Order: ${orderName}`}
+      size="sm"
     >
-      <div 
-        style={{
-          background: 'var(--vtr-card-bg, #1a1a1a)',
-          border: '1px solid var(--vtr-card-border, #333)',
-          borderRadius: '8px',
-          width: '90%',
-          maxWidth: '500px',
-          padding: '1.5rem',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <h2 style={{ marginBottom: "1.5rem", color: "var(--vtr-theme-primary)", fontFamily: 'var(--font-mono)' }}>Spawn Machine - {orderName}</h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Part / Model Type</label>
-            <input 
-              required 
-              className={styles.input} 
-              value={newMachineModel} 
-              onChange={e => setNewMachineModel(e.target.value)} 
-              placeholder="e.g. Housing Base" 
-              autoFocus 
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>S/N or Tracking Number</label>
-            <input 
-              required 
-              className={styles.input} 
-              value={newMachineSN} 
-              onChange={e => setNewMachineSN(e.target.value)} 
-              placeholder="e.g. SN-9982" 
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>F.A.T. (Factory Acceptance Test) Date</label>
-            <input 
-              type="date" 
-              className={styles.input} 
-              value={newMachineFatDate} 
-              onChange={e => setNewMachineFatDate(e.target.value)} 
-            />
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Lead (Project Lead)</label>
-            <input 
-              className={styles.input} 
-              value={newMachineLead} 
-              onChange={e => setNewMachineLead(e.target.value)} 
-              placeholder="e.g. Jane Doe" 
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button type="submit" className="vtr-btn" style={{ flex: 1 }}>Spawn Machine</button>
-            <button type="button" className="vtr-btn vtr-btn-secondary" onClick={() => { onClose(); resetForm(); }}>Cancel</button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className={formStyles.formGroup}>
+          <label className={formStyles.label}>Part / Model Type</label>
+          <input 
+            required 
+            className={formStyles.input} 
+            value={newMachineModel} 
+            onChange={e => setNewMachineModel(e.target.value)} 
+            placeholder="e.g. Housing Base" 
+            autoFocus 
+          />
+        </div>
+        <div className={formStyles.formGroup}>
+          <label className={formStyles.label}>S/N or Tracking Number</label>
+          <input 
+            required 
+            className={formStyles.input} 
+            value={newMachineSN} 
+            onChange={e => setNewMachineSN(e.target.value)} 
+            placeholder="e.g. SN-9982" 
+          />
+        </div>
+        <div className={formStyles.formGroup}>
+          <label className={formStyles.label}>F.A.T. (Factory Acceptance Test) Date</label>
+          <input 
+            type="date" 
+            className={formStyles.input} 
+            value={newMachineFatDate} 
+            onChange={e => setNewMachineFatDate(e.target.value)} 
+          />
+        </div>
+        <div className={formStyles.formGroup}>
+          <label className={formStyles.label}>Lead (Project Lead)</label>
+          <input 
+            className={formStyles.input} 
+            value={newMachineLead} 
+            onChange={e => setNewMachineLead(e.target.value)} 
+            placeholder="e.g. Jane Doe" 
+          />
+        </div>
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.25rem' }}>
+          <button type="submit" className="vtr-btn" style={{ flex: 1 }}>Spawn Machine</button>
+          <button type="button" className="vtr-btn vtr-btn-secondary" onClick={handleClose}>Cancel</button>
+        </div>
+      </form>
+    </Modal>
   );
 }
