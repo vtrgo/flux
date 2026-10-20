@@ -243,58 +243,16 @@ export function TimesheetApprovalsTable({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#aaa', whiteSpace: 'nowrap' }}>
-            Work Week:
-          </label>
-          <select
-            aria-label="Work Week"
-            style={{
-              background: 'rgba(0, 0, 0, 0.4)',
-              border: '1px solid var(--border-color, #444)',
-              borderRadius: '6px',
-              color: '#fff',
-              padding: '0.45rem 0.75rem',
-              fontSize: '0.85rem',
-            }}
-            value={selectedWeek}
-            onChange={e => setSelectedWeek(e.target.value)}
-          >
-            <option value="">All Work Weeks</option>
-            {isCustomWeek && (
-              <option value={selectedWeek}>
-                {formatWeekRange(selectedWeek)} (Selected)
-              </option>
-            )}
-            {weekOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Scope Filters & Controls Toolbar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          background: 'var(--vtr-theme-surface, #1e1e1e)',
-          border: '1px solid var(--border-color, #333)',
-          borderRadius: '8px',
-          padding: '0.85rem 1.25rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-          <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#aaa', display: 'block', marginBottom: '0.25rem' }}>
-              Department
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label
+              htmlFor="dept-filter-select"
+              style={{ fontSize: '0.75rem', fontWeight: 600, color: '#aaa', whiteSpace: 'nowrap' }}
+            >
+              Department:
             </label>
             <select
+              id="dept-filter-select"
               aria-label="Department"
               style={{
                 background: 'rgba(0, 0, 0, 0.4)',
@@ -315,16 +273,53 @@ export function TimesheetApprovalsTable({
               ))}
             </select>
           </div>
-        </div>
 
-        <button
-          className={styles.btnSecondary}
-          onClick={loadData}
-          disabled={loading}
-          type="button"
-        >
-          {loading ? 'Refreshing...' : '🔄 Refresh List'}
-        </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label
+              htmlFor="week-filter-select"
+              style={{ fontSize: '0.75rem', fontWeight: 600, color: '#aaa', whiteSpace: 'nowrap' }}
+            >
+              Work Week:
+            </label>
+            <select
+              id="week-filter-select"
+              aria-label="Work Week"
+              style={{
+                background: 'rgba(0, 0, 0, 0.4)',
+                border: '1px solid var(--border-color, #444)',
+                borderRadius: '6px',
+                color: '#fff',
+                padding: '0.45rem 0.75rem',
+                fontSize: '0.85rem',
+              }}
+              value={selectedWeek}
+              onChange={e => setSelectedWeek(e.target.value)}
+            >
+              <option value="">All Work Weeks</option>
+              {isCustomWeek && (
+                <option value={selectedWeek}>
+                  {formatWeekRange(selectedWeek)} (Selected)
+                </option>
+              )}
+              {weekOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            className={styles.btnSecondary}
+            onClick={loadData}
+            disabled={loading}
+            type="button"
+            style={{ padding: '0.45rem 0.85rem', fontSize: '0.85rem' }}
+            title="Refresh approvals list"
+          >
+            {loading ? 'Refreshing...' : '🔄 Refresh List'}
+          </button>
+        </div>
       </div>
 
       {/* Approvals Table */}
