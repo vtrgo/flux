@@ -536,6 +536,32 @@ describe('TimesheetPage', () => {
     // Review modal should open with the worker's name and read-only view
     expect(screen.getByText(/Reviewing Timesheet:/i)).toBeInTheDocument();
     expect(screen.getByText('Close ✕')).toBeInTheDocument();
+    expect(screen.getAllByText(/Delete/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('displays clean Timesheet Approved banner without lengthy payroll text when approved', async () => {
+    (fetchApi as any).mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('timesheets/weekly')) {
+        return Promise.resolve({
+          ...mockWeeklyTimesheet,
+          status: 'approved',
+          total_hours: 4.5,
+        });
+      }
+      if (endpoint === 'machines') return Promise.resolve(mockMachines);
+      if (endpoint === 'time-entries/my') return Promise.resolve(mockTimeEntries);
+      if (endpoint.startsWith('department-tasks')) return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
+
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    // Check banner contains clean "Timesheet Approved"
+    expect(screen.getByText('Timesheet Approved')).toBeInTheDocument();
+    // Lengthy text should NOT be present
+    expect(screen.queryByText(/permanently locked into payroll ledger/i)).not.toBeInTheDocument();
   });
 
   it('allows user to edit saved timesheet until approved', async () => {

@@ -275,6 +275,14 @@ export function useTimesheetData(selectedMachineId?: string) {
     return data;
   };
 
+  const deleteWeeklyTimesheet = async (id: string): Promise<void> => {
+    await fetchApi(`timesheets/weekly/${id}`, { method: 'DELETE' });
+    setApprovals(prev => prev.filter(t => t.id !== id));
+    if (weeklyTimesheet && weeklyTimesheet.id === id) {
+      setWeeklyTimesheet(null);
+    }
+  };
+
   // SSE listeners for weekly timesheet lifecycle
   useSSE('weekly_timesheet_updated', (updated: WeeklyTimesheet) => {
     if (weeklyTimesheet && weeklyTimesheet.id === updated.id) {
@@ -312,6 +320,13 @@ export function useTimesheetData(selectedMachineId?: string) {
       setWeeklyTimesheet(updated);
     }
     setApprovals(prev => prev.map(t => t.id === updated.id ? updated : t));
+  });
+
+  useSSE('weekly_timesheet_deleted', (data: { id: string }) => {
+    setApprovals(prev => prev.filter(t => t.id !== data.id));
+    if (weeklyTimesheet && weeklyTimesheet.id === data.id) {
+      setWeeklyTimesheet(null);
+    }
   });
 
   const updateDepartmentTask = async (id: string, req: UpdateDepartmentTaskRequest): Promise<DepartmentTask> => {
@@ -356,6 +371,7 @@ export function useTimesheetData(selectedMachineId?: string) {
     fetchApprovals,
     approveWeeklyTimesheet,
     rejectWeeklyTimesheet,
+    deleteWeeklyTimesheet,
     fetchMachineSummary,
     fetchMachineLaborCorrelation,
     fetchQuotingReview,

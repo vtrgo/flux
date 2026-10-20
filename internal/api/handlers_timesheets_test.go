@@ -1068,6 +1068,40 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 		}
 	})
 
+	t.Run("Manager_And_Lead_Can_Delete_Weekly_Timesheet", func(t *testing.T) {
+		leadCookie := createTestRoleCookie(t, "lead")
+
+		// 1. Worker tries to delete -> 403 Forbidden
+		delWorkerReq := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/timesheets/weekly/%s", timesheetID), nil)
+		delWorkerReq.AddCookie(workerCookie)
+		delWorkerRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(delWorkerRR, delWorkerReq)
+		if delWorkerRR.Code != http.StatusForbidden {
+			t.Fatalf("expected 403 when regular worker tries to delete timesheet, got %d", delWorkerRR.Code)
+		}
+
+		// 2. Team Lead deletes -> 200 OK
+		delLeadReq := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/timesheets/weekly/%s", timesheetID), nil)
+		delLeadReq.AddCookie(leadCookie)
+		delLeadRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(delLeadRR, delLeadReq)
+		if delLeadRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 when lead deletes timesheet, got %d: %s", delLeadRR.Code, delLeadRR.Body.String())
+		}
+
+		// 3. Verify deleted in database
+		var exists bool
+		_ = db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM weekly_timesheets WHERE id = $1)", timesheetID).Scan(&exists)
+		if exists {
+			t.Errorf("expected timesheet %s to be deleted from database", timesheetID)
+		}
+		var entryCount int
+		_ = db.DB.QueryRow("SELECT COUNT(*) FROM time_entries WHERE weekly_timesheet_id = $1", timesheetID).Scan(&entryCount)
+		if entryCount != 0 {
+			t.Errorf("expected associated time entries to be deleted, got %d", entryCount)
+		}
+	})
+
 	// Cleanup test weekly timesheet
 	_, _ = db.DB.Exec("DELETE FROM time_entries WHERE weekly_timesheet_id = $1", timesheetID)
 	_, _ = db.DB.Exec("DELETE FROM weekly_timesheets WHERE id = $1", timesheetID)

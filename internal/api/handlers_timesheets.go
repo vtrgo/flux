@@ -1858,3 +1858,75 @@ func handleRejectWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, wt)
 }
 
+// handleDeleteWeeklyTimesheet allows leads, managers, and admins to delete a weekly timesheet.
+func handleDeleteWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	timesheetID, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid timesheet ID", err)
+		return
+	}
+
+	authUserID := getAuthenticatedUserID(r)
+	if authUserID == "" {
+		respondError(w, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+
+	user, _ := r.Context().Value(UserContextKey).(*models.User)
+	isAuthorized := false
+	if user != nil && user.Role != nil {
+		role := strings.ToLower(*user.Role)
+		if role == "lead" || role == "manager" || role == "admin" {
+			isAuthorized = true
+		}
+	}
+	if !isAuthorized {
+		respondError(w, http.StatusForbidden, "Forbidden: Only team leads and managers can delete timesheets", nil)
+		return
+	}
+
+	tx, err := db.DB.BeginTx(r.Context(), nil)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to begin transaction", err)
+		return
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	var exists bool
+	err = tx.QueryRowContext(r.Context(), `SELECT EXISTS(SELECT 1 FROM weekly_timesheets WHERE id = $1)`, timesheetID).Scan(&exists)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to query timesheet", err)
+		return
+	}
+	if !exists {
+		respondError(w, http.StatusNotFound, "Weekly timesheet not found", nil)
+		return
+	}
+
+	if _, err := tx.ExecContext(r.Context(), `DELETE FROM time_entries WHERE weekly_timesheet_id = $1`, timesheetID); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to delete time entries", err)
+		return
+	}
+
+	if _, err := tx.ExecContext(r.Context(), `DELETE FROM weekly_timesheets WHERE id = $1`, timesheetID); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to delete weekly timesheet", err)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		respondError(w, http.StatusInternalServerError, "Failed to commit timesheet deletion", err)
+		return
+	}
+
+	BroadcastEvent("weekly_timesheet_deleted", map[string]interface{}{
+		"id": timesheetID,
+	})
+
+	respondJSON(w, http.StatusOK, map[string]string{
+		"message": "Weekly timesheet deleted successfully",
+	})
+}
+

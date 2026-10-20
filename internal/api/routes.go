@@ -123,6 +123,7 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /api/timesheets/approvals", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleGetTimesheetApprovals)))
 	mux.Handle("POST /api/timesheets/weekly/{id}/approve", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleApproveWeeklyTimesheet)))
 	mux.Handle("POST /api/timesheets/weekly/{id}/reject", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleRejectWeeklyTimesheet)))
+	mux.Handle("DELETE /api/timesheets/weekly/{id}", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleDeleteWeeklyTimesheet)))
 
 	// Department Core Task Catalog Endpoints
 	mux.HandleFunc("GET /api/department-tasks", handleGetDepartmentTasks)
