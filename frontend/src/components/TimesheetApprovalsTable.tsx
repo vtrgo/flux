@@ -250,180 +250,368 @@ export function TimesheetApprovalsTable({
                   </td>
                 </tr>
               ) : (
-                approvals.map(ts => (
-                  <tr key={ts.id}>
-                    <td>
-                      <strong>{ts.user_name || 'Unknown'}</strong>
-                      {ts.user_email && (
-                        <div style={{ fontSize: '0.75rem', color: '#888' }}>{ts.user_email}</div>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#aaa' }}>
-                        {ts.department || '—'}
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{formatWeekRange(ts.week_start_date)}</strong>
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--vtr-theme-primary, #00e5ff)' }}>
-                      {formatHours(ts.total_hours)} hrs
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span
-                        className={`${styles.statusBadge} ${
-                          ts.status === 'approved'
-                            ? styles.statusApproved
-                            : ts.status === 'rejected'
-                            ? styles.statusRejected
-                            : ts.total_hours > 0
-                            ? styles.statusSubmitted
-                            : styles.statusDraft
-                        }`}
+                approvals.map(ts => {
+                  const isInspecting = inspectingTimesheet?.id === ts.id;
+                  return (
+                    <React.Fragment key={ts.id}>
+                      <tr
+                        style={
+                          isInspecting
+                            ? { background: 'rgba(0, 229, 255, 0.05)', borderLeft: '3px solid var(--vtr-theme-primary, #00e5ff)' }
+                            : undefined
+                        }
                       >
-                        {ts.status === 'approved'
-                          ? 'APPROVED'
-                          : ts.status === 'rejected'
-                          ? 'REJECTED'
-                          : ts.total_hours > 0
-                          ? 'PENDING'
-                          : 'DRAFT'}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.8rem', color: '#aaa' }}>
-                      {ts.updated_at || ts.submitted_at || ts.created_at
-                        ? new Date(ts.updated_at || ts.submitted_at || ts.created_at).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : '—'}
-                    </td>
-                    <td>
-                      {ts.rejection_reason ? (
-                        <span style={{ color: '#ff5252', fontSize: '0.8rem' }}>
-                          Reason: {ts.rejection_reason}
-                        </span>
-                      ) : ts.approver_name ? (
-                        <span style={{ color: '#00e676', fontSize: '0.8rem' }}>
-                          Approved by {ts.approver_name}
-                        </span>
-                      ) : ts.notes ? (
-                        <span style={{ fontSize: '0.8rem', color: '#ccc' }}>{ts.notes}</span>
-                      ) : (
-                        <span style={{ color: '#666' }}>—</span>
+                        <td>
+                          <strong>{ts.user_name || 'Unknown'}</strong>
+                          {ts.user_email && (
+                            <div style={{ fontSize: '0.75rem', color: '#888' }}>{ts.user_email}</div>
+                          )}
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#aaa' }}>
+                            {ts.department || '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <strong>{formatWeekRange(ts.week_start_date)}</strong>
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--vtr-theme-primary, #00e5ff)' }}>
+                          {formatHours(ts.total_hours)} hrs
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span
+                            className={`${styles.statusBadge} ${
+                              ts.status === 'approved'
+                                ? styles.statusApproved
+                                : ts.status === 'rejected'
+                                ? styles.statusRejected
+                                : ts.total_hours > 0
+                                ? styles.statusSubmitted
+                                : styles.statusDraft
+                            }`}
+                          >
+                            {ts.status === 'approved'
+                              ? 'APPROVED'
+                              : ts.status === 'rejected'
+                              ? 'REJECTED'
+                              : ts.total_hours > 0
+                              ? 'PENDING'
+                              : 'DRAFT'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.8rem', color: '#aaa' }}>
+                          {ts.updated_at || ts.submitted_at || ts.created_at
+                            ? new Date(ts.updated_at || ts.submitted_at || ts.created_at).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : '—'}
+                        </td>
+                        <td>
+                          {ts.rejection_reason ? (
+                            <span style={{ color: '#ff5252', fontSize: '0.8rem' }}>
+                              Reason: {ts.rejection_reason}
+                            </span>
+                          ) : ts.approver_name ? (
+                            <span style={{ color: '#00e676', fontSize: '0.8rem' }}>
+                              Approved by {ts.approver_name}
+                            </span>
+                          ) : ts.notes ? (
+                            <span style={{ fontSize: '0.8rem', color: '#ccc' }}>{ts.notes}</span>
+                          ) : (
+                            <span style={{ color: '#666' }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                            {ts.status !== 'approved' && (
+                              <>
+                                <button
+                                  style={{
+                                    background: '#00c853',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    padding: '0.3rem 0.6rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
+                                    opacity: ts.total_hours > 0 ? 1 : 0.5,
+                                  }}
+                                  onClick={() => handleApprove(ts)}
+                                  disabled={processingAction || ts.total_hours <= 0}
+                                  title={ts.total_hours > 0 ? 'Approve timesheet hours' : 'Cannot approve timesheet with 0 hours'}
+                                  type="button"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  style={{
+                                    background: 'rgba(255, 68, 68, 0.2)',
+                                    color: '#ff5252',
+                                    border: '1px solid rgba(255, 68, 68, 0.4)',
+                                    borderRadius: '4px',
+                                    padding: '0.3rem 0.6rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
+                                    opacity: ts.total_hours > 0 ? 1 : 0.5,
+                                  }}
+                                  onClick={() => {
+                                    setRejectingTimesheet(ts);
+                                    setRejectionReason('');
+                                  }}
+                                  disabled={processingAction || ts.total_hours <= 0}
+                                  type="button"
+                                  title="Reject and request revisions"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                            {ts.status === 'approved' && (
+                              <button
+                                style={{
+                                  background: 'rgba(255, 68, 68, 0.2)',
+                                  color: '#ff5252',
+                                  border: '1px solid rgba(255, 68, 68, 0.4)',
+                                  borderRadius: '4px',
+                                  padding: '0.3rem 0.6rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => {
+                                  setRejectingTimesheet(ts);
+                                  setRejectionReason('');
+                                }}
+                                disabled={processingAction}
+                                type="button"
+                                title="Revoke approval and request revisions"
+                              >
+                                Revoke
+                              </button>
+                            )}
+                            <button
+                              style={{
+                                background: isInspecting ? 'var(--vtr-theme-primary, #00e5ff)' : 'rgba(255, 255, 255, 0.08)',
+                                color: isInspecting ? '#000' : '#fff',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                padding: '0.3rem 0.6rem',
+                                fontSize: '0.75rem',
+                                fontWeight: isInspecting ? 700 : 400,
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => setInspectingTimesheet(isInspecting ? null : ts)}
+                              type="button"
+                            >
+                              {isInspecting ? 'Hide Details' : 'Review'}
+                            </button>
+                            {isAdminUser && (
+                              <button
+                                style={{
+                                  background: 'rgba(255, 68, 68, 0.1)',
+                                  color: '#ff5252',
+                                  border: '1px solid rgba(255, 68, 68, 0.3)',
+                                  borderRadius: '4px',
+                                  padding: '0.3rem 0.6rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => handleDeleteTimesheet(ts)}
+                                disabled={processingAction}
+                                type="button"
+                                title="Delete timesheet and associated entries (Admin only)"
+                              >
+                                🗑️ Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {isInspecting && (
+                        <tr key={`${ts.id}-details`}>
+                          <td
+                            colSpan={8}
+                            style={{
+                              padding: '1.25rem 1.5rem',
+                              background: '#161616',
+                              borderTop: '1px solid rgba(0, 229, 255, 0.3)',
+                              borderBottom: '2px solid #333',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                                gap: '0.75rem',
+                                marginBottom: '1.25rem',
+                                paddingBottom: '0.75rem',
+                                borderBottom: '1px solid #333',
+                              }}
+                            >
+                              <div>
+                                <h3 style={{ margin: 0, color: '#fff', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                  <span>📋</span> Reviewing Timesheet: {ts.user_name} ({formatWeekRange(ts.week_start_date)})
+                                </h3>
+                                <div style={{ fontSize: '0.85rem', color: '#aaa', marginTop: '0.35rem' }}>
+                                  Status:{' '}
+                                  <strong
+                                    style={{
+                                      color:
+                                        ts.status === 'approved'
+                                          ? '#00e676'
+                                          : ts.status === 'rejected'
+                                          ? '#ff5252'
+                                          : '#00e5ff',
+                                      textTransform: 'uppercase',
+                                    }}
+                                  >
+                                    {ts.status === 'draft' ? (ts.total_hours > 0 ? 'PENDING' : 'DRAFT') : ts.status}
+                                  </strong>{' '}
+                                  | Total Hours: <strong>{formatHours(ts.total_hours)} hrs</strong>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                {ts.status !== 'approved' && (
+                                  <>
+                                    <button
+                                      style={{
+                                        background: '#00c853',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        padding: '0.45rem 0.9rem',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 700,
+                                        cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
+                                        opacity: ts.total_hours > 0 ? 1 : 0.5,
+                                      }}
+                                      onClick={async () => {
+                                        await handleApprove(ts);
+                                        setInspectingTimesheet(null);
+                                      }}
+                                      disabled={processingAction || ts.total_hours <= 0}
+                                      type="button"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      style={{
+                                        background: 'rgba(255, 68, 68, 0.2)',
+                                        color: '#ff5252',
+                                        border: '1px solid rgba(255, 68, 68, 0.4)',
+                                        borderRadius: '4px',
+                                        padding: '0.45rem 0.9rem',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 700,
+                                        cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
+                                        opacity: ts.total_hours > 0 ? 1 : 0.5,
+                                      }}
+                                      onClick={() => {
+                                        setRejectingTimesheet(ts);
+                                        setRejectionReason('');
+                                      }}
+                                      disabled={processingAction || ts.total_hours <= 0}
+                                      type="button"
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  className={styles.btnSecondary}
+                                  onClick={() => setInspectingTimesheet(null)}
+                                  type="button"
+                                >
+                                  Close ✕
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Worker Notes & Remarks */}
+                            <div
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                border: '1px solid #333',
+                                borderRadius: '6px',
+                                padding: '0.75rem 1rem',
+                                marginBottom: '1rem',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  color: 'var(--vtr-theme-primary, #00e5ff)',
+                                  textTransform: 'uppercase',
+                                  marginBottom: '0.35rem',
+                                  letterSpacing: '0.5px',
+                                }}
+                              >
+                                💬 Worker Notes & Remarks:
+                              </div>
+                              <div
+                                style={{
+                                  color: ts.notes ? '#fff' : '#888',
+                                  fontSize: '0.875rem',
+                                  fontStyle: ts.notes ? 'normal' : 'italic',
+                                  whiteSpace: 'pre-wrap',
+                                }}
+                              >
+                                {ts.notes ? ts.notes : 'No worker notes or remarks recorded for this timesheet period.'}
+                              </div>
+                            </div>
+
+                            {/* Prior Rejection Reason if any */}
+                            {ts.rejection_reason && (
+                              <div
+                                style={{
+                                  background: 'rgba(255, 82, 82, 0.1)',
+                                  border: '1px solid rgba(255, 82, 82, 0.3)',
+                                  borderRadius: '6px',
+                                  padding: '0.75rem 1rem',
+                                  marginBottom: '1rem',
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    color: '#ff5252',
+                                    textTransform: 'uppercase',
+                                    marginBottom: '0.25rem',
+                                  }}
+                                >
+                                  ⚠️ Previous Rejection Reason:
+                                </div>
+                                <div style={{ color: '#fff', fontSize: '0.875rem' }}>
+                                  {ts.rejection_reason}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Embedded Read-only User Timesheet Grid */}
+                            <WeeklyTimesheetGrid
+                              machines={machines}
+                              departmentTasks={departmentTasks}
+                              initialWeekStart={ts.week_start_date}
+                              readOnlyUserView={true}
+                              userDepartment={ts.department}
+                              targetUserId={ts.user_id}
+                            />
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                        {ts.status !== 'approved' && (
-                          <>
-                            <button
-                              style={{
-                                background: '#00c853',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                padding: '0.3rem 0.6rem',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
-                                opacity: ts.total_hours > 0 ? 1 : 0.5,
-                              }}
-                              onClick={() => handleApprove(ts)}
-                              disabled={processingAction || ts.total_hours <= 0}
-                              title={ts.total_hours > 0 ? 'Approve timesheet hours' : 'Cannot approve timesheet with 0 hours'}
-                              type="button"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              style={{
-                                background: 'rgba(255, 68, 68, 0.2)',
-                                color: '#ff5252',
-                                border: '1px solid rgba(255, 68, 68, 0.4)',
-                                borderRadius: '4px',
-                                padding: '0.3rem 0.6rem',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
-                                opacity: ts.total_hours > 0 ? 1 : 0.5,
-                              }}
-                              onClick={() => {
-                                setRejectingTimesheet(ts);
-                                setRejectionReason('');
-                              }}
-                              disabled={processingAction || ts.total_hours <= 0}
-                              type="button"
-                              title="Reject and request revisions"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                        {ts.status === 'approved' && (
-                          <button
-                            style={{
-                              background: 'rgba(255, 68, 68, 0.2)',
-                              color: '#ff5252',
-                              border: '1px solid rgba(255, 68, 68, 0.4)',
-                              borderRadius: '4px',
-                              padding: '0.3rem 0.6rem',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                            }}
-                            onClick={() => {
-                              setRejectingTimesheet(ts);
-                              setRejectionReason('');
-                            }}
-                            disabled={processingAction}
-                            type="button"
-                            title="Revoke approval and request revisions"
-                          >
-                            Revoke
-                          </button>
-                        )}
-                        <button
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            color: '#fff',
-                            border: '1px solid #444',
-                            borderRadius: '4px',
-                            padding: '0.3rem 0.6rem',
-                            fontSize: '0.75rem',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => setInspectingTimesheet(ts)}
-                          type="button"
-                        >
-                          Review
-                        </button>
-                        {isAdminUser && (
-                          <button
-                            style={{
-                              background: 'rgba(255, 68, 68, 0.1)',
-                              color: '#ff5252',
-                              border: '1px solid rgba(255, 68, 68, 0.3)',
-                              borderRadius: '4px',
-                              padding: '0.3rem 0.6rem',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                            }}
-                            onClick={() => handleDeleteTimesheet(ts)}
-                            disabled={processingAction}
-                            type="button"
-                            title="Delete timesheet and associated entries (Admin only)"
-                          >
-                            🗑️ Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                    </React.Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -506,113 +694,6 @@ export function TimesheetApprovalsTable({
                 {processingAction ? 'Rejecting...' : 'Confirm Rejection'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Inspect Modal */}
-      {inspectingTimesheet && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1.5rem',
-          }}
-        >
-          <div
-            style={{
-              background: '#1e1e1e',
-              border: '1px solid #444',
-              borderRadius: '8px',
-              padding: '1.5rem',
-              maxWidth: '1200px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h2 style={{ margin: 0, color: '#fff', fontSize: '1.25rem' }}>
-                  Reviewing Timesheet: {inspectingTimesheet.user_name} ({formatWeekRange(inspectingTimesheet.week_start_date)})
-                </h2>
-                <div style={{ fontSize: '0.85rem', color: '#aaa', marginTop: '0.25rem' }}>
-                  Status: <strong style={{ color: inspectingTimesheet.status === 'approved' ? '#00e676' : inspectingTimesheet.status === 'rejected' ? '#ff5252' : '#00e5ff', textTransform: 'uppercase' }}>{inspectingTimesheet.status === 'draft' ? (inspectingTimesheet.total_hours > 0 ? 'PENDING' : 'DRAFT') : inspectingTimesheet.status}</strong> | Total Hours: <strong>{formatHours(inspectingTimesheet.total_hours)} hrs</strong>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                {inspectingTimesheet.status !== 'approved' && (
-                  <>
-                    <button
-                      style={{
-                        background: '#00c853',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        cursor: inspectingTimesheet.total_hours > 0 ? 'pointer' : 'not-allowed',
-                        opacity: inspectingTimesheet.total_hours > 0 ? 1 : 0.5,
-                      }}
-                      onClick={async () => {
-                        await handleApprove(inspectingTimesheet);
-                        setInspectingTimesheet(null);
-                      }}
-                      disabled={processingAction || inspectingTimesheet.total_hours <= 0}
-                      type="button"
-                    >
-                      Approve
-                    </button>
-                    <button
-                      style={{
-                        background: 'rgba(255, 68, 68, 0.2)',
-                        color: '#ff5252',
-                        border: '1px solid rgba(255, 68, 68, 0.4)',
-                        borderRadius: '4px',
-                        padding: '0.4rem 0.8rem',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        cursor: inspectingTimesheet.total_hours > 0 ? 'pointer' : 'not-allowed',
-                        opacity: inspectingTimesheet.total_hours > 0 ? 1 : 0.5,
-                      }}
-                      onClick={() => {
-                        setRejectingTimesheet(inspectingTimesheet);
-                        setRejectionReason('');
-                      }}
-                      disabled={processingAction || inspectingTimesheet.total_hours <= 0}
-                      type="button"
-                    >
-                      Reject
-                    </button>
-                  </>
-                )}
-                <button
-                  className={styles.btnSecondary}
-                  onClick={() => setInspectingTimesheet(null)}
-                  type="button"
-                >
-                  Close ✕
-                </button>
-              </div>
-            </div>
-
-            <WeeklyTimesheetGrid
-              machines={machines}
-              departmentTasks={departmentTasks}
-              initialWeekStart={inspectingTimesheet.week_start_date}
-              readOnlyUserView={true}
-              userDepartment={inspectingTimesheet.department}
-              targetUserId={inspectingTimesheet.user_id}
-            />
           </div>
         </div>
       )}
