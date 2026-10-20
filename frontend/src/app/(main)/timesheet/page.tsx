@@ -33,7 +33,7 @@ export default function TimesheetPage() {
   const { user, isAdmin, hasRole } = useAuth();
   const isLeadOrManager = isAdmin || hasRole(["manager", "lead", "sales"]);
 
-  const [activeTab, setActiveTab] = useState<"my_time" | "project_variance" | "quoting_review" | "dept_catalog" | "approvals">("my_time");
+  const [activeTab, setActiveTab] = useState<"my_time" | "project_variance" | "dept_catalog" | "approvals">("my_time");
   const [machines, setMachines] = useState<Machine[]>([]);
   const [selectedMachineId, setSelectedMachineId] = useState<string>("");
 
@@ -68,14 +68,12 @@ export default function TimesheetPage() {
     myEntries,
     machineSummary,
     correlationReport,
-    quotingReview,
     departmentTasks,
     loading,
     deleteEntry,
     createOrUpdateTask,
     updateTaskQuote,
     fetchMachineLaborCorrelation,
-    fetchQuotingReview,
     fetchDepartmentTasks,
     createDepartmentTask,
     updateDepartmentTask,
@@ -94,18 +92,15 @@ export default function TimesheetPage() {
       .catch((err) => console.error("Failed to load machines", err));
   }, [selectedMachineId]);
 
-  // Load quoting review when tab is opened
+  // Load department catalog when tab is opened
   useEffect(() => {
-    if (activeTab === "quoting_review") {
-      fetchQuotingReview();
-    }
     if (activeTab === "dept_catalog") {
       fetchDepartmentTasks();
       if (projectDept !== "all") {
         setSelectedCatalogDept(projectDept);
       }
     }
-  }, [activeTab, fetchQuotingReview, fetchDepartmentTasks, projectDept]);
+  }, [activeTab, fetchDepartmentTasks, projectDept]);
 
   // Sync selected catalog task default quote
   useEffect(() => {
@@ -360,12 +355,6 @@ export default function TimesheetPage() {
                   onClick={() => setActiveTab("dept_catalog")}
                 >
                   🏢 Department Tasks
-                </button>
-                <button
-                  className={`${styles.toggleBtn} ${activeTab === "quoting_review" ? styles.toggleBtnActive : ""}`}
-                  onClick={() => setActiveTab("quoting_review")}
-                >
-                  📑 Quoting Audit
                 </button>
                 <button
                   className={`${styles.toggleBtn} ${activeTab === "approvals" ? styles.toggleBtnActive : ""}`}
@@ -1141,76 +1130,7 @@ export default function TimesheetPage() {
         </div>
       )}
 
-      {/* TAB 4: QUOTING AUDIT & REVIEW (Management View) */}
-      {activeTab === "quoting_review" && (
-        <div className={styles.contentCard}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>
-              <span>📑</span> Quoting Calibration Audit: Across All Machines
-            </h2>
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--text-secondary, #aaa)" }}>
-              Compares initial quoted hours against actual build, rework, and defect containment labor
-            </p>
-          </div>
-
-          <div className={styles.tableWrapper}>
-            {quotingReview.length === 0 ? (
-              <div className={styles.emptyState}>No machine data available for quoting review.</div>
-            ) : (
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Order #</th>
-                    <th>Model Type</th>
-                    <th>Status</th>
-                    <th>Quoted Hours</th>
-                    <th>Production Actual</th>
-                    <th>Variance</th>
-                    <th>Rework Hours (SOP 1-003)</th>
-                    <th>Defect Fix Hours</th>
-                    <th>Total Labor Expended</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quotingReview.map((row) => (
-                    <tr key={row.machine_id}>
-                      <td>
-                        <strong>{row.order_number}</strong>
-                      </td>
-                      <td>{row.model_type}</td>
-                      <td>
-                        <span className={`${styles.categoryBadge} ${styles.badgeIndirect}`}>
-                          {row.status.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ fontWeight: 700 }}>{row.total_quoted_hours.toFixed(1)}h</td>
-                      <td style={{ color: "var(--vtr-theme-primary, #00e5ff)", fontWeight: 700 }}>
-                        {row.total_production_hours.toFixed(1)}h
-                      </td>
-                      <td style={{ fontWeight: 800 }}>
-                        <span className={row.production_variance > 0 ? styles.variancePositive : styles.varianceNegative}>
-                          {row.production_variance > 0 ? `+${row.production_variance.toFixed(1)}h` : `${row.production_variance.toFixed(1)}h`}
-                        </span>
-                      </td>
-                      <td style={{ color: "#ff7043", fontWeight: 700 }}>
-                        {row.total_rework_hours.toFixed(1)}h
-                      </td>
-                      <td style={{ color: "#ffca28", fontWeight: 700 }}>
-                        {row.total_issue_fix_hours.toFixed(1)}h
-                      </td>
-                      <td style={{ fontWeight: 800, fontSize: "1.05rem" }}>
-                        {row.total_actual_hours.toFixed(1)}h
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 5: TIMESHEET APPROVALS DESK (Lead / Management View) */}
+      {/* TAB 4: TIMESHEET APPROVALS DESK (Lead / Management View) */}
       {activeTab === "approvals" && (
         <TimesheetApprovalsTable
           userDepartment={user?.department}
