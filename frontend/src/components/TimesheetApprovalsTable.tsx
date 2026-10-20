@@ -7,6 +7,7 @@ import { WeeklyTimesheet, Machine, DepartmentTask } from '../types';
 import { getSundayOfWeek, addWeeks, formatWeekRange, formatHours } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { WeeklyTimesheetGrid } from './WeeklyTimesheetGrid';
+import { Modal } from './ui/Modal';
 import styles from './WeeklyTimesheetGrid.module.css';
 
 interface TimesheetApprovalsTableProps {
@@ -584,84 +585,55 @@ export function TimesheetApprovalsTable({
       </div>
 
       {/* Reject Modal */}
-      {rejectingTimesheet && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: '#1e1e1e',
-              border: '1px solid #444',
-              borderRadius: '8px',
-              padding: '1.5rem',
-              maxWidth: '500px',
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <h3 style={{ margin: 0, color: '#ff5252' }}>
-              Reject Timesheet: {rejectingTimesheet.user_name}
-            </h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#ccc' }}>
-              Provide a clear reason for the rejection so the team member can correct their daily task
-              allocations and re-submit.
-            </p>
-            <textarea
+      <Modal
+        isOpen={Boolean(rejectingTimesheet)}
+        onClose={() => setRejectingTimesheet(null)}
+        title={`Reject Timesheet: ${rejectingTimesheet?.user_name || ''}`}
+        subtitle="Provide a clear reason for the rejection so the team member can correct their daily task allocations and re-submit."
+        size="sm"
+        footer={
+          <>
+            <button
+              className="vtr-btn vtr-btn-secondary"
+              onClick={() => setRejectingTimesheet(null)}
+              disabled={processingAction}
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              className="vtr-btn"
               style={{
-                width: '100%',
-                background: '#121212',
-                border: '1px solid #444',
-                borderRadius: '6px',
+                backgroundColor: 'var(--color-danger, #ff5252)',
+                borderColor: 'var(--color-danger, #ff5252)',
                 color: '#fff',
-                padding: '0.75rem',
-                fontSize: '0.9rem',
-                minHeight: '100px',
               }}
-              placeholder="e.g. Please clarify 4.0 hours logged on Wednesday for mechanical assembly..."
-              value={rejectionReason}
-              onChange={e => setRejectionReason(e.target.value)}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button
-                className={styles.btnSecondary}
-                onClick={() => setRejectingTimesheet(null)}
-                disabled={processingAction}
-                type="button"
-              >
-                Cancel
-              </button>
-              <button
-                style={{
-                  background: '#ff5252',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '0.45rem 1rem',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                }}
-                onClick={handleConfirmReject}
-                disabled={processingAction || !rejectionReason.trim()}
-                type="button"
-              >
-                {processingAction ? 'Rejecting...' : 'Confirm Rejection'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              onClick={handleConfirmReject}
+              disabled={processingAction || !rejectionReason.trim()}
+              type="button"
+            >
+              {processingAction ? 'Rejecting...' : 'Confirm Rejection'}
+            </button>
+          </>
+        }
+      >
+        <textarea
+          style={{
+            width: '100%',
+            background: 'var(--surface-base, #121212)',
+            border: '1px solid var(--border-default, #333)',
+            borderRadius: 'var(--radius-sm, 4px)',
+            color: 'var(--text-primary, #fff)',
+            padding: '0.75rem',
+            fontSize: '0.9rem',
+            minHeight: '100px',
+            fontFamily: 'var(--font-mono)',
+          }}
+          placeholder="e.g. Please clarify 4.0 hours logged on Wednesday for mechanical assembly..."
+          value={rejectionReason}
+          onChange={e => setRejectionReason(e.target.value)}
+        />
+      </Modal>
     </div>
   );
 }

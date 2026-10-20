@@ -6,6 +6,7 @@ import { fetchApi } from '../../../../lib/api';
 import { User } from '../../../../types';
 import { ACTIVE_DEPARTMENTS, formatDepartmentName } from '../../../../lib/departments';
 import { toast } from 'sonner';
+import styles from '../admin.module.css';
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -87,93 +88,73 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <main style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid var(--vtr-card-border, var(--border-color))', paddingBottom: '1.5rem' }}>
+    <main className={styles.container}>
+      <header className={styles.header}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-mono)', fontSize: '2rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--vtr-theme-primary, var(--text-primary))', margin: 0 }}>
-            User Management
-          </h1>
-          <p style={{ color: 'var(--vtr-theme-accent, var(--text-secondary))', fontFamily: 'var(--font-mono)', fontSize: '1rem', marginTop: '0.5rem' }}>
-            Manage system users and department assignments
-          </p>
+          <h1 className={styles.title}>User Management</h1>
+          <p className={styles.subtitle}>Manage system users and department assignments</p>
         </div>
         <Link href="/admin" className="vtr-btn vtr-btn-secondary">
           ← Back to Admin
         </Link>
       </header>
 
-      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
-        <section style={{ 
-          flex: 2,
-          backgroundColor: 'var(--vtr-card-bg, var(--bg-secondary))',
-          border: '1px solid var(--vtr-card-border, var(--border-color))',
-          borderRadius: '12px',
-          padding: '2rem',
-          backdropFilter: 'blur(8px)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.5rem', color: 'var(--vtr-theme-primary, var(--text-primary))', margin: 0 }}>
-              System Users
-            </h2>
+      <div className={styles.splitView}>
+        <section className={styles.card} style={{ flex: 2, marginBottom: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 className={styles.cardTitle} style={{ margin: 0 }}>System Users</h2>
             <button onClick={startCreate} className="vtr-btn">
               + New User
             </button>
           </div>
 
           {loading ? (
-            <div>Loading users...</div>
+            <div style={{ padding: '2rem 0', color: 'var(--text-secondary)' }}>Loading users...</div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--vtr-card-border, var(--border-color))', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
-                  <th style={{ padding: '1rem 0' }}>Username</th>
-                  <th style={{ padding: '1rem 0' }}>Email</th>
-                  <th style={{ padding: '1rem 0' }}>Name</th>
-                  <th style={{ padding: '1rem 0' }}>Department</th>
-                  <th style={{ padding: '1rem 0' }}>Role</th>
-                  <th style={{ padding: '1rem 0', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid var(--vtr-card-border, var(--border-color))' }}>
-                    <td style={{ padding: '1rem 0' }}>{u.username}</td>
-                    <td style={{ padding: '1rem 0', fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: u.email ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
-                      {u.email || '—'}
-                    </td>
-                    <td style={{ padding: '1rem 0' }}>{u.first_name} {u.last_name}</td>
-                    <td style={{ padding: '1rem 0' }}>
-                      {u.department ? formatDepartmentName(u.department) : 'None'}
-                    </td>
-                    <td style={{ padding: '1rem 0' }}>{u.role || 'None'}</td>
-                    <td style={{ padding: '1rem 0', textAlign: 'right' }}>
-                      <button onClick={() => startEdit(u)} className="vtr-btn vtr-btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', marginRight: '0.5rem' }}>Edit</button>
-                      <button onClick={() => handleDelete(u.id)} className="vtr-btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', background: 'var(--accent-red)', borderColor: 'var(--accent-red)' }}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-                {users.length === 0 && (
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
                   <tr>
-                    <td colSpan={6} style={{ padding: '2rem 0', textAlign: 'center', color: 'var(--text-secondary)' }}>No users found.</td>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Role</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id}>
+                      <td>{u.username}</td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem', color: u.email ? 'var(--vtr-theme-primary)' : 'var(--text-secondary)' }}>
+                        {u.email || '—'}
+                      </td>
+                      <td>{u.first_name} {u.last_name}</td>
+                      <td>
+                        {u.department ? formatDepartmentName(u.department) : 'None'}
+                      </td>
+                      <td>{u.role || 'None'}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button onClick={() => startEdit(u)} className="vtr-btn vtr-btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', marginRight: '0.5rem' }}>Edit</button>
+                        <button onClick={() => handleDelete(u.id)} className="vtr-btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem', background: 'var(--color-danger, #ff5252)', borderColor: 'var(--color-danger, #ff5252)' }}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {users.length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ padding: '2rem 0', textAlign: 'center', color: 'var(--text-secondary)' }}>No users found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 
         {(editingUser || isCreating) && (
-          <section style={{ 
-            flex: 1,
-            backgroundColor: 'var(--vtr-card-bg, var(--bg-secondary))',
-            border: '1px solid var(--vtr-card-border, var(--border-color))',
-            borderRadius: '12px',
-            padding: '2rem',
-            backdropFilter: 'blur(8px)',
-            position: 'sticky',
-            top: '2rem'
-          }}>
-            <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.25rem', color: 'var(--vtr-theme-primary, var(--text-primary))', marginBottom: '1.5rem', textTransform: 'uppercase' }}>
+          <section className={styles.card} style={{ flex: 1, position: 'sticky', top: '2rem', marginBottom: 0 }}>
+            <h2 className={styles.cardTitle}>
               {isCreating ? 'Create User' : 'Edit User'}
             </h2>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
