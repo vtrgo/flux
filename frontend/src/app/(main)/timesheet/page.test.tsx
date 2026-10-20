@@ -521,7 +521,8 @@ describe('TimesheetPage', () => {
       fireEvent.click(approvalsTabBtn);
     });
 
-    expect(screen.getByText('Pending Approval')).toBeInTheDocument();
+    expect(screen.getByLabelText('Work Week')).toBeInTheDocument();
+    expect(screen.getByLabelText('Department')).toBeInTheDocument();
     expect(screen.getByText('🔄 Refresh List')).toBeInTheDocument();
     expect(screen.getByText('Approve')).toBeInTheDocument();
     expect(screen.getByText('Reject')).toBeInTheDocument();

@@ -51,7 +51,6 @@ export function TimesheetApprovalsTable({
   const [deptFilter, setDeptFilter] = useState<string>(
     !isManagerOrAdmin && userDepartment ? userDepartment : ''
   );
-  const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [loading, setLoading] = useState(false);
 
   // Reject dialog state
@@ -127,7 +126,6 @@ export function TimesheetApprovalsTable({
     try {
       await fetchApprovals({
         department: deptFilter || undefined,
-        status: statusFilter || undefined,
         week_start: selectedWeek || undefined,
       });
     } catch (err) {
@@ -135,7 +133,7 @@ export function TimesheetApprovalsTable({
     } finally {
       setLoading(false);
     }
-  }, [deptFilter, statusFilter, selectedWeek, fetchApprovals]);
+  }, [deptFilter, selectedWeek, fetchApprovals]);
 
   useEffect(() => {
     loadData();
@@ -143,7 +141,7 @@ export function TimesheetApprovalsTable({
 
   useEffect(() => {
     setInspectingTimesheet(null);
-  }, [selectedWeek, deptFilter, statusFilter]);
+  }, [selectedWeek, deptFilter]);
 
   const handleApprove = async (ts: WeeklyTimesheet) => {
     if (!window.confirm(`Approve timesheet for ${ts.user_name || 'worker'} (${formatHours(ts.total_hours)} hrs)?`)) {
@@ -331,30 +329,6 @@ export function TimesheetApprovalsTable({
                   {d.label}
                 </option>
               ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#aaa', display: 'block', marginBottom: '0.25rem' }}>
-              Status
-            </label>
-            <select
-              aria-label="Status"
-              style={{
-                background: 'rgba(0, 0, 0, 0.4)',
-                border: '1px solid var(--border-color, #444)',
-                borderRadius: '6px',
-                color: '#fff',
-                padding: '0.45rem 0.75rem',
-                fontSize: '0.85rem',
-              }}
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-            >
-              <option value="pending">Pending Approval</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="">All Timesheets</option>
             </select>
           </div>
         </div>
