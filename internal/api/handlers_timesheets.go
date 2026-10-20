@@ -1381,23 +1381,32 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	existingRows, err := tx.QueryContext(r.Context(), `SELECT id FROM time_entries WHERE weekly_timesheet_id = $1`, timesheetID)
+	existingRows, err := tx.QueryContext(r.Context(), `SELECT id, rework_item_id FROM time_entries WHERE weekly_timesheet_id = $1`, timesheetID)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to query existing entries", err)
 		return
 	}
 	defer existingRows.Close()
 	existingIDs := make(map[uuid.UUID]bool)
+	affectedReworkIDs := make(map[uuid.UUID]bool)
 	for existingRows.Next() {
 		var eid uuid.UUID
-		if err := existingRows.Scan(&eid); err == nil {
+		var rwID uuid.NullUUID
+		if err := existingRows.Scan(&eid, &rwID); err == nil {
 			existingIDs[eid] = true
+			if rwID.Valid {
+				affectedReworkIDs[rwID.UUID] = true
+			}
 		}
 	}
 
 	keptIDs := make(map[uuid.UUID]bool)
 
 	for _, item := range req.Entries {
+		if item.ReworkItemID != nil {
+			affectedReworkIDs[*item.ReworkItemID] = true
+		}
+
 		entryType := item.EntryType
 		if entryType == "" {
 			entryType = models.TimeEntryTypeProduction
@@ -1459,9 +1468,10 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 			_, err = tx.ExecContext(r.Context(), `
 				UPDATE time_entries
 				SET machine_id = $1, entry_type = $2, project_task_id = $3, task_id = $4,
-				    work_date = $5::date, hours_spent = $6, work_description = $7, updated_at = NOW()
-				WHERE id = $8 AND weekly_timesheet_id = $9
-			`, machineID, entryType, item.ProjectTaskID, authorTaskID, item.WorkDate, item.HoursSpent, item.WorkDescription, *item.ID, timesheetID)
+				    rework_item_id = $5, defect_id = $6,
+				    work_date = $7::date, hours_spent = $8, work_description = $9, updated_at = NOW()
+				WHERE id = $10 AND weekly_timesheet_id = $11
+			`, machineID, entryType, item.ProjectTaskID, authorTaskID, item.ReworkItemID, item.DefectID, item.WorkDate, item.HoursSpent, item.WorkDescription, *item.ID, timesheetID)
 			if err != nil {
 				respondError(w, http.StatusInternalServerError, "Failed to update entry", err)
 				return
@@ -1472,10 +1482,11 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 			err = tx.QueryRowContext(r.Context(), `
 				INSERT INTO time_entries (
 					user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, task_id,
+					rework_item_id, defect_id,
 					work_date, hours_spent, work_description, created_at, updated_at
-				) VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8, $9, NOW(), NOW())
+				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11, NOW(), NOW())
 				RETURNING id
-			`, ownerID, timesheetID, machineID, entryType, item.ProjectTaskID, authorTaskID, item.WorkDate, item.HoursSpent, item.WorkDescription).Scan(&newID)
+			`, ownerID, timesheetID, machineID, entryType, item.ProjectTaskID, authorTaskID, item.ReworkItemID, item.DefectID, item.WorkDate, item.HoursSpent, item.WorkDescription).Scan(&newID)
 			if err != nil {
 				respondError(w, http.StatusInternalServerError, "Failed to insert entry", err)
 				return
@@ -1490,6 +1501,20 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 				respondError(w, http.StatusInternalServerError, "Failed to delete removed entry", err)
 				return
 			}
+		}
+	}
+
+	// Synchronize actual_hours on all affected rework items
+	for rwID := range affectedReworkIDs {
+		_, err = tx.ExecContext(r.Context(), `
+			UPDATE rework_items
+			SET actual_hours = (SELECT COALESCE(SUM(hours_spent), 0.00) FROM time_entries WHERE rework_item_id = $1),
+			    updated_at = NOW()
+			WHERE id = $1
+		`, rwID)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, "Failed to update rework item actual hours", err)
+			return
 		}
 	}
 
@@ -1906,9 +1931,30 @@ func handleDeleteWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var affectedReworkIDs []uuid.UUID
+	rwRows, err := tx.QueryContext(r.Context(), `SELECT DISTINCT rework_item_id FROM time_entries WHERE weekly_timesheet_id = $1 AND rework_item_id IS NOT NULL`, timesheetID)
+	if err == nil {
+		for rwRows.Next() {
+			var rid uuid.UUID
+			if err := rwRows.Scan(&rid); err == nil {
+				affectedReworkIDs = append(affectedReworkIDs, rid)
+			}
+		}
+		rwRows.Close()
+	}
+
 	if _, err := tx.ExecContext(r.Context(), `DELETE FROM time_entries WHERE weekly_timesheet_id = $1`, timesheetID); err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to delete time entries", err)
 		return
+	}
+
+	for _, rid := range affectedReworkIDs {
+		_, _ = tx.ExecContext(r.Context(), `
+			UPDATE rework_items
+			SET actual_hours = (SELECT COALESCE(SUM(hours_spent), 0.00) FROM time_entries WHERE rework_item_id = $1),
+			    updated_at = NOW()
+			WHERE id = $1
+		`, rid)
 	}
 
 	if _, err := tx.ExecContext(r.Context(), `DELETE FROM weekly_timesheets WHERE id = $1`, timesheetID); err != nil {

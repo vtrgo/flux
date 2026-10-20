@@ -203,6 +203,8 @@ type WeeklyTimesheetSaveItem struct {
 	EntryType       TimeEntryType `json:"entry_type"`
 	ProjectTaskID   *uuid.UUID    `json:"project_task_id,omitempty"`
 	TaskID          *uuid.UUID    `json:"task_id,omitempty"`
+	ReworkItemID    *uuid.UUID    `json:"rework_item_id,omitempty"`
+	DefectID        *uuid.UUID    `json:"defect_id,omitempty"`
 	Department      string        `json:"department,omitempty"`
 	WorkDate        string        `json:"work_date"`
 	HoursSpent      float64       `json:"hours_spent"`

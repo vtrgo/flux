@@ -454,6 +454,8 @@ export interface WeeklyTimesheetSaveItem {
   entry_type: TimeEntryType;
   project_task_id?: string;
   task_id?: string;
+  rework_item_id?: string;
+  defect_id?: string;
   department?: string;
   work_date: string;
   hours_spent: number;

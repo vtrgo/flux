@@ -31,6 +31,8 @@ interface GridRow {
   order_number?: string;
   project_task_id?: string;
   task_id?: string;
+  rework_item_id?: string;
+  defect_id?: string;
   task_name: string;
   department?: string;
   entry_type: TimeEntryType;
@@ -137,7 +139,7 @@ export function WeeklyTimesheetGrid({
 
     entries.forEach(entry => {
       const machineKey = entry.machine_id || 'none';
-      const taskKey = entry.task_id || entry.project_task_id || entry.task_name || 'general';
+      const taskKey = entry.rework_item_id || entry.defect_id || entry.task_id || entry.project_task_id || entry.task_name || 'general';
       const typeKey = entry.entry_type || 'production';
       const rowKey = `${machineKey}:${taskKey}:${typeKey}`;
 
@@ -148,7 +150,9 @@ export function WeeklyTimesheetGrid({
           order_number: entry.order_number || (entry.machine_id ? machines.find(m => m.id === entry.machine_id)?.order_number : undefined),
           project_task_id: entry.project_task_id,
           task_id: entry.task_id,
-          task_name: entry.task_name || 'General Task',
+          rework_item_id: entry.rework_item_id,
+          defect_id: entry.defect_id,
+          task_name: entry.task_name || (entry.rework_part_number ? `Rework: ${entry.rework_part_number}` : 'General Task'),
           department: entry.department,
           entry_type: entry.entry_type || 'production',
           days: {},
@@ -378,6 +382,8 @@ export function WeeklyTimesheetGrid({
             entry_type: row.entry_type,
             project_task_id: row.project_task_id || undefined,
             task_id: row.task_id || undefined,
+            rework_item_id: row.rework_item_id || undefined,
+            defect_id: row.defect_id || undefined,
             department: row.department,
             work_date: dateStr,
             hours_spent: hours,

@@ -1068,6 +1068,116 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 		}
 	})
 
+	t.Run("Save_Weekly_Timesheet_Persists_Rework_And_Defect_And_Syncs_Rework_Actual_Hours", func(t *testing.T) {
+		// Create a test rework item
+		var testRwID uuid.UUID
+		err := db.DB.QueryRow(`
+			INSERT INTO rework_items (
+				sales_order_id, machine_id, project_number, part_number, description,
+				revision, material, status, estimated_hours, actual_hours, reason_for_rework
+			) VALUES ($1, $2, 'PRJ-WT-RW', 'RW-TEST-01', 'Test Bracket Rework', 'A', 'Aluminum', 'in_machining', 8.0, 0.0, 'Drawing ambiguity')
+			RETURNING id
+		`, soID, machineID).Scan(&testRwID)
+		if err != nil {
+			t.Fatalf("failed to insert test rework item: %v", err)
+		}
+		defer func() {
+			_, _ = db.DB.Exec("DELETE FROM rework_items WHERE id = $1", testRwID)
+		}()
+
+		// Create a test defect
+		var testDefectID uuid.UUID
+		err = db.DB.QueryRow(`
+			INSERT INTO defects (machine_id, source_department, assigned_department, description, severity, status)
+			VALUES ($1, 'quality', 'assembly', 'Misaligned clamp', 'moderate', 'open')
+			RETURNING id
+		`, machineID).Scan(&testDefectID)
+		if err != nil {
+			t.Fatalf("failed to insert test defect: %v", err)
+		}
+		defer func() {
+			_, _ = db.DB.Exec("DELETE FROM defects WHERE id = $1", testDefectID)
+		}()
+
+		// Create a separate weekly timesheet for week 2026-10-26
+		weekStart := "2026-10-25"
+		initReq := httptest.NewRequest(http.MethodGet, "/api/timesheets/weekly?week_start="+weekStart, nil)
+		initReq.AddCookie(workerCookie)
+		initRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(initRR, initReq)
+		if initRR.Code != http.StatusOK {
+			t.Fatalf("failed to initialize weekly timesheet: %d: %s", initRR.Code, initRR.Body.String())
+		}
+		var rwTS models.WeeklyTimesheet
+		if err := json.NewDecoder(initRR.Body).Decode(&rwTS); err != nil {
+			t.Fatalf("failed to decode timesheet: %v", err)
+		}
+		defer func() {
+			_, _ = db.DB.Exec("DELETE FROM time_entries WHERE weekly_timesheet_id = $1", rwTS.ID)
+			_, _ = db.DB.Exec("DELETE FROM weekly_timesheets WHERE id = $1", rwTS.ID)
+		}()
+
+		// Save timesheet with rework entry and defect entry
+		saveReq := models.WeeklyTimesheetSaveRequest{
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					MachineID:       &machineID,
+					EntryType:       models.TimeEntryTypeRework,
+					ReworkItemID:    &testRwID,
+					DefectID:        &testDefectID,
+					WorkDate:        "2026-10-26",
+					HoursSpent:      3.5,
+					WorkDescription: "CNC Milling Rework Part",
+				},
+				{
+					MachineID:       &machineID,
+					EntryType:       models.TimeEntryTypeRework,
+					ReworkItemID:    &testRwID,
+					WorkDate:        "2026-10-27",
+					HoursSpent:      2.0,
+					WorkDescription: "Deburring and finish",
+				},
+			},
+		}
+		saveBody, _ := json.Marshal(saveReq)
+		saveHTTPReq := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", rwTS.ID), bytes.NewReader(saveBody))
+		saveHTTPReq.AddCookie(workerCookie)
+		saveRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(saveRR, saveHTTPReq)
+		if saveRR.Code != http.StatusOK {
+			t.Fatalf("failed to save timesheet with rework: %d: %s", saveRR.Code, saveRR.Body.String())
+		}
+
+		// Verify rework_item_id and defect_id were persisted in time_entries
+		var countReworkEntries int
+		err = db.DB.QueryRow(`
+			SELECT COUNT(*) FROM time_entries 
+			WHERE weekly_timesheet_id = $1 AND rework_item_id = $2
+		`, rwTS.ID, testRwID).Scan(&countReworkEntries)
+		if err != nil || countReworkEntries != 2 {
+			t.Errorf("expected 2 time entries with rework_item_id, got %d (err: %v)", countReworkEntries, err)
+		}
+
+		var countDefectEntries int
+		err = db.DB.QueryRow(`
+			SELECT COUNT(*) FROM time_entries 
+			WHERE weekly_timesheet_id = $1 AND defect_id = $2
+		`, rwTS.ID, testDefectID).Scan(&countDefectEntries)
+		if err != nil || countDefectEntries != 1 {
+			t.Errorf("expected 1 time entry with defect_id, got %d (err: %v)", countDefectEntries, err)
+		}
+
+		// Verify rework_items.actual_hours was synced to 3.5 + 2.0 = 5.5
+		var actualHours float64
+		err = db.DB.QueryRow(`SELECT actual_hours FROM rework_items WHERE id = $1`, testRwID).Scan(&actualHours)
+		if err != nil {
+			t.Fatalf("failed to query rework item actual_hours: %v", err)
+		}
+		if actualHours != 5.5 {
+			t.Errorf("expected rework_items.actual_hours to be 5.5, got %f", actualHours)
+		}
+	})
+
 	t.Run("Admin_Only_Can_Delete_Weekly_Timesheet", func(t *testing.T) {
 		leadCookie := createTestRoleCookie(t, "lead")
 		adminCookie := createTestRoleCookie(t, "admin")
