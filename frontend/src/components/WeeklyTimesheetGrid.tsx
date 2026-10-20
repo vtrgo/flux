@@ -99,11 +99,7 @@ export function WeeklyTimesheetGrid({
     loading,
     fetchWeeklyTimesheet,
     saveWeeklyTimesheet,
-    deleteWeeklyTimesheet,
   } = useTimesheetData();
-
-  const userRole = (authUser?.role || '').toLowerCase();
-  const isLeadOrManager = userRole === 'admin' || userRole === 'manager' || userRole === 'lead';
 
   const [rows, setRows] = useState<GridRow[]>([createBlankRow()]);
   const [pendingFocusRowKey, setPendingFocusRowKey] = useState<string | null>(null);
@@ -411,29 +407,6 @@ export function WeeklyTimesheetGrid({
     }
   };
 
-  // Delete Timesheet (Lead/Manager/Admin only)
-  const handleDeleteTimesheet = async () => {
-    if (!weeklyTimesheet || !isLeadOrManager) return;
-    if (
-      !window.confirm(
-        `Are you sure you want to delete this weekly timesheet (${formatWeekRange(currentWeekSunday)})? All time entries for this week will be permanently removed.`
-      )
-    ) {
-      return;
-    }
-    try {
-      setSaving(true);
-      await deleteWeeklyTimesheet(weeklyTimesheet.id);
-      toast.success('Timesheet deleted');
-      await fetchWeeklyTimesheet(currentWeekSunday, targetUserId);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to delete timesheet';
-      toast.error(msg);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   // Daily totals calculation
   const dayTotals = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -516,19 +489,6 @@ export function WeeklyTimesheetGrid({
                 : isDirty
                 ? 'Save Changes *'
                 : 'Save Timesheet'}
-            </button>
-          )}
-
-          {weeklyTimesheet && isLeadOrManager && (
-            <button
-              className={styles.btnSecondary}
-              style={{ color: '#ff5252', borderColor: 'rgba(255, 68, 68, 0.4)' }}
-              onClick={handleDeleteTimesheet}
-              disabled={saving}
-              type="button"
-              title="Delete timesheet and associated entries"
-            >
-              🗑️ Delete
             </button>
           )}
         </div>

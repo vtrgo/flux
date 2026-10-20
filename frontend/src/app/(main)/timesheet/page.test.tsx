@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import React from 'react';
 import TimesheetPage from './page';
 import { fetchApi } from '../../../lib/api';
@@ -536,7 +536,37 @@ describe('TimesheetPage', () => {
     // Review modal should open with the worker's name and read-only view
     expect(screen.getByText(/Reviewing Timesheet:/i)).toBeInTheDocument();
     expect(screen.getByText('Close ✕')).toBeInTheDocument();
-    expect(screen.getAllByText(/Delete/i).length).toBeGreaterThanOrEqual(1);
+
+    // Verify review modal header has Approve and Reject, but NOT Delete
+    const closeBtn = screen.getByText('Close ✕');
+    const modalActionGroup = closeBtn.parentElement;
+    expect(modalActionGroup).not.toBeNull();
+    expect(within(modalActionGroup!).queryByText(/Delete/i)).not.toBeInTheDocument();
+  });
+
+  it('shows delete button only for admins in the approvals view and hides it for managers', async () => {
+    (useAuth as any).mockReturnValue({
+      user: { id: 'u-mgr', username: 'leaduser', role: 'manager' },
+      isAdmin: false,
+      hasRole: vi.fn().mockImplementation((roles: string[]) => roles.includes('manager')),
+    });
+
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const approvalsTabBtn = screen.getByText('✅ Approvals');
+    await act(async () => {
+      fireEvent.click(approvalsTabBtn);
+    });
+
+    // Manager can approve, reject, review
+    expect(screen.getByText('Approve')).toBeInTheDocument();
+    expect(screen.getByText('Reject')).toBeInTheDocument();
+    expect(screen.getByText('Review')).toBeInTheDocument();
+
+    // But manager CANNOT delete
+    expect(screen.queryByText(/Delete/i)).not.toBeInTheDocument();
   });
 
   it('displays clean Timesheet Approved banner without lengthy payroll text when approved', async () => {

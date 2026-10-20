@@ -5,12 +5,14 @@ import { toast } from 'sonner';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { WeeklyTimesheet, Machine, DepartmentTask } from '../types';
 import { formatWeekRange, formatHours } from '../lib/dateUtils';
+import { useAuth } from '../contexts/AuthContext';
 import { WeeklyTimesheetGrid } from './WeeklyTimesheetGrid';
 import styles from './WeeklyTimesheetGrid.module.css';
 
 interface TimesheetApprovalsTableProps {
   userDepartment?: string;
   isManagerOrAdmin: boolean;
+  isAdmin?: boolean;
   machines: Machine[];
   departmentTasks: DepartmentTask[];
 }
@@ -29,9 +31,13 @@ const DEPARTMENTS = [
 export function TimesheetApprovalsTable({
   userDepartment,
   isManagerOrAdmin,
+  isAdmin: propsIsAdmin,
   machines,
   departmentTasks,
 }: TimesheetApprovalsTableProps) {
+  const { isAdmin: authIsAdmin } = useAuth();
+  const isAdminUser = Boolean(propsIsAdmin ?? authIsAdmin);
+
   const {
     approvals,
     fetchApprovals,
@@ -394,24 +400,26 @@ export function TimesheetApprovalsTable({
                         >
                           Review
                         </button>
-                        <button
-                          style={{
-                            background: 'rgba(255, 68, 68, 0.1)',
-                            color: '#ff5252',
-                            border: '1px solid rgba(255, 68, 68, 0.3)',
-                            borderRadius: '4px',
-                            padding: '0.3rem 0.6rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => handleDeleteTimesheet(ts)}
-                          disabled={processingAction}
-                          type="button"
-                          title="Delete timesheet and associated entries"
-                        >
-                          🗑️ Delete
-                        </button>
+                        {isAdminUser && (
+                          <button
+                            style={{
+                              background: 'rgba(255, 68, 68, 0.1)',
+                              color: '#ff5252',
+                              border: '1px solid rgba(255, 68, 68, 0.3)',
+                              borderRadius: '4px',
+                              padding: '0.3rem 0.6rem',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => handleDeleteTimesheet(ts)}
+                            disabled={processingAction}
+                            type="button"
+                            title="Delete timesheet and associated entries (Admin only)"
+                          >
+                            🗑️ Delete
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -587,43 +595,6 @@ export function TimesheetApprovalsTable({
                     </button>
                   </>
                 )}
-                <button
-                  style={{
-                    background: 'rgba(255, 68, 68, 0.1)',
-                    color: '#ff5252',
-                    border: '1px solid rgba(255, 68, 68, 0.3)',
-                    borderRadius: '4px',
-                    padding: '0.4rem 0.8rem',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                  onClick={async () => {
-                    if (
-                      !window.confirm(
-                        `Are you sure you want to delete the timesheet for ${inspectingTimesheet.user_name || 'worker'} (${formatWeekRange(inspectingTimesheet.week_start_date)})? This will permanently remove all associated time entries.`
-                      )
-                    ) {
-                      return;
-                    }
-                    try {
-                      setProcessingAction(true);
-                      await deleteWeeklyTimesheet(inspectingTimesheet.id);
-                      toast.success('Timesheet deleted');
-                      setInspectingTimesheet(null);
-                      await loadData();
-                    } catch (err: unknown) {
-                      const msg = err instanceof Error ? err.message : 'Failed to delete timesheet';
-                      toast.error(msg);
-                    } finally {
-                      setProcessingAction(false);
-                    }
-                  }}
-                  disabled={processingAction}
-                  type="button"
-                >
-                  🗑️ Delete
-                </button>
                 <button
                   className={styles.btnSecondary}
                   onClick={() => setInspectingTimesheet(null)}

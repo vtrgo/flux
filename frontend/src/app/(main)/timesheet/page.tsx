@@ -1215,6 +1215,7 @@ export default function TimesheetPage() {
         <TimesheetApprovalsTable
           userDepartment={user?.department}
           isManagerOrAdmin={isAdmin || hasRole(["manager"])}
+          isAdmin={isAdmin}
           machines={machines}
           departmentTasks={departmentTasks}
         />

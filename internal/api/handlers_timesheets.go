@@ -1858,7 +1858,7 @@ func handleRejectWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, wt)
 }
 
-// handleDeleteWeeklyTimesheet allows leads, managers, and admins to delete a weekly timesheet.
+// handleDeleteWeeklyTimesheet allows administrators to delete a weekly timesheet.
 func handleDeleteWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 	idStr := r.PathValue("id")
 	timesheetID, err := uuid.Parse(idStr)
@@ -1874,15 +1874,15 @@ func handleDeleteWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := r.Context().Value(UserContextKey).(*models.User)
-	isAuthorized := false
+	isAdmin := false
 	if user != nil && user.Role != nil {
 		role := strings.ToLower(*user.Role)
-		if role == "lead" || role == "manager" || role == "admin" {
-			isAuthorized = true
+		if role == "admin" {
+			isAdmin = true
 		}
 	}
-	if !isAuthorized {
-		respondError(w, http.StatusForbidden, "Forbidden: Only team leads and managers can delete timesheets", nil)
+	if !isAdmin {
+		respondError(w, http.StatusForbidden, "Forbidden: Only administrators can delete timesheets", nil)
 		return
 	}
 
