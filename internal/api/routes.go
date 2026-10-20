@@ -114,6 +114,8 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/machines/{id}/labor-summary", handleGetMachineLaborSummary)
 	mux.HandleFunc("GET /api/machines/{id}/labor-correlation", handleGetMachineLaborCorrelation)
 	mux.HandleFunc("GET /api/timesheets/quoting-review", handleGetQuotingReviewReport)
+	mux.HandleFunc("GET /api/analytics/conc", handleGetCostOfNonConformanceSummary)
+	mux.HandleFunc("GET /api/machines/{id}/conc", handleGetMachineCostOfNonConformance)
 
 	// Weekly Timesheet Endpoints
 	mux.HandleFunc("GET /api/timesheets/weekly", handleGetWeeklyTimesheet)

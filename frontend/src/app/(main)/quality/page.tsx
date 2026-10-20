@@ -12,6 +12,7 @@ import { NCRModal } from "../../../components/NCRModal";
 import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
+import { CoNCWidget } from "../../../components/CoNCWidget";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 import { formatDepartmentName } from "../../../lib/departments";
 
@@ -25,6 +26,8 @@ export default function QualityResolutionHub() {
 
   const [isNCRModalOpen, setIsNCRModalOpen] = useState(false);
   const [editingNCR, setEditingNCR] = useState<NCR | null>(null);
+
+  const [showCoNC, setShowCoNC] = useState(true);
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -152,6 +155,15 @@ export default function QualityResolutionHub() {
       <header className={`${styles.header} no-print`}>
         <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>Quality / PM Hub</h1>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="vtr-btn vtr-btn-secondary"
+            onClick={() => setShowCoNC(prev => !prev)}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            title="Toggle Cost of Non-Conformance metrics"
+          >
+            📊 {showCoNC ? 'Hide CoNC Metrics' : 'CoNC Metrics'}
+          </button>
           <Link href="/ncrs" className="vtr-btn vtr-btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
             📋 NCR Tracker
           </Link>
@@ -165,6 +177,8 @@ export default function QualityResolutionHub() {
           </button>
         </div>
       </header>
+
+      {showCoNC && <CoNCWidget />}
 
       <div className={`${styles.filters} no-print`}>
         <input 
