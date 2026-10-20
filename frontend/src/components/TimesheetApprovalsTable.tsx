@@ -338,7 +338,7 @@ export function TimesheetApprovalsTable({
                           onClick={() => setInspectingTimesheet(ts)}
                           type="button"
                         >
-                          Inspect Grid
+                          Review
                         </button>
                       </div>
                     </td>
@@ -459,17 +459,68 @@ export function TimesheetApprovalsTable({
               gap: '1rem',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, color: '#fff', fontSize: '1.25rem' }}>
-                Reviewing Timesheet: {inspectingTimesheet.user_name} ({formatWeekRange(inspectingTimesheet.week_start_date)})
-              </h2>
-              <button
-                className={styles.btnSecondary}
-                onClick={() => setInspectingTimesheet(null)}
-                type="button"
-              >
-                Close ✕
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h2 style={{ margin: 0, color: '#fff', fontSize: '1.25rem' }}>
+                  Reviewing Timesheet: {inspectingTimesheet.user_name} ({formatWeekRange(inspectingTimesheet.week_start_date)})
+                </h2>
+                <div style={{ fontSize: '0.85rem', color: '#aaa', marginTop: '0.25rem' }}>
+                  Status: <strong style={{ color: inspectingTimesheet.status === 'submitted' ? '#00e5ff' : '#aaa', textTransform: 'uppercase' }}>{inspectingTimesheet.status}</strong> | Total Hours: <strong>{inspectingTimesheet.total_hours.toFixed(1)} hrs</strong>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                {inspectingTimesheet.status === 'submitted' && (
+                  <>
+                    <button
+                      style={{
+                        background: '#00c853',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                      onClick={async () => {
+                        await handleApprove(inspectingTimesheet);
+                        setInspectingTimesheet(null);
+                      }}
+                      disabled={processingAction}
+                      type="button"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      style={{
+                        background: 'rgba(255, 68, 68, 0.2)',
+                        color: '#ff5252',
+                        border: '1px solid rgba(255, 68, 68, 0.4)',
+                        borderRadius: '4px',
+                        padding: '0.4rem 0.8rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => {
+                        setRejectingTimesheet(inspectingTimesheet);
+                        setRejectionReason('');
+                      }}
+                      disabled={processingAction}
+                      type="button"
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
+                <button
+                  className={styles.btnSecondary}
+                  onClick={() => setInspectingTimesheet(null)}
+                  type="button"
+                >
+                  Close ✕
+                </button>
+              </div>
             </div>
 
             <WeeklyTimesheetGrid
@@ -478,6 +529,7 @@ export function TimesheetApprovalsTable({
               initialWeekStart={inspectingTimesheet.week_start_date}
               readOnlyUserView={true}
               userDepartment={inspectingTimesheet.department}
+              targetUserId={inspectingTimesheet.user_id}
             />
           </div>
         </div>

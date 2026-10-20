@@ -21,6 +21,7 @@ interface WeeklyTimesheetGridProps {
   initialWeekStart?: string;
   readOnlyUserView?: boolean;
   userDepartment?: string;
+  targetUserId?: string;
 }
 
 interface GridRow {
@@ -78,6 +79,7 @@ export function WeeklyTimesheetGrid({
   initialWeekStart,
   readOnlyUserView = false,
   userDepartment,
+  targetUserId,
 }: WeeklyTimesheetGridProps) {
   const { user: authUser } = useAuth();
   const effectiveDepartment = useMemo(() => {
@@ -114,10 +116,10 @@ export function WeeklyTimesheetGrid({
   const weekDays = useMemo(() => getWeekDays(currentWeekSunday), [currentWeekSunday]);
   const isCurrentWeek = useMemo(() => getSundayOfWeek() === currentWeekSunday, [currentWeekSunday]);
 
-  // Load weekly timesheet whenever the selected week changes
+  // Load weekly timesheet whenever the selected week or target user changes
   useEffect(() => {
-    fetchWeeklyTimesheet(currentWeekSunday);
-  }, [currentWeekSunday, fetchWeeklyTimesheet]);
+    fetchWeeklyTimesheet(currentWeekSunday, targetUserId);
+  }, [currentWeekSunday, targetUserId, fetchWeeklyTimesheet]);
 
   // Sync state when weeklyTimesheet loads
   useEffect(() => {

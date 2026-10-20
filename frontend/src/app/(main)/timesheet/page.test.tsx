@@ -468,7 +468,17 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('🔄 Refresh List')).toBeInTheDocument();
     expect(screen.getByText('Approve')).toBeInTheDocument();
     expect(screen.getByText('Reject')).toBeInTheDocument();
-    expect(screen.getByText('Inspect Grid')).toBeInTheDocument();
+    expect(screen.getByText('Review')).toBeInTheDocument();
+
+    // Click Review button to open modal for that worker
+    const reviewBtn = screen.getByText('Review');
+    await act(async () => {
+      fireEvent.click(reviewBtn);
+    });
+
+    // Review modal should open with the worker's name and read-only view
+    expect(screen.getByText(/Reviewing Timesheet:/i)).toBeInTheDocument();
+    expect(screen.getByText('Close ✕')).toBeInTheDocument();
   });
 
   it('allows user to edit submitted timesheet until approved', async () => {
