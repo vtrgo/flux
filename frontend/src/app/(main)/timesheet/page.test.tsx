@@ -448,9 +448,8 @@ describe('TimesheetPage', () => {
     });
 
     // Weekly grid controls
-    expect(screen.getByText('Submit Timesheet')).toBeInTheDocument();
-    expect(screen.getByText('Save Draft')).toBeInTheDocument();
-    expect(screen.getAllByText(/DRAFT/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('Save Timesheet')).toBeInTheDocument();
+    expect(screen.getAllByText(/SAVED/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Total Logged This Week:')).toBeInTheDocument();
   });
 
@@ -464,7 +463,7 @@ describe('TimesheetPage', () => {
       fireEvent.click(approvalsTabBtn);
     });
 
-    expect(screen.getByText('Submitted (Needs Review)')).toBeInTheDocument();
+    expect(screen.getByText('Pending Approval')).toBeInTheDocument();
     expect(screen.getByText('🔄 Refresh List')).toBeInTheDocument();
     expect(screen.getByText('Approve')).toBeInTheDocument();
     expect(screen.getByText('Reject')).toBeInTheDocument();
@@ -481,13 +480,13 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('Close ✕')).toBeInTheDocument();
   });
 
-  it('allows user to edit submitted timesheet until approved', async () => {
+  it('allows user to edit saved timesheet until approved', async () => {
     (fetchApi as any).mockImplementation((endpoint: string, options?: any) => {
       if (endpoint.startsWith('timesheets/weekly')) {
         return Promise.resolve({
           ...mockWeeklyTimesheet,
-          status: 'submitted',
-          submitted_at: '2026-10-19T10:00:00Z',
+          status: 'draft',
+          total_hours: 4.5,
         });
       }
       if (endpoint === 'machines') return Promise.resolve(mockMachines);
@@ -500,16 +499,12 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    // Check banner mentions submitted but editable
-    expect(screen.getByText(/Timesheet Submitted:/i)).toBeInTheDocument();
-    expect(screen.getByText(/You can still make and save changes/i)).toBeInTheDocument();
-
     // Inputs should NOT be disabled
     const mondayInput = screen.getByLabelText(/Mechanical Assembly on Monday/i);
     expect(mondayInput).not.toBeDisabled();
 
     // Save button should be available
-    expect(screen.getByText('Saved')).toBeInTheDocument();
+    expect(screen.getByText('Save Timesheet')).toBeInTheDocument();
   });
 
   it('filters task options in the entry grid to user department', async () => {

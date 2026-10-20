@@ -907,8 +907,111 @@ func TestWeeklyTimesheetLifecycle(t *testing.T) {
 		}
 	})
 
+	t.Run("Direct_Save_Allows_Manager_Approval_Without_Submission", func(t *testing.T) {
+		week2 := "2026-10-25"
+		// 1. Worker initializes draft
+		initReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/timesheets/weekly?week_start=%s", week2), nil)
+		initReq.AddCookie(workerCookie)
+		initRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(initRR, initReq)
+		if initRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 initializing draft, got %d", initRR.Code)
+		}
+		var wt2 models.WeeklyTimesheet
+		_ = json.NewDecoder(initRR.Body).Decode(&wt2)
+
+		// 2. Worker saves hours without submitting (status remains draft)
+		saveDirectReq := models.WeeklyTimesheetSaveRequest{
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					MachineID:       &machineID,
+					ProjectTaskID:   &taskID,
+					WorkDate:        "2026-10-26",
+					HoursSpent:      6.0,
+					WorkDescription: "Direct saved assembly task",
+				},
+			},
+		}
+		sBody, _ := json.Marshal(saveDirectReq)
+		saveReq := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", wt2.ID), bytes.NewReader(sBody))
+		saveReq.AddCookie(workerCookie)
+		saveRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(saveRR, saveReq)
+		if saveRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on direct save, got %d: %s", saveRR.Code, saveRR.Body.String())
+		}
+
+		// 3. Manager lists pending approvals (?status=pending)
+		pendingReq := httptest.NewRequest(http.MethodGet, "/api/timesheets/approvals?status=pending", nil)
+		pendingReq.AddCookie(managerCookie)
+		pendingRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(pendingRR, pendingReq)
+		if pendingRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on pending approvals list, got %d", pendingRR.Code)
+		}
+		var pendingList []models.WeeklyTimesheet
+		_ = json.NewDecoder(pendingRR.Body).Decode(&pendingList)
+		foundPending := false
+		for _, item := range pendingList {
+			if item.ID == wt2.ID {
+				foundPending = true
+				break
+			}
+		}
+		if !foundPending {
+			t.Fatalf("expected saved draft timesheet %s to appear in status=pending approvals queue", wt2.ID)
+		}
+
+		// 4. Manager directly approves saved draft timesheet without worker submitting
+		directApproveReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/approve", wt2.ID), nil)
+		directApproveReq.AddCookie(managerCookie)
+		directApproveRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(directApproveRR, directApproveReq)
+		if directApproveRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 approving saved draft timesheet, got %d: %s", directApproveRR.Code, directApproveRR.Body.String())
+		}
+		var approvedDirectWT models.WeeklyTimesheet
+		_ = json.NewDecoder(directApproveRR.Body).Decode(&approvedDirectWT)
+		if approvedDirectWT.Status != models.WeeklyTimesheetStatusApproved {
+			t.Errorf("expected approved status, got %s", approvedDirectWT.Status)
+		}
+
+		// Cleanup
+		_, _ = db.DB.Exec("DELETE FROM time_entries WHERE weekly_timesheet_id = $1", wt2.ID)
+		_, _ = db.DB.Exec("DELETE FROM weekly_timesheets WHERE id = $1", wt2.ID)
+	})
+
 	t.Run("Worker_Resubmits_And_Manager_Approves", func(t *testing.T) {
-		// Worker can edit rejected timesheet and re-submit
+		// Worker edits rejected timesheet and saves -> resets status to draft, clears rejection reason
+		editReq := models.WeeklyTimesheetSaveRequest{
+			Entries: []models.WeeklyTimesheetSaveItem{
+				{
+					MachineID:       &machineID,
+					ProjectTaskID:   &taskID,
+					WorkDate:        "2026-10-19",
+					HoursSpent:      5.5,
+					WorkDescription: "Revised assembly work",
+				},
+			},
+		}
+		eBody, _ := json.Marshal(editReq)
+		saveEditReq := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/timesheets/weekly/%s/save", timesheetID), bytes.NewReader(eBody))
+		saveEditReq.AddCookie(workerCookie)
+		saveEditRR := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(saveEditRR, saveEditReq)
+		if saveEditRR.Code != http.StatusOK {
+			t.Fatalf("expected 200 on saving rejected timesheet, got %d", saveEditRR.Code)
+		}
+		var revisedWT models.WeeklyTimesheet
+		_ = json.NewDecoder(saveEditRR.Body).Decode(&revisedWT)
+		if revisedWT.Status != models.WeeklyTimesheetStatusDraft {
+			t.Errorf("expected status reset to draft, got %s", revisedWT.Status)
+		}
+		if revisedWT.RejectionReason != "" {
+			t.Errorf("expected rejection reason cleared, got %s", revisedWT.RejectionReason)
+		}
+
+		// Worker can re-submit if desired, or manager can approve directly
 		resubmitReq := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/timesheets/weekly/%s/submit", timesheetID), nil)
 		resubmitReq.AddCookie(workerCookie)
 		resubmitRR := httptest.NewRecorder()

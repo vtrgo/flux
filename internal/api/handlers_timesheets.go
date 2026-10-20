@@ -1496,6 +1496,8 @@ func handleSaveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 	_, err = tx.ExecContext(r.Context(), `
 		UPDATE weekly_timesheets
 		SET total_hours = (SELECT COALESCE(SUM(hours_spent), 0.00) FROM time_entries WHERE weekly_timesheet_id = $1),
+		    status = CASE WHEN status = 'rejected' THEN 'draft' ELSE status END,
+		    rejection_reason = CASE WHEN status = 'rejected' THEN NULL ELSE rejection_reason END,
 		    updated_at = NOW()
 		WHERE id = $1
 	`, timesheetID)
@@ -1693,7 +1695,9 @@ func handleGetTimesheetApprovals(w http.ResponseWriter, r *http.Request) {
 		args = append(args, deptFilter)
 		argIdx++
 	}
-	if statusFilter != "" {
+	if statusFilter == "pending" {
+		query += " AND wt.status NOT IN ('approved', 'rejected') AND wt.total_hours > 0"
+	} else if statusFilter != "" {
 		query += fmt.Sprintf(" AND wt.status = $%d", argIdx)
 		args = append(args, statusFilter)
 		argIdx++
@@ -1758,7 +1762,8 @@ func handleApproveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 	authUserUUID, _ := uuid.Parse(authUserID)
 
 	var status string
-	err = db.DB.QueryRowContext(r.Context(), `SELECT status FROM weekly_timesheets WHERE id = $1`, timesheetID).Scan(&status)
+	var totalHours float64
+	err = db.DB.QueryRowContext(r.Context(), `SELECT status, total_hours FROM weekly_timesheets WHERE id = $1`, timesheetID).Scan(&status, &totalHours)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			respondError(w, http.StatusNotFound, "Weekly timesheet not found", nil)
@@ -1768,8 +1773,12 @@ func handleApproveWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if status != string(models.WeeklyTimesheetStatusSubmitted) {
-		respondError(w, http.StatusBadRequest, fmt.Sprintf("Cannot approve timesheet with status '%s'. Only 'submitted' timesheets can be approved.", status), nil)
+	if status == string(models.WeeklyTimesheetStatusApproved) {
+		respondError(w, http.StatusBadRequest, "Timesheet is already approved", nil)
+		return
+	}
+	if totalHours <= 0 {
+		respondError(w, http.StatusBadRequest, "Cannot approve timesheet with 0 hours logged", nil)
 		return
 	}
 
@@ -1813,7 +1822,8 @@ func handleRejectWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var status string
-	err = db.DB.QueryRowContext(r.Context(), `SELECT status FROM weekly_timesheets WHERE id = $1`, timesheetID).Scan(&status)
+	var totalHours float64
+	err = db.DB.QueryRowContext(r.Context(), `SELECT status, total_hours FROM weekly_timesheets WHERE id = $1`, timesheetID).Scan(&status, &totalHours)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			respondError(w, http.StatusNotFound, "Weekly timesheet not found", nil)
@@ -1823,8 +1833,8 @@ func handleRejectWeeklyTimesheet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if status != string(models.WeeklyTimesheetStatusSubmitted) && status != string(models.WeeklyTimesheetStatusApproved) {
-		respondError(w, http.StatusBadRequest, fmt.Sprintf("Cannot reject timesheet with status '%s'. Only 'submitted' or 'approved' timesheets can be rejected.", status), nil)
+	if totalHours <= 0 {
+		respondError(w, http.StatusBadRequest, "Cannot reject timesheet with 0 hours logged", nil)
 		return
 	}
 

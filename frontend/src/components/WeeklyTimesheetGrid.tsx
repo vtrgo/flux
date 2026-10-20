@@ -99,8 +99,6 @@ export function WeeklyTimesheetGrid({
     loading,
     fetchWeeklyTimesheet,
     saveWeeklyTimesheet,
-    submitWeeklyTimesheet,
-    withdrawWeeklyTimesheet,
   } = useTimesheetData();
 
   const [rows, setRows] = useState<GridRow[]>([createBlankRow()]);
@@ -108,7 +106,6 @@ export function WeeklyTimesheetGrid({
   const [notes, setNotes] = useState<string>('');
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
-  const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Cache allocated tasks per machine to support inline selects on multiple rows
   const [machineTasksCache, setMachineTasksCache] = useState<Record<string, ProjectTask[]>>({});
@@ -390,8 +387,8 @@ export function WeeklyTimesheetGrid({
     return items;
   }, [rows]);
 
-  // Save Draft
-  const handleSaveDraft = async () => {
+  // Save Timesheet
+  const handleSaveTimesheet = async () => {
     if (!weeklyTimesheet || isLocked) return;
     try {
       setSaving(true);
@@ -401,66 +398,12 @@ export function WeeklyTimesheetGrid({
         entries: items,
       });
       setIsDirty(false);
-      toast.success(weeklyTimesheet.status === 'submitted' ? 'Timesheet changes saved' : 'Weekly timesheet draft saved successfully');
+      toast.success('Weekly timesheet saved successfully');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save timesheet';
       toast.error(msg);
     } finally {
       setSaving(false);
-    }
-  };
-
-  // Submit for Approval
-  const handleSubmit = async () => {
-    if (!weeklyTimesheet || isLocked) return;
-
-    const totalHours = rows.reduce(
-      (acc, r) => acc + Object.values(r.days).reduce((s, h) => s + (h || 0), 0),
-      0
-    );
-
-    if (totalHours <= 0) {
-      toast.error('Cannot submit an empty timesheet. Please log hours first.');
-      return;
-    }
-
-    if (!window.confirm(`Submit timesheet for week ${formatWeekRange(currentWeekSunday)} (${totalHours.toFixed(1)} hrs total) for lead review?`)) {
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const items = buildSavePayload();
-      await saveWeeklyTimesheet(weeklyTimesheet.id, {
-        notes,
-        entries: items,
-      });
-      await submitWeeklyTimesheet(weeklyTimesheet.id);
-      setIsDirty(false);
-      toast.success('Timesheet submitted for team lead approval');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to submit timesheet';
-      toast.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Withdraw timesheet back to draft
-  const handleWithdraw = async () => {
-    if (!weeklyTimesheet || weeklyTimesheet.status !== 'submitted') return;
-    if (!window.confirm('Withdraw this submitted timesheet back to draft to edit your hours?')) {
-      return;
-    }
-    try {
-      setSubmitting(true);
-      await withdrawWeeklyTimesheet(weeklyTimesheet.id);
-      toast.success('Timesheet withdrawn back to draft');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to withdraw timesheet';
-      toast.error(msg);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -517,69 +460,41 @@ export function WeeklyTimesheetGrid({
               className={`${styles.statusBadge} ${
                 weeklyTimesheet.status === 'approved'
                   ? styles.statusApproved
-                  : weeklyTimesheet.status === 'submitted'
-                  ? styles.statusSubmitted
                   : weeklyTimesheet.status === 'rejected'
                   ? styles.statusRejected
+                  : weeklyTimesheet.total_hours > 0
+                  ? styles.statusSubmitted
                   : styles.statusDraft
               }`}
             >
-              {weeklyTimesheet.status.toUpperCase()}
+              {weeklyTimesheet.status === 'approved'
+                ? 'APPROVED'
+                : weeklyTimesheet.status === 'rejected'
+                ? 'REJECTED'
+                : weeklyTimesheet.total_hours > 0
+                ? 'SAVED'
+                : 'DRAFT'}
             </span>
           )}
 
           {!readOnlyUserView && (
-            <>
-              <button
-                className={styles.btnPrimary}
-                onClick={handleSaveDraft}
-                disabled={isLocked || saving || !isDirty}
-                type="button"
-              >
-                {saving
-                  ? 'Saving...'
-                  : isDirty
-                  ? weeklyTimesheet?.status === 'submitted'
-                    ? 'Save Changes *'
-                    : 'Save Draft *'
-                  : weeklyTimesheet?.status === 'submitted'
-                  ? 'Saved'
-                  : 'Save Draft'}
-              </button>
-              {weeklyTimesheet?.status === 'submitted' ? (
-                <button
-                  className={styles.btnSecondary}
-                  onClick={handleWithdraw}
-                  disabled={submitting}
-                  type="button"
-                  title="Withdraw timesheet back to draft"
-                >
-                  ↩ Withdraw
-                </button>
-              ) : (
-                <button
-                  className={styles.btnSuccess}
-                  onClick={handleSubmit}
-                  disabled={isLocked || submitting || grandTotal <= 0}
-                  type="button"
-                  title="Submit timesheet to Lead for approval"
-                >
-                  {submitting ? 'Submitting...' : 'Submit Timesheet'}
-                </button>
-              )}
-            </>
+            <button
+              className={styles.btnPrimary}
+              onClick={handleSaveTimesheet}
+              disabled={isLocked || saving || !isDirty}
+              type="button"
+            >
+              {saving
+                ? 'Saving...'
+                : isDirty
+                ? 'Save Changes *'
+                : 'Save Timesheet'}
+            </button>
           )}
         </div>
       </div>
 
       {/* Lockout / Status Banners */}
-      {weeklyTimesheet?.status === 'submitted' && (
-        <div className={`${styles.banner} ${styles.bannerSubmitted}`}>
-          <span>
-            ⏳ <strong>Timesheet Submitted:</strong> This timesheet is currently submitted for review. You can still make and save changes until it is approved.
-          </span>
-        </div>
-      )}
       {weeklyTimesheet?.status === 'approved' && (
         <div className={`${styles.banner} ${styles.bannerApproved}`}>
           <span>

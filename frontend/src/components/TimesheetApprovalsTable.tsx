@@ -42,7 +42,7 @@ export function TimesheetApprovalsTable({
   const [deptFilter, setDeptFilter] = useState<string>(
     !isManagerOrAdmin && userDepartment ? userDepartment : ''
   );
-  const [statusFilter, setStatusFilter] = useState<string>('submitted');
+  const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [loading, setLoading] = useState(false);
 
   // Reject dialog state
@@ -167,11 +167,10 @@ export function TimesheetApprovalsTable({
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
             >
-              <option value="submitted">Submitted (Needs Review)</option>
+              <option value="pending">Pending Approval</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
-              <option value="draft">Drafts</option>
-              <option value="">All Statuses</option>
+              <option value="">All Timesheets</option>
             </select>
           </div>
         </div>
@@ -204,7 +203,7 @@ export function TimesheetApprovalsTable({
                 <th style={{ minWidth: '180px' }}>Work Week</th>
                 <th style={{ minWidth: '90px', textAlign: 'right' }}>Total Hours</th>
                 <th style={{ minWidth: '100px', textAlign: 'center' }}>Status</th>
-                <th style={{ minWidth: '140px' }}>Submitted</th>
+                <th style={{ minWidth: '140px' }}>Saved / Updated</th>
                 <th style={{ minWidth: '180px' }}>Notes / Approver</th>
                 <th style={{ minWidth: '180px', textAlign: 'center' }}>Actions</th>
               </tr>
@@ -245,21 +244,27 @@ export function TimesheetApprovalsTable({
                     <td style={{ textAlign: 'center' }}>
                       <span
                         className={`${styles.statusBadge} ${
-                          ts.status === 'submitted'
-                            ? styles.statusSubmitted
-                            : ts.status === 'approved'
+                          ts.status === 'approved'
                             ? styles.statusApproved
                             : ts.status === 'rejected'
                             ? styles.statusRejected
+                            : ts.total_hours > 0
+                            ? styles.statusSubmitted
                             : styles.statusDraft
                         }`}
                       >
-                        {ts.status}
+                        {ts.status === 'approved'
+                          ? 'APPROVED'
+                          : ts.status === 'rejected'
+                          ? 'REJECTED'
+                          : ts.total_hours > 0
+                          ? 'PENDING'
+                          : 'DRAFT'}
                       </span>
                     </td>
                     <td style={{ fontSize: '0.8rem', color: '#aaa' }}>
-                      {ts.submitted_at
-                        ? new Date(ts.submitted_at).toLocaleDateString(undefined, {
+                      {ts.updated_at || ts.submitted_at || ts.created_at
+                        ? new Date(ts.updated_at || ts.submitted_at || ts.created_at).toLocaleDateString(undefined, {
                             month: 'short',
                             day: 'numeric',
                             hour: '2-digit',
@@ -284,7 +289,7 @@ export function TimesheetApprovalsTable({
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
-                        {ts.status === 'submitted' && (
+                        {ts.status !== 'approved' && (
                           <>
                             <button
                               style={{
@@ -295,10 +300,12 @@ export function TimesheetApprovalsTable({
                                 padding: '0.3rem 0.6rem',
                                 fontSize: '0.75rem',
                                 fontWeight: 700,
-                                cursor: 'pointer',
+                                cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
+                                opacity: ts.total_hours > 0 ? 1 : 0.5,
                               }}
                               onClick={() => handleApprove(ts)}
-                              disabled={processingAction}
+                              disabled={processingAction || ts.total_hours <= 0}
+                              title={ts.total_hours > 0 ? 'Approve timesheet hours' : 'Cannot approve timesheet with 0 hours'}
                               type="button"
                             >
                               Approve
@@ -312,18 +319,43 @@ export function TimesheetApprovalsTable({
                                 padding: '0.3rem 0.6rem',
                                 fontSize: '0.75rem',
                                 fontWeight: 700,
-                                cursor: 'pointer',
+                                cursor: ts.total_hours > 0 ? 'pointer' : 'not-allowed',
+                                opacity: ts.total_hours > 0 ? 1 : 0.5,
                               }}
                               onClick={() => {
                                 setRejectingTimesheet(ts);
                                 setRejectionReason('');
                               }}
-                              disabled={processingAction}
+                              disabled={processingAction || ts.total_hours <= 0}
                               type="button"
+                              title="Reject and request revisions"
                             >
                               Reject
                             </button>
                           </>
+                        )}
+                        {ts.status === 'approved' && (
+                          <button
+                            style={{
+                              background: 'rgba(255, 68, 68, 0.2)',
+                              color: '#ff5252',
+                              border: '1px solid rgba(255, 68, 68, 0.4)',
+                              borderRadius: '4px',
+                              padding: '0.3rem 0.6rem',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => {
+                              setRejectingTimesheet(ts);
+                              setRejectionReason('');
+                            }}
+                            disabled={processingAction}
+                            type="button"
+                            title="Revoke approval and request revisions"
+                          >
+                            Revoke
+                          </button>
                         )}
                         <button
                           style={{
