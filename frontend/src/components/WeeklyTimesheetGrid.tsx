@@ -12,6 +12,8 @@ import {
   ProjectTask,
   TimeEntryType,
   WeeklyTimesheetSaveItem,
+  ReworkItem,
+  Defect,
 } from '../types';
 import styles from './WeeklyTimesheetGrid.module.css';
 
@@ -111,8 +113,10 @@ export function WeeklyTimesheetGrid({
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
 
-  // Cache allocated tasks per machine to support inline selects on multiple rows
+  // Cache allocated tasks, rework items, and defects per machine to support inline selects on multiple rows
   const [machineTasksCache, setMachineTasksCache] = useState<Record<string, ProjectTask[]>>({});
+  const [machineReworksCache, setMachineReworksCache] = useState<Record<string, ReworkItem[]>>({});
+  const [machineDefectsCache, setMachineDefectsCache] = useState<Record<string, Defect[]>>({});
 
   const weekDays = useMemo(() => getWeekDays(currentWeekSunday), [currentWeekSunday]);
   const isCurrentWeek = useMemo(() => getSundayOfWeek() === currentWeekSunday, [currentWeekSunday]);
@@ -177,7 +181,7 @@ export function WeeklyTimesheetGrid({
     setIsDirty(false);
   }, [weeklyTimesheet, machines]);
 
-  // Pre-load machine tasks for unique machine IDs present in rows
+  // Pre-load machine tasks, rework items, and defects for unique machine IDs present in rows
   const uniqueMachineIds = useMemo(() => {
     return Array.from(new Set(rows.map(r => r.machine_id).filter((id): id is string => Boolean(id && id !== 'none'))));
   }, [rows]);
@@ -193,8 +197,26 @@ export function WeeklyTimesheetGrid({
             console.error('Failed to load tasks for machine', machineId, err);
           });
       }
+      if (!machineReworksCache[machineId]) {
+        fetchApi<ReworkItem[]>('rework/items', { params: { machine_id: machineId } })
+          .then(items => {
+            setMachineReworksCache(prev => ({ ...prev, [machineId]: items || [] }));
+          })
+          .catch(err => {
+            console.error('Failed to load rework items for machine', machineId, err);
+          });
+      }
+      if (!machineDefectsCache[machineId]) {
+        fetchApi<Defect[]>(`machines/${machineId}/defects`)
+          .then(defects => {
+            setMachineDefectsCache(prev => ({ ...prev, [machineId]: defects || [] }));
+          })
+          .catch(err => {
+            console.error('Failed to load defects for machine', machineId, err);
+          });
+      }
     });
-  }, [uniqueMachineIds, machineTasksCache]);
+  }, [uniqueMachineIds, machineTasksCache, machineReworksCache, machineDefectsCache]);
 
   const isLocked = useMemo(() => {
     if (readOnlyUserView) return true;
@@ -222,27 +244,41 @@ export function WeeklyTimesheetGrid({
   const handleMachineChange = async (rowKey: string, machineId: string) => {
     if (isLocked) return;
     const selectedMachine = machines.find(m => m.id === machineId);
-    const entryType: TimeEntryType = machineId && machineId !== 'none' ? 'production' : 'indirect';
-    const defaultDept = machineId && machineId !== 'none' ? 'assembly' : 'shop';
+    const isValidMachine = machineId && machineId !== 'none';
 
-    if (machineId && machineId !== 'none' && !machineTasksCache[machineId]) {
-      try {
-        const tasks = await fetchApi<ProjectTask[]>(`machines/${machineId}/tasks`);
-        setMachineTasksCache(prev => ({ ...prev, [machineId]: tasks || [] }));
-      } catch (err) {
-        console.error('Failed to load tasks for machine', machineId, err);
+    if (isValidMachine) {
+      if (!machineTasksCache[machineId]) {
+        fetchApi<ProjectTask[]>(`machines/${machineId}/tasks`)
+          .then(tasks => setMachineTasksCache(prev => ({ ...prev, [machineId]: tasks || [] })))
+          .catch(err => console.error('Failed to load tasks for machine', machineId, err));
+      }
+      if (!machineReworksCache[machineId]) {
+        fetchApi<ReworkItem[]>('rework/items', { params: { machine_id: machineId } })
+          .then(items => setMachineReworksCache(prev => ({ ...prev, [machineId]: items || [] })))
+          .catch(err => console.error('Failed to load rework items for machine', machineId, err));
+      }
+      if (!machineDefectsCache[machineId]) {
+        fetchApi<Defect[]>(`machines/${machineId}/defects`)
+          .then(defects => setMachineDefectsCache(prev => ({ ...prev, [machineId]: defects || [] })))
+          .catch(err => console.error('Failed to load defects for machine', machineId, err));
       }
     }
 
     setRows(prev =>
       prev.map(r => {
         if (r.rowKey !== rowKey) return r;
+        const entryType: TimeEntryType = !isValidMachine ? 'indirect' : r.entry_type;
+        const defaultDept = !isValidMachine ? 'shop' : (r.department || 'assembly');
+
         return {
           ...r,
           machine_id: machineId === 'none' ? undefined : (machineId || undefined),
           order_number: selectedMachine?.order_number,
           project_task_id: undefined,
-          task_name: machineId === 'none' ? INDIRECT_TASKS[0] : '',
+          task_id: undefined,
+          rework_item_id: undefined,
+          defect_id: undefined,
+          task_name: !isValidMachine ? INDIRECT_TASKS[0] : '',
           department: defaultDept,
           entry_type: entryType,
         };
@@ -308,10 +344,130 @@ export function WeeklyTimesheetGrid({
     setIsDirty(true);
   };
 
+  const handleReworkItemChange = (rowKey: string, reworkId: string) => {
+    if (isLocked) return;
+    setRows(prev =>
+      prev.map(r => {
+        if (r.rowKey !== rowKey) return r;
+        const reworks = r.machine_id ? machineReworksCache[r.machine_id] || [] : [];
+        const found = reworks.find(rw => rw.id === reworkId);
+        if (found) {
+          const partLabel = found.part_number || 'Part';
+          const descLabel = found.description ? ` - ${found.description}` : '';
+          return {
+            ...r,
+            rework_item_id: found.id,
+            defect_id: found.defect_id || undefined,
+            task_name: `Rework: ${partLabel}${descLabel}`,
+            project_task_id: undefined,
+            task_id: undefined,
+          };
+        }
+        return {
+          ...r,
+          rework_item_id: reworkId || undefined,
+          task_name: reworkId ? r.task_name : '',
+          project_task_id: undefined,
+          task_id: undefined,
+        };
+      })
+    );
+    setIsDirty(true);
+  };
+
+  const handleDefectChange = (rowKey: string, defectId: string) => {
+    if (isLocked) return;
+    setRows(prev =>
+      prev.map(r => {
+        if (r.rowKey !== rowKey) return r;
+        const defects = r.machine_id ? machineDefectsCache[r.machine_id] || [] : [];
+        const found = defects.find(d => d.id === defectId);
+        if (found) {
+          return {
+            ...r,
+            defect_id: found.id,
+            rework_item_id: undefined,
+            task_name: `Issue Fix: ${found.description}`,
+            department: found.assigned_department || r.department || effectiveDepartment || 'quality',
+            project_task_id: undefined,
+            task_id: undefined,
+          };
+        }
+        return {
+          ...r,
+          defect_id: defectId || undefined,
+          task_name: defectId ? r.task_name : '',
+          rework_item_id: undefined,
+          project_task_id: undefined,
+          task_id: undefined,
+        };
+      })
+    );
+    setIsDirty(true);
+  };
+
   const handleTypeChange = (rowKey: string, type: TimeEntryType) => {
     if (isLocked) return;
     setRows(prev =>
-      prev.map(r => (r.rowKey === rowKey ? { ...r, entry_type: type } : r))
+      prev.map(r => {
+        if (r.rowKey !== rowKey) return r;
+
+        if (r.machine_id && r.machine_id !== 'none') {
+          if (type === 'rework' && !machineReworksCache[r.machine_id]) {
+            fetchApi<ReworkItem[]>('rework/items', { params: { machine_id: r.machine_id } })
+              .then(items => setMachineReworksCache(prev => ({ ...prev, [r.machine_id!]: items || [] })))
+              .catch(err => console.error('Failed to load rework items for machine', r.machine_id, err));
+          } else if (type === 'issue_fix' && !machineDefectsCache[r.machine_id]) {
+            fetchApi<Defect[]>(`machines/${r.machine_id}/defects`)
+              .then(defects => setMachineDefectsCache(prev => ({ ...prev, [r.machine_id!]: defects || [] })))
+              .catch(err => console.error('Failed to load defects for machine', r.machine_id, err));
+          }
+        }
+
+        if (type === 'rework') {
+          return {
+            ...r,
+            entry_type: type,
+            project_task_id: undefined,
+            task_id: undefined,
+            task_name: r.rework_item_id ? r.task_name : '',
+          };
+        }
+        if (type === 'issue_fix') {
+          return {
+            ...r,
+            entry_type: type,
+            project_task_id: undefined,
+            task_id: undefined,
+            rework_item_id: undefined,
+            task_name: r.defect_id ? r.task_name : '',
+          };
+        }
+        if (type === 'production') {
+          return {
+            ...r,
+            entry_type: type,
+            rework_item_id: undefined,
+            defect_id: undefined,
+            task_name: r.task_id || r.project_task_id ? r.task_name : '',
+          };
+        }
+        if (type === 'indirect') {
+          return {
+            ...r,
+            entry_type: type,
+            machine_id: undefined,
+            order_number: undefined,
+            project_task_id: undefined,
+            task_id: undefined,
+            rework_item_id: undefined,
+            defect_id: undefined,
+            task_name: INDIRECT_TASKS[0],
+            department: 'shop',
+          };
+        }
+        return { ...r, entry_type: type };
+      })
     );
     setIsDirty(true);
   };
@@ -587,7 +743,88 @@ export function WeeklyTimesheetGrid({
                       {/* Task Selection */}
                       <td>
                         {!isLocked ? (
-                          row.machine_id && row.machine_id !== 'none' ? (
+                          row.entry_type === 'rework' ? (
+                            row.machine_id && row.machine_id !== 'none' ? (
+                              <select
+                                aria-label="Rework / Allocation Target"
+                                className={styles.rowSelect}
+                                value={row.rework_item_id || ''}
+                                onChange={e => handleReworkItemChange(row.rowKey, e.target.value)}
+                              >
+                                <option value="">Select Rework Item...</option>
+                                {(machineReworksCache[row.machine_id] || []).length > 0 && (
+                                  <optgroup label="🔧 Active Rework Orders">
+                                    {(machineReworksCache[row.machine_id] || []).map(rw => (
+                                      <option key={rw.id} value={rw.id}>
+                                        {rw.is_ncr && rw.ncr_number ? `[NCR #${rw.ncr_number}] ` : ''}
+                                        {rw.part_number} - {rw.description} ({rw.status.replace(/_/g, ' ')})
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
+                                {(machineReworksCache[row.machine_id] || []).length === 0 && (
+                                  <option disabled value="">
+                                    No rework orders found for this machine
+                                  </option>
+                                )}
+                                {row.rework_item_id &&
+                                  !(machineReworksCache[row.machine_id] || []).some(rw => rw.id === row.rework_item_id) && (
+                                    <option value={row.rework_item_id}>
+                                      {row.task_name || 'Linked Rework Order'}
+                                    </option>
+                                  )}
+                              </select>
+                            ) : (
+                              <select
+                                aria-label="Rework / Allocation Target"
+                                className={styles.rowSelect}
+                                disabled
+                                value=""
+                              >
+                                <option value="">Select a Machine first...</option>
+                              </select>
+                            )
+                          ) : row.entry_type === 'issue_fix' ? (
+                            row.machine_id && row.machine_id !== 'none' ? (
+                              <select
+                                aria-label="Defect / Allocation Target"
+                                className={styles.rowSelect}
+                                value={row.defect_id || ''}
+                                onChange={e => handleDefectChange(row.rowKey, e.target.value)}
+                              >
+                                <option value="">Select Issue / Defect...</option>
+                                {(machineDefectsCache[row.machine_id] || []).length > 0 && (
+                                  <optgroup label="⚠️ Machine Defects & Issues">
+                                    {(machineDefectsCache[row.machine_id] || []).map(d => (
+                                      <option key={d.id} value={d.id}>
+                                        [{d.severity.toUpperCase()}] {d.description} ({d.status})
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
+                                {(machineDefectsCache[row.machine_id] || []).length === 0 && (
+                                  <option disabled value="">
+                                    No open defects found for this machine
+                                  </option>
+                                )}
+                                {row.defect_id &&
+                                  !(machineDefectsCache[row.machine_id] || []).some(d => d.id === row.defect_id) && (
+                                    <option value={row.defect_id}>
+                                      {row.task_name || 'Linked Defect'}
+                                    </option>
+                                  )}
+                              </select>
+                            ) : (
+                              <select
+                                aria-label="Defect / Allocation Target"
+                                className={styles.rowSelect}
+                                disabled
+                                value=""
+                              >
+                                <option value="">Select a Machine first...</option>
+                              </select>
+                            )
+                          ) : row.machine_id && row.machine_id !== 'none' ? (
                             <select
                               aria-label="Task / Allocation Target"
                               className={styles.rowSelect}

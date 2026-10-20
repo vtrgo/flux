@@ -203,6 +203,34 @@ describe('TimesheetPage', () => {
       if (endpoint === 'machines/m-1/tasks') {
         return Promise.resolve(mockLaborSummary.tasks);
       }
+      if (endpoint.startsWith('rework/items')) {
+        return Promise.resolve([
+          {
+            id: 'rw-1',
+            sales_order_id: 'so-1',
+            machine_id: 'm-1',
+            part_number: 'RW-PART-100',
+            description: 'Shaft realignment',
+            status: 'in_machining',
+            is_ncr: true,
+            ncr_number: 'NCR-2026-001',
+            estimated_hours: 8.0,
+            actual_hours: 2.0,
+          },
+        ]);
+      }
+      if (endpoint === 'machines/m-1/defects') {
+        return Promise.resolve([
+          {
+            id: 'def-1',
+            machine_id: 'm-1',
+            description: 'Loose sensor bracket',
+            severity: 'moderate',
+            status: 'open',
+            assigned_department: 'assembly',
+          },
+        ]);
+      }
       if (endpoint.startsWith('department-tasks')) {
         return Promise.resolve([
           {
@@ -714,6 +742,62 @@ describe('TimesheetPage', () => {
     // Verify no separate optgroups for "Quoted Tasks Allocated by Lead" vs "Core Department Tasks"
     expect(screen.queryByText(/Core Department Tasks/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Quoted Tasks Allocated by Lead/i)).not.toBeInTheDocument();
+  });
+
+  it('renders dynamic rework traveler dropdown when entry type is changed to rework', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const typeSelects = screen.getAllByLabelText('Type');
+    expect(typeSelects.length).toBeGreaterThan(0);
+
+    // Switch entry type to rework on the first row
+    await act(async () => {
+      fireEvent.change(typeSelects[0], { target: { value: 'rework' } });
+    });
+
+    // Rework Traveler select should now be visible
+    const reworkSelect = screen.getByLabelText('Rework / Allocation Target') as HTMLSelectElement;
+    expect(reworkSelect).toBeInTheDocument();
+
+    const options = Array.from(reworkSelect.options).map(o => o.text);
+    expect(options.some(t => t.includes('RW-PART-100') && t.includes('Shaft realignment'))).toBe(true);
+
+    // Select the rework item
+    await act(async () => {
+      fireEvent.change(reworkSelect, { target: { value: 'rw-1' } });
+    });
+
+    expect(reworkSelect.value).toBe('rw-1');
+  });
+
+  it('renders dynamic defect dropdown when entry type is changed to issue_fix', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const typeSelects = screen.getAllByLabelText('Type');
+    expect(typeSelects.length).toBeGreaterThan(0);
+
+    // Switch entry type to issue_fix on the first row
+    await act(async () => {
+      fireEvent.change(typeSelects[0], { target: { value: 'issue_fix' } });
+    });
+
+    // Defect select should now be visible
+    const defectSelect = screen.getByLabelText('Defect / Allocation Target') as HTMLSelectElement;
+    expect(defectSelect).toBeInTheDocument();
+
+    const options = Array.from(defectSelect.options).map(o => o.text);
+    expect(options.some(t => t.includes('Loose sensor bracket'))).toBe(true);
+
+    // Select the defect
+    await act(async () => {
+      fireEvent.change(defectSelect, { target: { value: 'def-1' } });
+    });
+
+    expect(defectSelect.value).toBe('def-1');
   });
 });
 
