@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { fetchApi } from '../lib/api';
 import { useTimesheetData } from '../hooks/useTimesheetData';
-import { getSundayOfWeek, addWeeks, getWeekDays, formatWeekRange } from '../lib/dateUtils';
+import { getSundayOfWeek, addWeeks, getWeekDays, formatWeekRange, formatHours } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Machine,
@@ -720,7 +720,7 @@ export function WeeklyTimesheetGrid({
                         );
                       })}
 
-                      <td className={styles.rowTotal}>{rowTotal.toFixed(1)}h</td>
+                      <td className={styles.rowTotal}>{formatHours(rowTotal)}h</td>
 
                       {!isLocked && (
                         <td style={{ textAlign: 'center' }}>
@@ -771,11 +771,11 @@ export function WeeklyTimesheetGrid({
                   </td>
                   {weekDays.map(day => (
                     <td key={day.dateStr} style={{ textAlign: 'center' }}>
-                      {(dayTotals[day.dateStr] || 0).toFixed(1)}h
+                      {formatHours(dayTotals[day.dateStr] || 0)}h
                     </td>
                   ))}
                   <td className={`${styles.rowTotal} ${styles.grandTotal}`}>
-                    {grandTotal.toFixed(1)}h
+                    {formatHours(grandTotal)}h
                   </td>
                   {!isLocked && <td></td>}
                 </tr>

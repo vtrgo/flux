@@ -270,3 +270,14 @@ export function formatWeekRange(weekStartStr: string): string {
   return `${start.shortDate} – ${end.shortDate}, ${endYear}`;
 }
 
+/**
+ * Formats decimal hours cleanly without rounding quarter-hour increments (.25, .5, .75) to 0.1.
+ * e.g., 0.25 -> "0.25", 0.5 -> "0.5", 0.75 -> "0.75", 4.5 -> "4.5", 8 -> "8", 0 -> "0".
+ */
+export function formatHours(hours?: number | null): string {
+  if (hours == null || isNaN(hours) || hours === 0) return '0';
+  const rounded = Math.round((hours + Number.EPSILON) * 100) / 100;
+  return rounded.toString();
+}
+
+

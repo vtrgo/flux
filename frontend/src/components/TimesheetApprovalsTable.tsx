@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { WeeklyTimesheet, Machine, DepartmentTask } from '../types';
-import { formatWeekRange } from '../lib/dateUtils';
+import { formatWeekRange, formatHours } from '../lib/dateUtils';
 import { WeeklyTimesheetGrid } from './WeeklyTimesheetGrid';
 import styles from './WeeklyTimesheetGrid.module.css';
 
@@ -239,7 +239,7 @@ export function TimesheetApprovalsTable({
                       <strong>{formatWeekRange(ts.week_start_date)}</strong>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--vtr-theme-primary, #00e5ff)' }}>
-                      {ts.total_hours.toFixed(1)} hrs
+                      {formatHours(ts.total_hours)} hrs
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <span
@@ -497,11 +497,11 @@ export function TimesheetApprovalsTable({
                   Reviewing Timesheet: {inspectingTimesheet.user_name} ({formatWeekRange(inspectingTimesheet.week_start_date)})
                 </h2>
                 <div style={{ fontSize: '0.85rem', color: '#aaa', marginTop: '0.25rem' }}>
-                  Status: <strong style={{ color: inspectingTimesheet.status === 'submitted' ? '#00e5ff' : '#aaa', textTransform: 'uppercase' }}>{inspectingTimesheet.status}</strong> | Total Hours: <strong>{inspectingTimesheet.total_hours.toFixed(1)} hrs</strong>
+                  Status: <strong style={{ color: inspectingTimesheet.status === 'approved' ? '#00e676' : inspectingTimesheet.status === 'rejected' ? '#ff5252' : '#00e5ff', textTransform: 'uppercase' }}>{inspectingTimesheet.status === 'draft' ? (inspectingTimesheet.total_hours > 0 ? 'PENDING' : 'DRAFT') : inspectingTimesheet.status}</strong> | Total Hours: <strong>{formatHours(inspectingTimesheet.total_hours)} hrs</strong>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                {inspectingTimesheet.status === 'submitted' && (
+                {inspectingTimesheet.status !== 'approved' && (
                   <>
                     <button
                       style={{
@@ -512,13 +512,14 @@ export function TimesheetApprovalsTable({
                         padding: '0.4rem 0.8rem',
                         fontSize: '0.8rem',
                         fontWeight: 700,
-                        cursor: 'pointer',
+                        cursor: inspectingTimesheet.total_hours > 0 ? 'pointer' : 'not-allowed',
+                        opacity: inspectingTimesheet.total_hours > 0 ? 1 : 0.5,
                       }}
                       onClick={async () => {
                         await handleApprove(inspectingTimesheet);
                         setInspectingTimesheet(null);
                       }}
-                      disabled={processingAction}
+                      disabled={processingAction || inspectingTimesheet.total_hours <= 0}
                       type="button"
                     >
                       Approve
@@ -532,13 +533,14 @@ export function TimesheetApprovalsTable({
                         padding: '0.4rem 0.8rem',
                         fontSize: '0.8rem',
                         fontWeight: 700,
-                        cursor: 'pointer',
+                        cursor: inspectingTimesheet.total_hours > 0 ? 'pointer' : 'not-allowed',
+                        opacity: inspectingTimesheet.total_hours > 0 ? 1 : 0.5,
                       }}
                       onClick={() => {
                         setRejectingTimesheet(inspectingTimesheet);
                         setRejectionReason('');
                       }}
-                      disabled={processingAction}
+                      disabled={processingAction || inspectingTimesheet.total_hours <= 0}
                       type="button"
                     >
                       Reject

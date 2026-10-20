@@ -258,6 +258,64 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('4.50 hrs')).toBeInTheDocument();
   });
 
+  it('displays exact quarter-hour totals for .25, .5, and .75 without rounding to 0.1', async () => {
+    const quarterHourEntries = [
+      {
+        id: 'te-qh-1',
+        user_id: 'u-1',
+        machine_id: 'm-1',
+        order_number: 'M-1001',
+        entry_type: 'production' as const,
+        project_task_id: 'task-1',
+        task_name: 'Mechanical Assembly',
+        work_date: '2026-10-19',
+        hours_spent: 0.25,
+        created_at: '2026-10-19T08:00:00Z',
+        updated_at: '2026-10-19T08:00:00Z',
+      },
+      {
+        id: 'te-qh-2',
+        user_id: 'u-1',
+        machine_id: 'm-1',
+        order_number: 'M-1001',
+        entry_type: 'production' as const,
+        project_task_id: 'task-1',
+        task_name: 'Mechanical Assembly',
+        work_date: '2026-10-20',
+        hours_spent: 0.5,
+        created_at: '2026-10-20T08:00:00Z',
+        updated_at: '2026-10-20T08:00:00Z',
+      },
+    ];
+
+    (fetchApi as any).mockImplementation((endpoint: string) => {
+      if (endpoint.startsWith('timesheets/weekly')) {
+        return Promise.resolve({
+          ...mockWeeklyTimesheet,
+          total_hours: 0.75,
+          entries: quarterHourEntries,
+        });
+      }
+      if (endpoint === 'machines') return Promise.resolve(mockMachines);
+      if (endpoint === 'time-entries/my') return Promise.resolve(quarterHourEntries);
+      if (endpoint.startsWith('department-tasks')) return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
+
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    // Row total and grand total should be 0.75h, not rounded to 0.8h
+    expect(screen.getAllByText('0.75h').length).toBeGreaterThan(0);
+    // Daily totals should be 0.25h and 0.5h, not 0.3h
+    expect(screen.getAllByText('0.25h').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('0.5h').length).toBeGreaterThan(0);
+    // 0.8h and 0.3h must NOT appear
+    expect(screen.queryByText('0.8h')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.3h')).not.toBeInTheDocument();
+  });
+
   it('toggles to Quoting & Variance tab and displays task quoting metrics', async () => {
     await act(async () => {
       render(<TimesheetPage />);

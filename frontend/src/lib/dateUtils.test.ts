@@ -9,6 +9,7 @@ import {
   getSundayOfWeek,
   getWeekDays,
   formatWeekRange,
+  formatHours,
 } from './dateUtils';
 
 describe('dateUtils - F.A.T. and Days Late', () => {
@@ -111,5 +112,18 @@ describe('dateUtils - F.A.T. and Days Late', () => {
   it('formats week range from Sunday to Saturday', () => {
     const range = formatWeekRange('2026-10-18');
     expect(range).toBe('Oct 18 – Oct 24, 2026');
+  });
+
+  it('formats decimal hours cleanly preserving quarter-hour increments', () => {
+    expect(formatHours(0.25)).toBe('0.25');
+    expect(formatHours(0.5)).toBe('0.5');
+    expect(formatHours(0.75)).toBe('0.75');
+    expect(formatHours(1)).toBe('1');
+    expect(formatHours(4.5)).toBe('4.5');
+    expect(formatHours(7.25)).toBe('7.25');
+    expect(formatHours(8)).toBe('8');
+    expect(formatHours(0)).toBe('0');
+    expect(formatHours(null)).toBe('0');
+    expect(formatHours(undefined)).toBe('0');
   });
 });
