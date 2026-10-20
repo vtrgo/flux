@@ -105,22 +105,6 @@ export function TimesheetApprovalsTable({
     [selectedWeek, weekOptions]
   );
 
-  // Summary KPIs for current work week view
-  const metrics = useMemo(() => {
-    const totalTimesheets = approvals.length;
-    const pendingApprovals = approvals.filter(
-      ts => ts.status !== 'approved' && ts.status !== 'rejected' && ts.total_hours > 0
-    ).length;
-    const approvedCount = approvals.filter(ts => ts.status === 'approved').length;
-    const totalHours = approvals.reduce((acc, ts) => acc + (ts.total_hours || 0), 0);
-    return {
-      totalTimesheets,
-      pendingApprovals,
-      approvedCount,
-      totalHours,
-    };
-  }, [approvals]);
-
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -341,93 +325,6 @@ export function TimesheetApprovalsTable({
         >
           {loading ? 'Refreshing...' : '🔄 Refresh List'}
         </button>
-      </div>
-
-      {/* Week Pulse / Metrics Strip */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '1rem',
-        }}
-      >
-        <div
-          style={{
-            background: 'var(--vtr-theme-surface, #1e1e1e)',
-            border: '1px solid var(--border-color, #333)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
-            Work Week
-          </div>
-          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', marginTop: '0.25rem' }}>
-            {selectedWeek ? formatWeekRange(selectedWeek) : 'All Weeks Combined'}
-          </div>
-        </div>
-
-        <div
-          style={{
-            background: 'var(--vtr-theme-surface, #1e1e1e)',
-            border: '1px solid var(--border-color, #333)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
-            Pending Review
-          </div>
-          <div
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: metrics.pendingApprovals > 0 ? '#ffca28' : '#00e676',
-              marginTop: '0.25rem',
-            }}
-          >
-            {metrics.pendingApprovals}
-          </div>
-        </div>
-
-        <div
-          style={{
-            background: 'var(--vtr-theme-surface, #1e1e1e)',
-            border: '1px solid var(--border-color, #333)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
-            Approved Timesheets
-          </div>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#00e676', marginTop: '0.25rem' }}>
-            {metrics.approvedCount}
-          </div>
-        </div>
-
-        <div
-          style={{
-            background: 'var(--vtr-theme-surface, #1e1e1e)',
-            border: '1px solid var(--border-color, #333)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: '#888', fontWeight: 600, textTransform: 'uppercase' }}>
-            Total Labor In View
-          </div>
-          <div
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: 'var(--vtr-theme-primary, #00e5ff)',
-              marginTop: '0.25rem',
-            }}
-          >
-            {formatHours(metrics.totalHours)} hrs
-          </div>
-        </div>
       </div>
 
       {/* Approvals Table */}
