@@ -11,7 +11,6 @@ import { ACTIVE_DEPARTMENTS } from "../../../lib/departments";
 import { IssueModal } from "../../../components/IssueModal";
 import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
-import { useMachineCoNCData } from "../../../hooks/useCoNCData";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
 import { calculateDaysLate, formatFatDate } from "../../../lib/dateUtils";
@@ -30,8 +29,6 @@ function MachineDetailContent() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
-
-  const { data: concData } = useMachineCoNCData(id);
 
   useSSE('defect_added', (newDefect: Defect) => {
     if (newDefect.machine_id === id) {
@@ -244,19 +241,6 @@ function MachineDetailContent() {
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Days Late</div>
                 <div style={{ fontSize: '0.875rem', fontWeight: 700, color: calculateDaysLate(machine.fat_date, timezone) > 0 ? 'var(--accent-red)' : 'var(--vtr-theme-primary)' }}>
                   {calculateDaysLate(machine.fat_date, timezone)}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>CoNC Impact</div>
-                <div 
-                  style={{ 
-                    fontSize: '0.875rem', 
-                    fontWeight: 700, 
-                    color: (concData?.total_conc_cost || 0) > 0 ? '#ff7043' : 'var(--vtr-theme-primary)' 
-                  }}
-                  title={concData ? `Rework: $${Math.round(concData.rework_cost).toLocaleString()} | Defects: $${Math.round(concData.defect_cost).toLocaleString()} | NCR: $${Math.round(concData.ncr_cost).toLocaleString()}` : ''}
-                >
-                  {concData ? `$${Math.round(concData.total_conc_cost).toLocaleString()} (${concData.conc_percentage_of_labor.toFixed(1)}%)` : '—'}
                 </div>
               </div>
             </div>
