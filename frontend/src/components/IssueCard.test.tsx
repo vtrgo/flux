@@ -104,5 +104,26 @@ describe('IssueCard Component', () => {
     expect(screen.getByText('Target Resolution:')).toBeDefined();
     expect(screen.getByText('9/30/2026')).toBeDefined();
   });
+
+  it('renders GENERAL badge when issue label is General', async () => {
+    const generalIssue: Defect = {
+      ...baseIssue,
+      label: 'General',
+      status: 'verified',
+      resolved_at: '2026-08-25T16:45:00Z',
+    };
+
+    await act(async () => {
+      render(
+        <IssueCard
+          issue={generalIssue}
+          onClick={() => {}}
+          actions={<button>View</button>}
+        />
+      );
+    });
+
+    expect(screen.getByText('GENERAL')).toBeDefined();
+  });
 });
 

@@ -34,6 +34,7 @@ export default function QualityResolutionHub() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeDepartment, setActiveDepartment] = useState<string>("All");
   const [activeSeverity, setActiveSeverity] = useState<string>("All");
+  const [activeClassification, setActiveClassification] = useState<string>("All");
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,8 +142,13 @@ export default function QualityResolutionHub() {
     
     const matchesAssignedDept = activeDepartment === "All" || defect.assigned_department === activeDepartment;
     const matchesSeverity = activeSeverity === "All" || defect.severity === activeSeverity;
+    const isGeneral = defect.label === 'General';
+    const matchesClassification =
+      activeClassification === "All" ||
+      (activeClassification === "General" && isGeneral) ||
+      (activeClassification === "Defects" && !isGeneral);
 
-    return matchesSearch && matchesAssignedDept && matchesSeverity;
+    return matchesSearch && matchesAssignedDept && matchesSeverity && matchesClassification;
   });
 
   const openDefects = filteredDefects.filter(d => d.status === 'open');
@@ -213,6 +219,14 @@ export default function QualityResolutionHub() {
             label="Severity" 
           />
         )}
+
+        <FilterButtonGroup 
+          options={["All", "Defects", "General"]} 
+          activeOption={activeClassification} 
+          onChange={setActiveClassification} 
+          label="Type" 
+          formatOption={opt => opt === "Defects" ? "Actionable" : opt === "General" ? "General Issues" : "All Types"}
+        />
       </div>
 
       <div className={`${styles.grid} no-print`}>

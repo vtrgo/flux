@@ -56,7 +56,7 @@ func handleGetNCRs(w http.ResponseWriter, r *http.Request) {
 		SELECT d.id, d.machine_id, d.source_department, d.assigned_department, d.assigned_user_id,
 		       d.created_by_user_id, d.fixed_by_user_id, d.verified_by_user_id,
 		       d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at, d.due_date,
-		       d.is_ncr, d.ncr_number, d.assembler, d.location, d.root_cause, d.corrective_action, d.closeout_date, d.team_lead_signature,
+		       d.is_ncr, d.ncr_number, d.assembler, d.location, d.root_cause, d.corrective_action, d.closeout_date, d.team_lead_signature, d.label,
 		       u.username as assigned_user_name,
 		       c.username as created_by_user_name,
 		       f.username as fixed_by_user_name,
@@ -121,7 +121,7 @@ func handleGetNCRs(w http.ResponseWriter, r *http.Request) {
 			&ncr.ID, &ncr.MachineID, &ncr.SourceDepartment, &assigned, &ncr.AssignedUserID,
 			&ncr.CreatedByUserID, &ncr.FixedByUserID, &ncr.VerifiedByUserID,
 			&ncr.Description, &ncr.Severity, &ncr.Status, &ncr.Notes, &ncr.ResolvedBy, &ncr.ResolvedAt, &ncr.CreatedAt, &ncr.DueDate,
-			&ncr.IsNCR, &ncr.NCRNumber, &ncr.Assembler, &ncr.Location, &ncr.RootCause, &ncr.CorrectiveAction, &ncr.CloseoutDate, &ncr.TeamLeadSignature,
+			&ncr.IsNCR, &ncr.NCRNumber, &ncr.Assembler, &ncr.Location, &ncr.RootCause, &ncr.CorrectiveAction, &ncr.CloseoutDate, &ncr.TeamLeadSignature, &ncr.Label,
 			&ncr.AssignedUserName, &ncr.CreatedByUserName, &ncr.FixedByUserName, &ncr.VerifiedByUserName,
 			&ncr.OrderNumber, &ncr.InternalProjectNumber, &ncr.ProjectName, &ncr.CustomerName,
 		); err != nil {
@@ -282,7 +282,7 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 			VALUES ($1, $2, $3, $4, NULLIF($8, '')::uuid, $5, $6, 'open', $7, $9, TRUE, $10, $11, $12, $13, $14, $15, $16)
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id,
 			          description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
-			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature, label
 		)
 		SELECT i.*,
 		       u.username as assigned_user_name,
@@ -307,7 +307,7 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 	).Scan(
 		&ncr.ID, &ncr.MachineID, &ncr.SourceDepartment, &ncr.AssignedDepartment, &ncr.AssignedUserID, &ncr.CreatedByUserID, &ncr.FixedByUserID, &ncr.VerifiedByUserID,
 		&ncr.Description, &ncr.Severity, &ncr.Status, &ncr.Notes, &ncr.ResolvedBy, &ncr.ResolvedAt, &ncr.CreatedAt, &ncr.DueDate,
-		&ncr.IsNCR, &ncr.NCRNumber, &ncr.Assembler, &ncr.Location, &ncr.RootCause, &ncr.CorrectiveAction, &ncr.CloseoutDate, &ncr.TeamLeadSignature,
+		&ncr.IsNCR, &ncr.NCRNumber, &ncr.Assembler, &ncr.Location, &ncr.RootCause, &ncr.CorrectiveAction, &ncr.CloseoutDate, &ncr.TeamLeadSignature, &ncr.Label,
 		&ncr.AssignedUserName, &ncr.CreatedByUserName, &ncr.FixedByUserName, &ncr.VerifiedByUserName,
 		&assignedUserEmail, &machineOrderNumber, &openedByName,
 		&ncr.InternalProjectNumber, &ncr.ProjectName, &ncr.CustomerName,
@@ -405,7 +405,7 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 				    END
 				WHERE id = $1
 				RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
-				          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+				          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature, label
 			)
 			SELECT u_tbl.*, 
 			       COALESCE(m.order_number, '') as order_number,
@@ -418,7 +418,7 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 			LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
 		`, oldDefectID, authUserID, auditNote).Scan(
 			&updatedOldDefect.ID, &updatedOldDefect.MachineID, &updatedOldDefect.SourceDepartment, &updatedOldDefect.AssignedDepartment, &updatedOldDefect.AssignedUserID, &updatedOldDefect.CreatedByUserID, &updatedOldDefect.FixedByUserID, &updatedOldDefect.VerifiedByUserID, &updatedOldDefect.Description, &updatedOldDefect.Severity, &updatedOldDefect.Status, &updatedOldDefect.Notes, &updatedOldDefect.ResolvedBy, &updatedOldDefect.ResolvedAt, &updatedOldDefect.CreatedAt, &updatedOldDefect.DueDate,
-			&updatedOldDefect.IsNCR, &updatedOldDefect.NCRNumber, &updatedOldDefect.Assembler, &updatedOldDefect.Location, &updatedOldDefect.RootCause, &updatedOldDefect.CorrectiveAction, &updatedOldDefect.CloseoutDate, &updatedOldDefect.TeamLeadSignature,
+			&updatedOldDefect.IsNCR, &updatedOldDefect.NCRNumber, &updatedOldDefect.Assembler, &updatedOldDefect.Location, &updatedOldDefect.RootCause, &updatedOldDefect.CorrectiveAction, &updatedOldDefect.CloseoutDate, &updatedOldDefect.TeamLeadSignature, &updatedOldDefect.Label,
 			&updatedOldDefect.OrderNumber,
 			&updatedOldDefect.AssignedUserName, &updatedOldDefect.CreatedByUserName, &updatedOldDefect.FixedByUserName, &updatedOldDefect.VerifiedByUserName,
 		)
@@ -565,7 +565,7 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 			WHERE id = $1 AND is_ncr = TRUE
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id,
 			          description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
-			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature, label
 		)
 		SELECT u_tbl.*,
 		       u.username as assigned_user_name,
@@ -593,7 +593,7 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request) {
 		&ncr.ID, &ncr.MachineID, &ncr.SourceDepartment, &ncr.AssignedDepartment, &ncr.AssignedUserID,
 		&ncr.CreatedByUserID, &ncr.FixedByUserID, &ncr.VerifiedByUserID,
 		&ncr.Description, &ncr.Severity, &ncr.Status, &ncr.Notes, &ncr.ResolvedBy, &ncr.ResolvedAt, &ncr.CreatedAt, &ncr.DueDate,
-		&ncr.IsNCR, &ncr.NCRNumber, &ncr.Assembler, &ncr.Location, &ncr.RootCause, &ncr.CorrectiveAction, &ncr.CloseoutDate, &ncr.TeamLeadSignature,
+		&ncr.IsNCR, &ncr.NCRNumber, &ncr.Assembler, &ncr.Location, &ncr.RootCause, &ncr.CorrectiveAction, &ncr.CloseoutDate, &ncr.TeamLeadSignature, &ncr.Label,
 		&ncr.AssignedUserName, &ncr.CreatedByUserName, &ncr.FixedByUserName, &ncr.VerifiedByUserName,
 		&assignedUserEmail, &openedByName,
 		&ncr.OrderNumber, &ncr.InternalProjectNumber, &ncr.ProjectName, &ncr.CustomerName,

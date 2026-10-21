@@ -451,6 +451,77 @@ func TestDefects(t *testing.T) {
 			t.Errorf("expected assigned_department 'quality', got '%s'", updated.AssignedDepartment)
 		}
 	})
+
+	t.Run("Create General Defect - Automatically Exists as Verified (Closed) with Label 'General'", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"source_department": "assembly",
+			"description":       "Vendor fastener pitch variance noted for future machine builds",
+			"notes":             "No physical rework or action required on current unit",
+			"label":             "General",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/defects", createdMachine.ID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusCreated {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusCreated, rr.Body.String())
+		}
+
+		var defect models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&defect); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if defect.Label != "General" {
+			t.Errorf("expected label 'General', got '%s'", defect.Label)
+		}
+
+		if defect.Status != "verified" {
+			t.Errorf("expected status 'verified' (closed), got '%s'", defect.Status)
+		}
+
+		if defect.ResolvedAt == nil {
+			t.Errorf("expected resolved_at to be automatically populated, got nil")
+		}
+
+		if defect.ResolvedBy == nil || *defect.ResolvedBy == "" {
+			t.Errorf("expected resolved_by to be automatically populated, got empty or nil")
+		}
+	})
+
+	t.Run("Edit Defect - Update Label", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"source_department":   "assembly",
+			"assigned_department": "assembly",
+			"severity":            "minor",
+			"description":         "Label updated to General reference note",
+			"notes":               "Recorded context for future iterations",
+			"label":               "General",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/defects/%s/edit", defectID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusOK, rr.Body.String())
+		}
+
+		var updated models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&updated); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if updated.Label != "General" {
+			t.Errorf("expected updated label 'General', got '%s'", updated.Label)
+		}
+	})
 }
+
 
 

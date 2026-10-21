@@ -69,6 +69,7 @@ export interface Defect {
   corrective_action?: string;
   closeout_date?: string;
   team_lead_signature?: string;
+  label?: string;
 }
 
 export interface NCR extends Defect {

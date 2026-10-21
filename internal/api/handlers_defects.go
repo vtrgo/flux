@@ -49,7 +49,7 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
               d.fixed_by_user_id, f.username as fixed_by_user_name, 
               d.verified_by_user_id, v.username as verified_by_user_name,
               d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at, d.due_date,
-              d.is_ncr, d.ncr_number, d.assembler, d.location, d.root_cause, d.corrective_action, d.closeout_date, d.team_lead_signature
+              d.is_ncr, d.ncr_number, d.assembler, d.location, d.root_cause, d.corrective_action, d.closeout_date, d.team_lead_signature, d.label
 		FROM defects d
 		LEFT JOIN machines m ON d.machine_id = m.id
 		LEFT JOIN users u ON d.assigned_user_id = u.id
@@ -79,7 +79,7 @@ func handleGetMachineDefects(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&d.ID, &d.MachineID, &d.OrderNumber, &d.InspectionID, &d.SourceDepartment, &assigned, &d.AssignedUserID, &d.AssignedUserName, &d.CreatedByUserID, &d.CreatedByUserName, &d.FixedByUserID, &d.FixedByUserName, &d.VerifiedByUserID, &d.VerifiedByUserName, &d.Description,
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt, &d.DueDate,
-			&d.IsNCR, &d.NCRNumber, &d.Assembler, &d.Location, &d.RootCause, &d.CorrectiveAction, &d.CloseoutDate, &d.TeamLeadSignature,
+			&d.IsNCR, &d.NCRNumber, &d.Assembler, &d.Location, &d.RootCause, &d.CorrectiveAction, &d.CloseoutDate, &d.TeamLeadSignature, &d.Label,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning defect", err)
 			return
@@ -121,6 +121,9 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		CorrectiveAction  *string `json:"corrective_action"`
 		CloseoutDate      *string `json:"closeout_date"`
 		TeamLeadSignature *string `json:"team_lead_signature"`
+
+		// Label & Classification
+		Label string `json:"label"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -168,6 +171,24 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		assignedUserID = *req.AssignedUserID
 	}
 
+	label := strings.TrimSpace(req.Label)
+	if label == "" {
+		label = "Defect"
+	}
+
+	isGeneral := strings.EqualFold(label, "General")
+	initialStatus := "open"
+	if isGeneral {
+		label = "General"
+		initialStatus = "verified"
+		if req.Severity == "" {
+			req.Severity = "minor"
+		}
+		if req.AssignedDepartment == "" {
+			req.AssignedDepartment = req.SourceDepartment
+		}
+	}
+
 	var assignedUserEmail *string
 	var machineOrderNumber string
 	var openedByName string
@@ -178,11 +199,23 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 			INSERT INTO defects (
 				machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, 
 				description, severity, status, notes, due_date,
-				is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+				is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature,
+				label, resolved_at, resolved_by, verified_by_user_id
 			)
-			VALUES ($1, $2, $3, $4, NULLIF($8, '')::uuid, $5, $6, 'open', $7, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			VALUES (
+				$1, $2, $3, $4, NULLIF($8, '')::uuid, $5, $6, $18::text, $7, $9, 
+				$10, $11, $12, $13, $14, $15, $16, $17, 
+				$19,
+				CASE WHEN $18::text = 'verified' THEN NOW() ELSE NULL END,
+				CASE WHEN $18::text = 'verified' THEN COALESCE(
+					(SELECT NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), '') FROM users WHERE id = NULLIF($8, '')::uuid),
+					(SELECT username FROM users WHERE id = NULLIF($8, '')::uuid),
+					'System'
+				) ELSE NULL END,
+				CASE WHEN $18::text = 'verified' THEN NULLIF($8, '')::uuid ELSE NULL END
+			)
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
-			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature, label
 		)
 		SELECT i.*, 
 		       u.username as assigned_user_name, 
@@ -200,9 +233,10 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN machines m ON i.machine_id = m.id
 	`, machineID, req.SourceDepartment, req.AssignedDepartment, assignedUserID, req.Description, req.Severity, req.Notes, authUserID, parsedDueDate,
 		req.IsNCR, req.NCRNumber, req.Assembler, req.Location, req.RootCause, req.CorrectiveAction, parsedCloseoutDate, req.TeamLeadSignature,
+		initialStatus, label,
 	).Scan(
 		&newDefect.ID, &newDefect.MachineID, &newDefect.SourceDepartment, &newDefect.AssignedDepartment, &newDefect.AssignedUserID, &newDefect.CreatedByUserID, &newDefect.FixedByUserID, &newDefect.VerifiedByUserID, &newDefect.Description, &newDefect.Severity, &newDefect.Status, &newDefect.Notes, &newDefect.ResolvedBy, &newDefect.ResolvedAt, &newDefect.CreatedAt, &newDefect.DueDate,
-		&newDefect.IsNCR, &newDefect.NCRNumber, &newDefect.Assembler, &newDefect.Location, &newDefect.RootCause, &newDefect.CorrectiveAction, &newDefect.CloseoutDate, &newDefect.TeamLeadSignature,
+		&newDefect.IsNCR, &newDefect.NCRNumber, &newDefect.Assembler, &newDefect.Location, &newDefect.RootCause, &newDefect.CorrectiveAction, &newDefect.CloseoutDate, &newDefect.TeamLeadSignature, &newDefect.Label,
 		&newDefect.AssignedUserName, &newDefect.CreatedByUserName, &newDefect.FixedByUserName, &newDefect.VerifiedByUserName,
 		&assignedUserEmail, &machineOrderNumber, &openedByName,
 	)
@@ -215,9 +249,9 @@ func handleAddDefect(w http.ResponseWriter, r *http.Request) {
 	newDefect.OrderNumber = machineOrderNumber
 
 	BroadcastEvent("defect_added", newDefect)
-	slog.Debug("Defect logged", "defect_id", newDefect.ID, "machine_id", machineID, "is_ncr", newDefect.IsNCR)
+	slog.Debug("Defect logged", "defect_id", newDefect.ID, "machine_id", machineID, "is_ncr", newDefect.IsNCR, "label", newDefect.Label)
 
-	if req.SendNotification {
+	if req.SendNotification && !isGeneral {
 		dispatchDefectNotification(r.Context(), newDefect, assignedUserEmail, machineOrderNumber, openedByName)
 	}
 
@@ -338,7 +372,7 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
               d.fixed_by_user_id, f.username as fixed_by_user_name, 
               d.verified_by_user_id, v.username as verified_by_user_name,
               d.description, d.severity, d.status, d.notes, d.resolved_by, d.resolved_at, d.created_at, d.due_date,
-              d.is_ncr, d.ncr_number, d.assembler, d.location, d.root_cause, d.corrective_action, d.closeout_date, d.team_lead_signature
+              d.is_ncr, d.ncr_number, d.assembler, d.location, d.root_cause, d.corrective_action, d.closeout_date, d.team_lead_signature, d.label
 		FROM defects d
 		JOIN machines m ON d.machine_id = m.id
 		LEFT JOIN sales_orders so ON m.sales_order_id = so.id
@@ -373,7 +407,7 @@ func handleGetAllDefects(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(
 			&d.ID, &d.MachineID, &d.OrderNumber, &d.SourceDepartment, &assigned, &d.AssignedUserID, &d.AssignedUserName, &d.CreatedByUserID, &d.CreatedByUserName, &d.FixedByUserID, &d.FixedByUserName, &d.VerifiedByUserID, &d.VerifiedByUserName, &d.Description,
 			&d.Severity, &d.Status, &d.Notes, &d.ResolvedBy, &d.ResolvedAt, &d.CreatedAt, &d.DueDate,
-			&d.IsNCR, &d.NCRNumber, &d.Assembler, &d.Location, &d.RootCause, &d.CorrectiveAction, &d.CloseoutDate, &d.TeamLeadSignature,
+			&d.IsNCR, &d.NCRNumber, &d.Assembler, &d.Location, &d.RootCause, &d.CorrectiveAction, &d.CloseoutDate, &d.TeamLeadSignature, &d.Label,
 		); err != nil {
 			respondError(w, http.StatusInternalServerError, "Error scanning defect", err)
 			return
@@ -443,7 +477,7 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 			    END
 			WHERE id = $1
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
-			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature, label
 		)
 		SELECT u_tbl.*, 
 		       COALESCE(m.order_number, '') as order_number,
@@ -456,7 +490,7 @@ func handleUpdateDefect(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
 	`, defectID, req.Status, req.AssignedDepartment, req.Notes, authUserID).Scan(
 		&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment, &updatedDefect.AssignedUserID, &updatedDefect.CreatedByUserID, &updatedDefect.FixedByUserID, &updatedDefect.VerifiedByUserID, &updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes, &updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt, &updatedDefect.DueDate,
-		&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature,
+		&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature, &updatedDefect.Label,
 		&updatedDefect.OrderNumber,
 		&updatedDefect.AssignedUserName, &updatedDefect.CreatedByUserName, &updatedDefect.FixedByUserName, &updatedDefect.VerifiedByUserName,
 	)
@@ -896,6 +930,9 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 		CorrectiveAction  *string `json:"corrective_action"`
 		CloseoutDate      *string `json:"closeout_date"`
 		TeamLeadSignature *string `json:"team_lead_signature"`
+
+		// Label & Classification
+		Label string `json:"label"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -941,10 +978,11 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 			    root_cause = COALESCE($11, root_cause),
 			    corrective_action = COALESCE($12, corrective_action),
 			    closeout_date = COALESCE($13, closeout_date),
-			    team_lead_signature = COALESCE($14, team_lead_signature)
+			    team_lead_signature = COALESCE($14, team_lead_signature),
+			    label = COALESCE(NULLIF($15, ''), label)
 			WHERE id = $1
 			RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
-			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+			          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature, label
 		)
 		SELECT u_tbl.*, 
 		       COALESCE(m.order_number, '') as order_number,
@@ -956,11 +994,11 @@ func handleEditDefect(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN users f ON u_tbl.fixed_by_user_id = f.id
 		LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
 	`, defectID, req.SourceDepartment, req.AssignedDepartment, assignedUserID, req.Severity, req.Description, req.Notes, parsedDueDate,
-		req.Assembler, req.Location, req.RootCause, req.CorrectiveAction, parsedCloseoutDate, req.TeamLeadSignature,
+		req.Assembler, req.Location, req.RootCause, req.CorrectiveAction, parsedCloseoutDate, req.TeamLeadSignature, req.Label,
 	).Scan(
 		&updated.ID, &updated.MachineID, &updated.SourceDepartment, &updated.AssignedDepartment, &updated.AssignedUserID, &updated.CreatedByUserID, &updated.FixedByUserID, &updated.VerifiedByUserID,
 		&updated.Description, &updated.Severity, &updated.Status, &updated.Notes, &updated.ResolvedBy, &updated.ResolvedAt, &updated.CreatedAt, &updated.DueDate,
-		&updated.IsNCR, &updated.NCRNumber, &updated.Assembler, &updated.Location, &updated.RootCause, &updated.CorrectiveAction, &updated.CloseoutDate, &updated.TeamLeadSignature,
+		&updated.IsNCR, &updated.NCRNumber, &updated.Assembler, &updated.Location, &updated.RootCause, &updated.CorrectiveAction, &updated.CloseoutDate, &updated.TeamLeadSignature, &updated.Label,
 		&updated.OrderNumber,
 		&updated.AssignedUserName, &updated.CreatedByUserName, &updated.FixedByUserName, &updated.VerifiedByUserName,
 	)

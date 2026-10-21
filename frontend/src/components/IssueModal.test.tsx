@@ -506,4 +506,45 @@ describe('IssueModal Assignee Department Filtering', () => {
 
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('allows selecting GENERAL ISSUE (CLOSED), shows info banner, and submits with label General and auto-routed dept', async () => {
+    const onClose = vi.fn();
+    await act(async () => {
+      render(
+        <IssueModal
+          isOpen={true}
+          onClose={onClose}
+          editingDefect={null}
+          preselectedMachineId="mach-1"
+        />
+      );
+    });
+
+    const generalBtn = screen.getByRole('button', { name: /GENERAL ISSUE \(CLOSED\)/i });
+    expect(generalBtn).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(generalBtn);
+    });
+
+    expect(screen.getByText(/Informational Record:/i)).toBeInTheDocument();
+
+    // Fill in description
+    const descInput = screen.getByLabelText(/BRIEF DESCRIPTION/i);
+    await act(async () => {
+      fireEvent.change(descInput, { target: { value: 'Informational note for next machine' } });
+    });
+
+    // Submit form
+    const submitBtn = screen.getByRole('button', { name: /CREATE ISSUE/i });
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(fetchApi).toHaveBeenCalledWith('machines/mach-1/defects', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"label":"General"'),
+    }));
+    expect(onClose).toHaveBeenCalled();
+  });
 });

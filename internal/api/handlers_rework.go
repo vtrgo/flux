@@ -423,7 +423,7 @@ func handleCreateReworkItem(w http.ResponseWriter, r *http.Request) {
 					SET notes = COALESCE(notes, '') || $2
 					WHERE id = $1
 					RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
-					          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+					          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature, label
 				)
 				SELECT u_tbl.*, 
 				       COALESCE(m.order_number, '') as order_number,
@@ -436,7 +436,7 @@ func handleCreateReworkItem(w http.ResponseWriter, r *http.Request) {
 				LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
 			`, defUUID, noteAppend).Scan(
 				&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment, &updatedDefect.AssignedUserID, &updatedDefect.CreatedByUserID, &updatedDefect.FixedByUserID, &updatedDefect.VerifiedByUserID, &updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes, &updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt, &updatedDefect.DueDate,
-				&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature,
+				&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature, &updatedDefect.Label,
 				&updatedDefect.OrderNumber,
 				&updatedDefect.AssignedUserName, &updatedDefect.CreatedByUserName, &updatedDefect.FixedByUserName, &updatedDefect.VerifiedByUserName,
 			)
@@ -744,7 +744,7 @@ func handleUpdateReworkItem(w http.ResponseWriter, r *http.Request) {
 				    notes = COALESCE(notes, '') || $4
 				WHERE id = $1 AND status = 'open'
 				RETURNING id, machine_id, source_department, assigned_department, assigned_user_id, created_by_user_id, fixed_by_user_id, verified_by_user_id, description, severity, status, notes, resolved_by, resolved_at, created_at, due_date,
-				          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature
+				          is_ncr, ncr_number, assembler, location, root_cause, corrective_action, closeout_date, team_lead_signature, label
 			)
 			SELECT u_tbl.*, 
 			       COALESCE(m.order_number, '') as order_number,
@@ -757,7 +757,7 @@ func handleUpdateReworkItem(w http.ResponseWriter, r *http.Request) {
 			LEFT JOIN users v ON u_tbl.verified_by_user_id = v.id
 		`, *existing.DefectID, resolvedByStr, resolvedByUUID, autoNote).Scan(
 			&updatedDefect.ID, &updatedDefect.MachineID, &updatedDefect.SourceDepartment, &updatedDefect.AssignedDepartment, &updatedDefect.AssignedUserID, &updatedDefect.CreatedByUserID, &updatedDefect.FixedByUserID, &updatedDefect.VerifiedByUserID, &updatedDefect.Description, &updatedDefect.Severity, &updatedDefect.Status, &updatedDefect.Notes, &updatedDefect.ResolvedBy, &updatedDefect.ResolvedAt, &updatedDefect.CreatedAt, &updatedDefect.DueDate,
-			&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature,
+			&updatedDefect.IsNCR, &updatedDefect.NCRNumber, &updatedDefect.Assembler, &updatedDefect.Location, &updatedDefect.RootCause, &updatedDefect.CorrectiveAction, &updatedDefect.CloseoutDate, &updatedDefect.TeamLeadSignature, &updatedDefect.Label,
 			&updatedDefect.OrderNumber,
 			&updatedDefect.AssignedUserName, &updatedDefect.CreatedByUserName, &updatedDefect.FixedByUserName, &updatedDefect.VerifiedByUserName,
 		)

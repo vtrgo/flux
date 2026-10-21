@@ -45,7 +45,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     severity: 'moderate',
     description: '',
     notes: '',
-    due_date: ''
+    due_date: '',
+    label: 'Defect'
   });
 
   useAppHotkeys('escape', () => {
@@ -82,7 +83,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           severity: editingDefect.severity,
           description: editingDefect.description,
           notes: editingDefect.notes || '',
-          due_date: toCalendarDateInput(editingDefect.due_date)
+          due_date: toCalendarDateInput(editingDefect.due_date),
+          label: editingDefect.label || 'Defect'
         });
       } else {
         setSendNotification(false);
@@ -94,7 +96,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           severity: 'moderate',
           description: '',
           notes: '',
-          due_date: ''
+          due_date: '',
+          label: 'Defect'
         });
       }
     }
@@ -103,10 +106,15 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const finalAssignedDept = formData.label === 'General' && !formData.assigned_department
+      ? formData.source_department
+      : formData.assigned_department;
+
     const payload = {
       ...formData,
+      assigned_department: finalAssignedDept,
       due_date: formData.due_date ? calendarDateToUtcNoon(formData.due_date) : undefined,
-      send_notification: !editingDefect ? sendNotification : undefined
+      send_notification: !editingDefect && formData.label !== 'General' ? sendNotification : undefined
     };
     try {
       if (editingDefect) {
@@ -189,6 +197,60 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
 
             <div className={styles.modalBody}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.25rem' }}>
+                <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  ISSUE CLASSIFICATION
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, label: 'Defect' }))}
+                    className="vtr-btn"
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-mono)',
+                      border: formData.label === 'General' ? '1px solid var(--border-color)' : '1px solid var(--vtr-theme-primary)',
+                      background: formData.label === 'General' ? 'transparent' : 'rgba(0, 229, 255, 0.12)',
+                      color: formData.label === 'General' ? 'var(--text-secondary)' : 'var(--vtr-theme-primary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ACTIONABLE DEFECT
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, label: 'General', severity: prev.severity === 'critical' ? 'minor' : prev.severity }))}
+                    className="vtr-btn"
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-mono)',
+                      border: formData.label === 'General' ? '1px solid #64b5f6' : '1px solid var(--border-color)',
+                      background: formData.label === 'General' ? 'rgba(100, 181, 246, 0.15)' : 'transparent',
+                      color: formData.label === 'General' ? '#64b5f6' : 'var(--text-secondary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    GENERAL ISSUE (CLOSED)
+                  </button>
+                </div>
+                {formData.label === 'General' && (
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#90caf9',
+                    background: 'rgba(30, 58, 138, 0.25)',
+                    border: '1px solid rgba(144, 202, 249, 0.3)',
+                    borderRadius: '4px',
+                    padding: '0.5rem 0.75rem',
+                    marginTop: '0.25rem',
+                    lineHeight: '1.4'
+                  }}>
+                    ℹ️ <strong>Informational Record:</strong> This issue will automatically exist as closed with a generic &quot;General&quot; label. Useful for capturing details across projects without creating pending tasks or blocking machine readiness.
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <label htmlFor="issue_machine_id" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>MACHINE / ORDER NUMBER</label>
             <select 
@@ -238,7 +300,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                     assigned_user_id: isUserInNewDept ? formData.assigned_user_id : ''
                   });
                 }}
-                required
+                required={formData.label !== 'General'}
                 className="vtr-input"
                 style={{ borderColor: 'var(--vtr-theme-primary)', color: 'var(--vtr-theme-primary)' }}
               >
@@ -308,7 +370,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
           </div>
 
-          {!editingDefect && (
+          {!editingDefect && formData.label !== 'General' && (
             <NotificationRoutingCheckbox
               checked={sendNotification}
               onChange={setSendNotification}

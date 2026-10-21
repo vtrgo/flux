@@ -89,6 +89,9 @@ type Defect struct {
 	CorrectiveAction  *string    `json:"corrective_action,omitempty"`
 	CloseoutDate      *time.Time `json:"closeout_date,omitempty"`
 	TeamLeadSignature *string    `json:"team_lead_signature,omitempty"`
+
+	// General & Classification Label
+	Label string `json:"label"`
 }
 
 // NCRDetail represents a rich Non-Conformance Report with machine and sales order context
