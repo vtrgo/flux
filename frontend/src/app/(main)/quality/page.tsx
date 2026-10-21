@@ -15,6 +15,7 @@ import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
 import { CoNCWidget } from "../../../components/CoNCWidget";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 import { formatDepartmentName } from "../../../lib/departments";
+import { ChartIcon, ClipboardIcon } from "../../../components/ui/Icons";
 
 export default function QualityResolutionHub() {
   const [defects, setDefects] = useState<Defect[]>([]);
@@ -159,13 +160,13 @@ export default function QualityResolutionHub() {
             type="button"
             className="vtr-btn vtr-btn-secondary"
             onClick={() => setShowCoNC(prev => !prev)}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
             title="Toggle Cost of Non-Conformance metrics"
           >
-            📊 {showCoNC ? 'Hide CoNC Metrics' : 'CoNC Metrics'}
+            <ChartIcon size={14} /> {showCoNC ? 'Hide CoNC Metrics' : 'CoNC Metrics'}
           </button>
-          <Link href="/ncrs" className="vtr-btn vtr-btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
-            📋 NCR Tracker
+          <Link href="/ncrs" className="vtr-btn vtr-btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
+            <ClipboardIcon size={14} /> NCR Tracker
           </Link>
           <button className="vtr-btn" onClick={openNewNCRModal} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2, borderColor: 'var(--vtr-theme-primary)' }}>
             <span>+ CREATE NCR</span>

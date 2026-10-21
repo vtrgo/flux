@@ -77,8 +77,9 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>Part / Model Type</label>
+          <label htmlFor="edit_model_type" className={formStyles.label}>Part / Model Type</label>
           <input 
+            id="edit_model_type"
             required 
             className={formStyles.input} 
             value={modelType} 
@@ -88,8 +89,9 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
           />
         </div>
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>S/N or Tracking Number</label>
+          <label htmlFor="edit_order_number" className={formStyles.label}>S/N or Tracking Number</label>
           <input 
+            id="edit_order_number"
             required 
             className={formStyles.input} 
             value={orderNumber} 
@@ -98,8 +100,9 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
           />
         </div>
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>F.A.T. (Factory Acceptance Test) Date</label>
+          <label htmlFor="edit_fat_date" className={formStyles.label}>F.A.T. (Factory Acceptance Test) Date</label>
           <input 
+            id="edit_fat_date"
             type="date" 
             className={formStyles.input} 
             value={fatDate} 
@@ -107,8 +110,9 @@ export function EditMachineModal({ isOpen, onClose, machine, onSuccess }: EditMa
           />
         </div>
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>Lead (Project Lead)</label>
+          <label htmlFor="edit_lead" className={formStyles.label}>Lead (Project Lead)</label>
           <input 
+            id="edit_lead"
             className={formStyles.input} 
             value={lead} 
             onChange={e => setLead(e.target.value)} 

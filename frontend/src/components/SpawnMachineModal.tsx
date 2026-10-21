@@ -76,8 +76,9 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>Part / Model Type</label>
+          <label htmlFor="spawn_model_type" className={formStyles.label}>Part / Model Type</label>
           <input 
+            id="spawn_model_type"
             required 
             className={formStyles.input} 
             value={newMachineModel} 
@@ -87,8 +88,9 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
           />
         </div>
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>S/N or Tracking Number</label>
+          <label htmlFor="spawn_serial_number" className={formStyles.label}>S/N or Tracking Number</label>
           <input 
+            id="spawn_serial_number"
             required 
             className={formStyles.input} 
             value={newMachineSN} 
@@ -97,8 +99,9 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
           />
         </div>
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>F.A.T. (Factory Acceptance Test) Date</label>
+          <label htmlFor="spawn_fat_date" className={formStyles.label}>F.A.T. (Factory Acceptance Test) Date</label>
           <input 
+            id="spawn_fat_date"
             type="date" 
             className={formStyles.input} 
             value={newMachineFatDate} 
@@ -106,8 +109,9 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
           />
         </div>
         <div className={formStyles.formGroup}>
-          <label className={formStyles.label}>Lead (Project Lead)</label>
+          <label htmlFor="spawn_lead" className={formStyles.label}>Lead (Project Lead)</label>
           <input 
+            id="spawn_lead"
             className={formStyles.input} 
             value={newMachineLead} 
             onChange={e => setNewMachineLead(e.target.value)} 

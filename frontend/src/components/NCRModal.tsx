@@ -13,6 +13,7 @@ import { useSSE } from "./SSEProvider";
 import { toCalendarDateInput, calendarDateToUtcNoon } from "../lib/dateUtils";
 import { formatDepartmentName } from "../lib/departments";
 import { Authorize } from "./Authorize";
+import { PrinterIcon } from "./ui/Icons";
 
 interface NCRModalProps {
   isOpen: boolean;
@@ -536,7 +537,7 @@ export function NCRModal({
             </div>
 
             <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-              <div className={styles.label}>
+              <label htmlFor="description" className={styles.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span>Description of Defect</span>
                 <span
                   className="no-print"
@@ -550,7 +551,7 @@ export function NCRModal({
                 >
                   {formData.description.length} / 255
                 </span>
-              </div>
+              </label>
               <textarea
                 id="description"
                 value={formData.description}
@@ -847,8 +848,9 @@ export function NCRModal({
                 className="vtr-btn"
                 onClick={handlePrint}
                 title="Print standard PDF report"
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
               >
-                🖨️ Print / Save to PDF
+                <PrinterIcon size={14} /> Print / Save to PDF
               </button>
               <button
                 type="button"

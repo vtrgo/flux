@@ -64,4 +64,50 @@ describe('Modal Primitive Component', () => {
     fireEvent.click(screen.getByTestId('modal-backdrop'));
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it('traps focus within the modal on Tab key navigation', () => {
+    render(
+      <Modal
+        isOpen={true}
+        onClose={vi.fn()}
+        title="Focus Trap Dialog"
+        footer={<button data-testid="footer-btn">Submit</button>}
+      >
+        <input data-testid="input-field" placeholder="Type here" />
+      </Modal>
+    );
+
+    const closeBtn = screen.getByTestId('modal-close-btn');
+    const inputField = screen.getByTestId('input-field');
+    const footerBtn = screen.getByTestId('footer-btn');
+
+    // Focus last element (footer button) and press Tab -> should wrap to closeBtn
+    footerBtn.focus();
+    expect(document.activeElement).toBe(footerBtn);
+
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(closeBtn);
+
+    // Focus first element (close button) and press Shift+Tab -> should wrap to footerBtn
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(footerBtn);
+  });
+
+  it('restores focus to previous active element when modal unmounts', () => {
+    const triggerBtn = document.createElement('button');
+    triggerBtn.textContent = 'Open Modal';
+    document.body.appendChild(triggerBtn);
+    triggerBtn.focus();
+    expect(document.activeElement).toBe(triggerBtn);
+
+    const { unmount } = render(
+      <Modal isOpen={true} onClose={vi.fn()} title="Focus Restore Dialog">
+        Modal Content
+      </Modal>
+    );
+
+    unmount();
+    expect(document.activeElement).toBe(triggerBtn);
+    document.body.removeChild(triggerBtn);
+  });
 });

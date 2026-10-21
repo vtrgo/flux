@@ -14,6 +14,7 @@ const SSEContext = createContext<SSEContextType | null>(null);
 
 export function SSEProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
+  const [announcement, setAnnouncement] = useState<string>('');
   const listenersRef = useRef<Map<string, Set<SSECallback>>>(new Map());
   const eventSourceRef = useRef<EventSource | null>(null);
   
@@ -21,6 +22,8 @@ export function SSEProvider({ children }: { children: React.ReactNode }) {
     const msgEvent = e as MessageEvent;
     try {
       const data = JSON.parse(msgEvent.data);
+      const friendlyName = e.type.replace(/_/g, ' ');
+      setAnnouncement(`Real-time update: ${friendlyName}`);
       listenersRef.current.get(e.type)?.forEach(cb => cb(data));
     } catch (err) {
       listenersRef.current.get(e.type)?.forEach(cb => cb(null));
@@ -81,6 +84,15 @@ export function SSEProvider({ children }: { children: React.ReactNode }) {
   return (
     <SSEContext.Provider value={{ subscribe, isConnected }}>
       {children}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="sse-announcer"
+      >
+        {announcement}
+      </div>
     </SSEContext.Provider>
   );
 }

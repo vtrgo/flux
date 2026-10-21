@@ -349,7 +349,7 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    const varianceTabBtn = screen.getByText('📊 Quoting & Variance');
+    const varianceTabBtn = screen.getByRole('button', { name: /Quoting & Variance/i });
     await act(async () => {
       fireEvent.click(varianceTabBtn);
     });
@@ -367,7 +367,7 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    const deptTabBtn = screen.getByText('🏢 Department Tasks');
+    const deptTabBtn = screen.getByRole('button', { name: /Department Tasks/i });
     await act(async () => {
       fireEvent.click(deptTabBtn);
     });
@@ -451,7 +451,7 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    const varianceTabBtn = screen.getByText('📊 Quoting & Variance');
+    const varianceTabBtn = screen.getByRole('button', { name: /Quoting & Variance/i });
     await act(async () => {
       fireEvent.click(varianceTabBtn);
     });
@@ -492,7 +492,7 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    const varianceTabBtn = screen.getByText('📊 Quoting & Variance');
+    const varianceTabBtn = screen.getByRole('button', { name: /Quoting & Variance/i });
     await act(async () => {
       fireEvent.click(varianceTabBtn);
     });
@@ -544,7 +544,7 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    const approvalsTabBtn = screen.getByText('✅ Approvals');
+    const approvalsTabBtn = screen.getByRole('button', { name: /Approvals/i });
     await act(async () => {
       fireEvent.click(approvalsTabBtn);
     });
@@ -590,7 +590,7 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    const approvalsTabBtn = screen.getByText('✅ Approvals');
+    const approvalsTabBtn = screen.getByRole('button', { name: /Approvals/i });
     await act(async () => {
       fireEvent.click(approvalsTabBtn);
     });
@@ -609,7 +609,7 @@ describe('TimesheetPage', () => {
       render(<TimesheetPage />);
     });
 
-    const approvalsTabBtn = screen.getByText('✅ Approvals');
+    const approvalsTabBtn = screen.getByRole('button', { name: /Approvals/i });
     await act(async () => {
       fireEvent.click(approvalsTabBtn);
     });

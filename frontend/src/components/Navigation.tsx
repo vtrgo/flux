@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import styles from './Navigation.module.css';
+import { HomeIcon } from './ui/Icons';
 
 const DEPARTMENTS = [
   { path: "/design", label: "Design" },
@@ -104,7 +105,11 @@ export function Navigation() {
                 className={`${styles.dropdownItem} ${pathname === dept.path ? styles.dropdownItemActive : ''}`}
                 onClick={() => setIsDropdownOpen(false)}
               >
-                {dept.label} {isHome && <span title="Your Home Department">🏠</span>}
+                {dept.label} {isHome && (
+                  <span title="Your Home Department" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '0.35rem', verticalAlign: 'middle' }}>
+                    <HomeIcon size={13} />
+                  </span>
+                )}
               </Link>
             );
           })}

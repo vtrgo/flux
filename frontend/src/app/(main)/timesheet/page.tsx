@@ -8,6 +8,7 @@ import { WeeklyTimesheetGrid } from "../../../components/WeeklyTimesheetGrid";
 import { TimesheetApprovalsTable } from "../../../components/TimesheetApprovalsTable";
 import { Machine, CreateProjectTaskRequest, CreateDepartmentTaskRequest, ProjectTask, LaborCorrelationItem } from "../../../types";
 import { fetchApi } from "../../../lib/api";
+import { ClockIcon, ChartIcon, CheckIcon } from "../../../components/ui/Icons";
 import styles from "./timesheet.module.css";
 
 const DEPARTMENTS = [
@@ -327,8 +328,8 @@ export default function TimesheetPage() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleSection}>
-          <h1>
-            <span>⏱️</span> Timesheet & Quoting Hub
+          <h1 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ClockIcon size={22} style={{ color: 'var(--vtr-theme-primary)' }} /> Timesheet & Quoting Hub
           </h1>
           <p>Universal labor tracking connecting Production Quoting, SOP 1-003 Rework, and Defect Resolution</p>
         </div>
@@ -340,13 +341,14 @@ export default function TimesheetPage() {
               className={`${styles.toggleBtn} ${activeTab === "my_time" ? styles.toggleBtnActive : ""}`}
               onClick={() => setActiveTab("my_time")}
             >
-              👤 Weekly Timesheet
+              Weekly Timesheet
             </button>
             <button
               className={`${styles.toggleBtn} ${activeTab === "project_variance" ? styles.toggleBtnActive : ""}`}
               onClick={() => setActiveTab("project_variance")}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
             >
-              📊 Quoting & Variance
+              <ChartIcon size={14} /> Quoting & Variance
             </button>
             {isLeadOrManager && (
               <>
@@ -354,13 +356,14 @@ export default function TimesheetPage() {
                   className={`${styles.toggleBtn} ${activeTab === "dept_catalog" ? styles.toggleBtnActive : ""}`}
                   onClick={() => setActiveTab("dept_catalog")}
                 >
-                  🏢 Department Tasks
+                  Department Tasks
                 </button>
                 <button
                   className={`${styles.toggleBtn} ${activeTab === "approvals" ? styles.toggleBtnActive : ""}`}
                   onClick={() => setActiveTab("approvals")}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >
-                  ✅ Approvals
+                  <CheckIcon size={14} /> Approvals
                 </button>
               </>
             )}

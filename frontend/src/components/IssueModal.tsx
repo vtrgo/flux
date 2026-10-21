@@ -190,8 +190,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
 
             <div className={styles.modalBody}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>MACHINE / ORDER NUMBER</label>
+            <label htmlFor="issue_machine_id" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>MACHINE / ORDER NUMBER</label>
             <select 
+              id="issue_machine_id"
               value={formData.machine_id} 
               onChange={e => setFormData({...formData, machine_id: e.target.value})}
               required
@@ -205,8 +206,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           
           <div className={styles.routingGrid}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SOURCE DEPT</label>
+              <label htmlFor="issue_source_department" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SOURCE DEPT</label>
               <select 
+                id="issue_source_department"
                 value={formData.source_department} 
                 onChange={e => setFormData({...formData, source_department: e.target.value})}
                 className="vtr-input"
@@ -281,8 +283,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
 
           <div className={styles.severityGrid}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SEVERITY</label>
+              <label htmlFor="issue_severity" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SEVERITY</label>
               <select 
+                id="issue_severity"
                 value={formData.severity} 
                 onChange={e => setFormData({...formData, severity: e.target.value})}
                 className="vtr-input"
@@ -294,8 +297,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TARGET RESOLUTION DATE (OPTIONAL)</label>
+              <label htmlFor="issue_due_date" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TARGET RESOLUTION DATE (OPTIONAL)</label>
               <input 
+                id="issue_due_date"
                 type="date"
                 value={formData.due_date}
                 onChange={e => setFormData({...formData, due_date: e.target.value})}
@@ -314,7 +318,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              <label htmlFor="issue_description" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 BRIEF DESCRIPTION
               </label>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: formData.description.length >= 240 ? 'var(--accent-red, #ff3366)' : 'var(--text-secondary)' }}>
@@ -322,6 +326,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               </span>
             </div>
             <textarea 
+              id="issue_description"
               value={formData.description} 
               onChange={e => setFormData({...formData, description: e.target.value})}
               required
@@ -335,10 +340,11 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+            <label htmlFor="issue_notes" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               DETAILED NOTES & CONTEXT (OPTIONAL)
             </label>
             <textarea 
+              id="issue_notes"
               value={formData.notes} 
               onChange={e => setFormData({...formData, notes: e.target.value})}
               rows={5}

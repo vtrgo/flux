@@ -242,8 +242,9 @@ export function ReworkModal({
               <h3 className={styles.sectionTitle}>1. Design Department Procedure</h3>
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label>Project (Sales Order) *</label>
+                  <label htmlFor="rework_sales_order_id">Project (Sales Order) *</label>
                   <select
+                    id="rework_sales_order_id"
                     value={formData.sales_order_id}
                     onChange={(e) => {
                       const so = salesOrders.find((s) => s.id === e.target.value);
@@ -265,8 +266,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Machine / Station (Optional)</label>
+                  <label htmlFor="rework_machine_id">Machine / Station (Optional)</label>
                   <select
+                    id="rework_machine_id"
                     value={formData.machine_id}
                     onChange={(e) => setFormData({ ...formData, machine_id: e.target.value })}
                   >
@@ -282,8 +284,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Project Number & Letter *</label>
+                  <label htmlFor="rework_project_number">Project Number & Letter *</label>
                   <input
+                    id="rework_project_number"
                     type="text"
                     value={formData.project_number}
                     onChange={(e) => setFormData({ ...formData, project_number: e.target.value })}
@@ -295,8 +298,9 @@ export function ReworkModal({
 
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label>Part Number *</label>
+                  <label htmlFor="rework_part_number">Part Number *</label>
                   <input
+                    id="rework_part_number"
                     type="text"
                     value={formData.part_number}
                     onChange={(e) => setFormData({ ...formData, part_number: e.target.value })}
@@ -306,8 +310,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Revision *</label>
+                  <label htmlFor="rework_revision">Revision *</label>
                   <input
+                    id="rework_revision"
                     type="text"
                     value={formData.revision}
                     onChange={(e) => setFormData({ ...formData, revision: e.target.value })}
@@ -317,8 +322,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Work Type (NEW or MOD) *</label>
+                  <label htmlFor="rework_part_type">Work Type (NEW or MOD) *</label>
                   <select
+                    id="rework_part_type"
                     value={formData.part_type}
                     onChange={(e) => setFormData({ ...formData, part_type: e.target.value as ReworkPartType })}
                   >
@@ -328,8 +334,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Quantity *</label>
+                  <label htmlFor="rework_qty">Quantity *</label>
                   <input
+                    id="rework_qty"
                     type="number"
                     min="1"
                     value={formData.qty}
@@ -341,8 +348,9 @@ export function ReworkModal({
 
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label>Description *</label>
+                  <label htmlFor="rework_description">Description *</label>
                   <input
+                    id="rework_description"
                     type="text"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -352,8 +360,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Material *</label>
+                  <label htmlFor="rework_material">Material *</label>
                   <input
+                    id="rework_material"
                     type="text"
                     value={formData.material}
                     onChange={(e) => setFormData({ ...formData, material: e.target.value })}
@@ -363,8 +372,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Sub-Assembly</label>
+                  <label htmlFor="rework_sub_assembly">Sub-Assembly</label>
                   <input
+                    id="rework_sub_assembly"
                     type="text"
                     value={formData.sub_assembly}
                     onChange={(e) => setFormData({ ...formData, sub_assembly: e.target.value })}
@@ -375,8 +385,9 @@ export function ReworkModal({
 
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label>Mechanical Designer</label>
+                  <label htmlFor="rework_mech_designer_id">Mechanical Designer</label>
                   <select
+                    id="rework_mech_designer_id"
                     value={formData.mech_designer_id}
                     onChange={(e) => setFormData({ ...formData, mech_designer_id: e.target.value })}
                   >
@@ -390,8 +401,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Release To (PM or Plant Manager)</label>
+                  <label htmlFor="rework_pm_released_to_id">Release To (PM or Plant Manager)</label>
                   <select
+                    id="rework_pm_released_to_id"
                     value={formData.pm_released_to_id}
                     onChange={(e) => setFormData({ ...formData, pm_released_to_id: e.target.value })}
                   >
@@ -405,8 +417,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Estimated Hours</label>
+                  <label htmlFor="rework_estimated_hours">Estimated Hours</label>
                   <input
+                    id="rework_estimated_hours"
                     type="number"
                     step="0.5"
                     value={formData.estimated_hours}
@@ -416,8 +429,9 @@ export function ReworkModal({
               </div>
 
               <div className={styles.field}>
-                <label>Reason for Rework *</label>
+                <label htmlFor="rework_reason_for_rework">Reason for Rework *</label>
                 <textarea
+                  id="rework_reason_for_rework"
                   rows={2}
                   value={formData.reason_for_rework}
                   onChange={(e) => setFormData({ ...formData, reason_for_rework: e.target.value })}
@@ -441,8 +455,9 @@ export function ReworkModal({
               <h3 className={styles.sectionTitle}>2. Project Management Review</h3>
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label>Date Released to Mfg</label>
+                  <label htmlFor="rework_date_released_to_mfg">Date Released to Mfg</label>
                   <input
+                    id="rework_date_released_to_mfg"
                     type="date"
                     value={formData.date_released_to_mfg}
                     onChange={(e) => setFormData({ ...formData, date_released_to_mfg: e.target.value })}
@@ -450,8 +465,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Requested Completion (Mfg + PP)</label>
+                  <label htmlFor="rework_requested_completion_date">Requested Completion (Mfg + PP)</label>
                   <input
+                    id="rework_requested_completion_date"
                     type="date"
                     value={formData.requested_completion_date}
                     onChange={(e) => setFormData({ ...formData, requested_completion_date: e.target.value })}
@@ -459,8 +475,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Delivered To (Mfg Lead)</label>
+                  <label htmlFor="rework_pm_delivered_to">Delivered To (Mfg Lead)</label>
                   <input
+                    id="rework_pm_delivered_to"
                     type="text"
                     value={formData.pm_delivered_to}
                     onChange={(e) => setFormData({ ...formData, pm_delivered_to: e.target.value })}
@@ -484,8 +501,9 @@ export function ReworkModal({
               <h3 className={styles.sectionTitle}>3. Manufacturing Department Execution</h3>
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label>Expected Completion</label>
+                  <label htmlFor="rework_expected_completion_date">Expected Completion</label>
                   <input
+                    id="rework_expected_completion_date"
                     type="date"
                     value={formData.expected_completion_date}
                     onChange={(e) => setFormData({ ...formData, expected_completion_date: e.target.value })}
@@ -493,8 +511,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Material Ordered Date</label>
+                  <label htmlFor="rework_material_ordered_date">Material Ordered Date</label>
                   <input
+                    id="rework_material_ordered_date"
                     type="date"
                     value={formData.material_ordered_date}
                     onChange={(e) => setFormData({ ...formData, material_ordered_date: e.target.value })}
@@ -502,8 +521,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Assigned Machinist</label>
+                  <label htmlFor="rework_assigned_machinist_id">Assigned Machinist</label>
                   <select
+                    id="rework_assigned_machinist_id"
                     value={formData.assigned_machinist_id}
                     onChange={(e) => setFormData({ ...formData, assigned_machinist_id: e.target.value })}
                   >
@@ -519,8 +539,9 @@ export function ReworkModal({
 
               <div className={styles.row}>
                 <div className={styles.field}>
-                  <label>Date Mfg Completed</label>
+                  <label htmlFor="rework_date_mfg_completed">Date Mfg Completed</label>
                   <input
+                    id="rework_date_mfg_completed"
                     type="date"
                     value={formData.date_mfg_completed}
                     onChange={(e) => setFormData({ ...formData, date_mfg_completed: e.target.value })}
@@ -528,8 +549,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Part Given To / Left At</label>
+                  <label htmlFor="rework_part_given_to_or_left_at">Part Given To / Left At</label>
                   <input
+                    id="rework_part_given_to_or_left_at"
                     type="text"
                     value={formData.part_given_to_or_left_at}
                     onChange={(e) => setFormData({ ...formData, part_given_to_or_left_at: e.target.value })}
@@ -538,8 +560,9 @@ export function ReworkModal({
                 </div>
 
                 <div className={styles.field}>
-                  <label>Actual Machining Hours</label>
+                  <label htmlFor="rework_actual_hours">Actual Machining Hours</label>
                   <input
+                    id="rework_actual_hours"
                     type="number"
                     step="0.5"
                     value={formData.actual_hours}
@@ -564,8 +587,9 @@ export function ReworkModal({
               {formData.requires_outside_processing && (
                 <div className={styles.row} style={{ marginTop: "0.5rem" }}>
                   <div className={styles.field}>
-                    <label>Outside Vendor</label>
+                    <label htmlFor="rework_outside_vendor">Outside Vendor</label>
                     <input
+                      id="rework_outside_vendor"
                       type="text"
                       value={formData.outside_vendor}
                       onChange={(e) => setFormData({ ...formData, outside_vendor: e.target.value })}
@@ -574,8 +598,9 @@ export function ReworkModal({
                   </div>
 
                   <div className={styles.field}>
-                    <label>Date Sent</label>
+                    <label htmlFor="rework_date_sent_for_processing">Date Sent</label>
                     <input
+                      id="rework_date_sent_for_processing"
                       type="date"
                       value={formData.date_sent_for_processing}
                       onChange={(e) => setFormData({ ...formData, date_sent_for_processing: e.target.value })}
@@ -583,8 +608,9 @@ export function ReworkModal({
                   </div>
 
                   <div className={styles.field}>
-                    <label>Date Expected</label>
+                    <label htmlFor="rework_date_expected_from_processing">Date Expected</label>
                     <input
+                      id="rework_date_expected_from_processing"
                       type="date"
                       value={formData.date_expected_from_processing}
                       onChange={(e) => setFormData({ ...formData, date_expected_from_processing: e.target.value })}
@@ -592,8 +618,9 @@ export function ReworkModal({
                   </div>
 
                   <div className={styles.field}>
-                    <label>Date Received</label>
+                    <label htmlFor="rework_date_received_from_processing">Date Received</label>
                     <input
+                      id="rework_date_received_from_processing"
                       type="date"
                       value={formData.date_received_from_processing}
                       onChange={(e) => setFormData({ ...formData, date_received_from_processing: e.target.value })}

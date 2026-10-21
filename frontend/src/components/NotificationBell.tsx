@@ -227,7 +227,12 @@ export function NotificationBell() {
           <div style={{ overflowY: 'auto', maxHeight: '400px', display: 'flex', flexDirection: 'column' }}>
             {alerts.length === 0 ? (
               <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem', opacity: 0.5 }}>🔔</div>
+                <div style={{ marginBottom: '0.5rem', opacity: 0.4, display: 'flex', justifyContent: 'center' }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                  </svg>
+                </div>
                 No notifications logged yet.<br />
                 <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>Live quality events will appear here.</span>
               </div>

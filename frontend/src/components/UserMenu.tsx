@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
+import { SettingsIcon } from './ui/Icons';
 
 export function UserMenu() {
   const { user, logout, loading } = useAuth();
@@ -68,7 +69,7 @@ export function UserMenu() {
           title="Manage profile and change password"
         >
           {userDisplayName}
-          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>⚙️</span>
+          <SettingsIcon size={13} style={{ opacity: 0.8 }} />
         </button>
         <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
           {deptLabel && (
