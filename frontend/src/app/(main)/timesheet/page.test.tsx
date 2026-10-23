@@ -799,6 +799,23 @@ describe('TimesheetPage', () => {
 
     expect(defectSelect.value).toBe('def-1');
   });
+
+  it('opens the printable timesheet modal when Print button is clicked', async () => {
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    const printBtn = screen.getByRole('button', { name: /Print/i });
+    expect(printBtn).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(printBtn);
+    });
+
+    expect(screen.getByText('Print Weekly Timesheet')).toBeInTheDocument();
+    expect(screen.getByText('Weekly Job Schedule')).toBeInTheDocument();
+    expect(screen.getByText('Job allocation approved by')).toBeInTheDocument();
+  });
 });
 
 

@@ -15,6 +15,7 @@ import {
   ReworkItem,
   Defect,
 } from '../types';
+import { TimesheetPrintModal } from './TimesheetPrintModal';
 import styles from './WeeklyTimesheetGrid.module.css';
 
 interface WeeklyTimesheetGridProps {
@@ -105,6 +106,8 @@ export function WeeklyTimesheetGrid({
     loading,
     fetchWeeklyTimesheet,
     saveWeeklyTimesheet,
+    submitWeeklyTimesheet,
+    withdrawWeeklyTimesheet,
   } = useTimesheetData();
 
   const [rows, setRows] = useState<GridRow[]>([createBlankRow()]);
@@ -112,6 +115,8 @@ export function WeeklyTimesheetGrid({
   const [notes, setNotes] = useState<string>('');
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
 
   // Cache allocated tasks, rework items, and defects per machine to support inline selects on multiple rows
   const [machineTasksCache, setMachineTasksCache] = useState<Record<string, ProjectTask[]>>({});
@@ -571,6 +576,44 @@ export function WeeklyTimesheetGrid({
     }
   };
 
+  // Submit Timesheet to Manager for Approval
+  const handleSubmitTimesheet = async () => {
+    if (!weeklyTimesheet || isLocked) return;
+    try {
+      setSubmitting(true);
+      if (isDirty) {
+        const items = buildSavePayload();
+        await saveWeeklyTimesheet(weeklyTimesheet.id, {
+          notes,
+          entries: items,
+        });
+        setIsDirty(false);
+      }
+      await submitWeeklyTimesheet(weeklyTimesheet.id);
+      toast.success('Weekly timesheet submitted to manager for approval');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit timesheet';
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Withdraw Submitted Timesheet for Edits
+  const handleWithdrawTimesheet = async () => {
+    if (!weeklyTimesheet) return;
+    try {
+      setSubmitting(true);
+      await withdrawWeeklyTimesheet(weeklyTimesheet.id);
+      toast.success('Timesheet withdrawn back to draft');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to withdraw timesheet';
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Daily totals calculation
   const dayTotals = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -643,6 +686,17 @@ export function WeeklyTimesheetGrid({
             )}
 
             <button
+              className={styles.navBtn}
+              onClick={() => setIsPrintModalOpen(true)}
+              type="button"
+              title="Print standard shop timesheet schedule"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+            >
+              <span>🖨️</span>
+              <span>Print</span>
+            </button>
+
+            <button
               className={styles.btnPrimary}
               onClick={handleSaveTimesheet}
               disabled={isLocked || saving || !isDirty}
@@ -654,7 +708,57 @@ export function WeeklyTimesheetGrid({
                 ? 'Save Changes *'
                 : 'Save Timesheet'}
             </button>
+
+            {!isLocked && weeklyTimesheet && weeklyTimesheet.status !== 'submitted' && (grandTotal > 0 || weeklyTimesheet.total_hours > 0) && (
+              <button
+                className={styles.navBtn}
+                onClick={handleSubmitTimesheet}
+                disabled={submitting || saving}
+                type="button"
+                title="Submit weekly timesheet to department manager for approval"
+                style={{
+                  background: 'rgba(0, 229, 255, 0.15)',
+                  color: 'var(--vtr-theme-primary, #00e5ff)',
+                  border: '1px solid rgba(0, 229, 255, 0.4)',
+                  fontWeight: 700,
+                }}
+              >
+                {submitting ? 'Submitting...' : 'Submit to Manager ➔'}
+              </button>
+            )}
+
+            {!isLocked && weeklyTimesheet?.status === 'submitted' && (
+              <button
+                className={styles.navBtn}
+                onClick={handleWithdrawTimesheet}
+                disabled={submitting}
+                type="button"
+                title="Withdraw submitted timesheet back to draft for edits"
+                style={{
+                  background: 'rgba(255, 170, 0, 0.15)',
+                  color: '#ffb300',
+                  border: '1px solid rgba(255, 170, 0, 0.4)',
+                }}
+              >
+                Withdraw for Edits
+              </button>
+            )}
           </div>
+        </div>
+      )}
+
+      {readOnlyUserView && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+          <button
+            className={styles.navBtn}
+            onClick={() => setIsPrintModalOpen(true)}
+            type="button"
+            title="Print standard shop timesheet schedule"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <span>🖨️</span>
+            <span>Print Timesheet</span>
+          </button>
         </div>
       )}
 
@@ -1057,6 +1161,23 @@ export function WeeklyTimesheetGrid({
           </div>
         </div>
       </div>
+
+      <TimesheetPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        timesheet={weeklyTimesheet}
+        employeeName={
+          weeklyTimesheet?.user_name ||
+          (authUser
+            ? authUser.first_name
+              ? `${authUser.first_name} ${authUser.last_name || ''}`.trim()
+              : authUser.username
+            : '')
+        }
+        department={effectiveDepartment}
+        weekStartDate={currentWeekSunday}
+        rows={rows}
+      />
     </div>
   );
 }

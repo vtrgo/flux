@@ -8,6 +8,7 @@ import { getSundayOfWeek, addWeeks, formatWeekRange, formatHours } from '../lib/
 import { useAuth } from '../contexts/AuthContext';
 import { WeeklyTimesheetGrid } from './WeeklyTimesheetGrid';
 import { Modal } from './ui/Modal';
+import { TimesheetPrintModal } from './TimesheetPrintModal';
 import styles from './WeeklyTimesheetGrid.module.css';
 
 interface TimesheetApprovalsTableProps {
@@ -58,6 +59,9 @@ export function TimesheetApprovalsTable({
   const [rejectingTimesheet, setRejectingTimesheet] = useState<WeeklyTimesheet | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [processingAction, setProcessingAction] = useState<boolean>(false);
+
+  // Print dialog state
+  const [printingTimesheet, setPrintingTimesheet] = useState<WeeklyTimesheet | null>(null);
 
   // Expanded inline child row state
   const [expandedTimesheet, setExpandedTimesheet] = useState<WeeklyTimesheet | null>(null);
@@ -466,6 +470,26 @@ export function TimesheetApprovalsTable({
                             >
                               {isExpanded ? 'Hide Details' : 'Review'}
                             </button>
+                            <button
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.08)',
+                                color: '#fff',
+                                border: '1px solid #444',
+                                borderRadius: '4px',
+                                padding: '0.3rem 0.6rem',
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                              }}
+                              onClick={() => setPrintingTimesheet(ts)}
+                              type="button"
+                              title="Print standard shop timesheet schedule"
+                            >
+                              <span>🖨️</span>
+                              <span>Print</span>
+                            </button>
                             {isAdminUser && (
                               <button
                                 style={{
@@ -634,6 +658,18 @@ export function TimesheetApprovalsTable({
           onChange={e => setRejectionReason(e.target.value)}
         />
       </Modal>
+
+      {/* Print Timesheet Modal */}
+      {printingTimesheet && (
+        <TimesheetPrintModal
+          isOpen={Boolean(printingTimesheet)}
+          onClose={() => setPrintingTimesheet(null)}
+          timesheet={printingTimesheet}
+          employeeName={printingTimesheet.user_name}
+          department={printingTimesheet.department}
+          weekStartDate={printingTimesheet.week_start_date || selectedWeek}
+        />
+      )}
     </div>
   );
 }
