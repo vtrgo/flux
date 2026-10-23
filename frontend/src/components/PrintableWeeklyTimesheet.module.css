@@ -1,5 +1,5 @@
 /* PrintableWeeklyTimesheet.module.css
- * High-fidelity print styling mirroring timesheet-example.xlsx
+ * High-fidelity full-page print styling mirroring timesheet-example.xlsx
  */
 
 .wrapper {
@@ -13,13 +13,13 @@
 .sheet {
   box-sizing: border-box;
   width: 100%;
-  max-width: 820px;
+  max-width: 860px;
   background-color: #ffffff !important;
   color: #111111 !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  font-size: 11px;
-  line-height: 1.3;
-  padding: 24px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  padding: 24px 28px;
   border: 1px solid #d0d0d0;
   border-radius: 4px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
@@ -30,7 +30,7 @@
 .headerTable {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .headerTable td {
@@ -39,30 +39,33 @@
 }
 
 .employeeNameCell {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: #000000;
 }
 
 .scheduleTitleCell {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   text-align: right;
   letter-spacing: 0.5px;
+  color: #000000;
 }
 
 .weekEndingCell {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  padding-top: 4px;
+  padding-top: 6px;
+  color: #000000;
 }
 
 .instructionCell {
-  font-size: 11px;
+  font-size: 11.5px;
   font-style: italic;
-  color: #444444;
-  padding: 4px 6px 8px 6px;
+  color: #333333;
+  padding: 4px 6px 10px 6px;
   text-align: left;
 }
 
@@ -76,54 +79,58 @@
 
 .gridTable th,
 .gridTable td {
-  border: 1px solid #111111;
-  padding: 4px 6px;
+  border: 1.5px solid #111111;
+  padding: 6px 8px;
   box-sizing: border-box;
-  color: #111111;
+  color: #000000;
 }
 
-/* Column Widths (matching ~28% Col A, 9% each Col B-H, 9% Col I) */
+/* Column Widths (matching ~31% Col A, 8.7% each Col B-H, 8.1% Col I) */
 .colJob {
-  width: 28%;
+  width: 31%;
   text-align: left;
 }
 
 .colDay {
-  width: 9%;
+  width: 8.7%;
   text-align: center;
 }
 
 .colTotal {
-  width: 9%;
+  width: 8.1%;
   text-align: right;
 }
 
 /* Header Rows */
 .thDayName {
-  background-color: #f2f2f2;
+  background-color: #f0f0f0;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 12px;
   text-align: center;
+  height: 28px;
+  letter-spacing: 0.25px;
 }
 
 .thDateLabel {
-  background-color: #fafafa;
+  background-color: #f8f8f8;
   font-weight: 700;
-  font-size: 10px;
+  font-size: 11px;
   text-align: left;
+  height: 24px;
 }
 
 .thDateValue {
-  background-color: #fafafa;
+  background-color: #f8f8f8;
   font-weight: 600;
-  font-size: 10px;
+  font-size: 11px;
   text-align: center;
+  height: 24px;
 }
 
 /* Task / Job Rows */
 .rowJob td {
-  height: 22px;
-  font-size: 10.5px;
+  height: 30px;
+  font-size: 11.5px;
 }
 
 .jobName {
@@ -131,38 +138,36 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.jobDept {
-  font-size: 9px;
-  color: #555555;
-  margin-left: 4px;
-  text-transform: uppercase;
+  display: block;
 }
 
 .cellHours {
   text-align: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .cellRowTotal {
   text-align: right;
-  font-weight: 600;
+  font-weight: 700;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
 }
 
 /* Blank / Write-in Rows */
 .rowBlank td {
-  height: 22px;
+  height: 30px;
 }
 
 /* Totals Row */
 .rowTotals td {
-  background-color: #e8e8e8;
+  background-color: #e5e5e5;
   font-weight: 800;
-  font-size: 11px;
-  border-top: 2px solid #111111;
-  border-bottom: 2px solid #111111;
+  font-size: 12px;
+  height: 32px;
+  border-top: 2px solid #000000;
+  border-bottom: 2px solid #000000;
 }
 
 .labelTotal {
@@ -173,11 +178,12 @@
 .cellDayTotal {
   text-align: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
 }
 
 .cellGrandTotal {
   text-align: right;
-  font-size: 11.5px;
+  font-size: 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -187,14 +193,14 @@
 
 /* Footer & Approval Section */
 .footerContainer {
-  margin-top: 10px;
+  margin-top: 12px;
   width: 100%;
 }
 
 .approvalTable {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .approvalTable td {
@@ -203,109 +209,145 @@
 }
 
 .approvalLabelCell {
-  width: 45%;
-  font-size: 11px;
+  width: 40%;
+  font-size: 12px;
   font-weight: 700;
-  color: #222222;
+  color: #111111;
+  padding-top: 10px;
 }
 
 .approvalBoxCell {
-  width: 55%;
+  width: 60%;
   border: 1.5px solid #111111;
   border-radius: 2px;
-  padding: 8px 10px;
+  padding: 10px 14px;
   background-color: #fafafa;
 }
 
 .signatureLines {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .sigRow {
   display: flex;
   align-items: flex-end;
-  gap: 6px;
-  font-size: 10px;
-  color: #333333;
+  gap: 8px;
+  font-size: 11px;
+  color: #111111;
 }
 
 .sigUnderline {
   flex: 1;
-  border-bottom: 1px solid #111111;
-  height: 14px;
+  border-bottom: 1.5px solid #111111;
+  height: 16px;
 }
 
 .digitalApprovalStamp {
-  margin-top: 6px;
-  padding: 4px 6px;
+  margin-top: 8px;
+  padding: 5px 8px;
   background-color: #e8f5e9;
   border: 1px solid #81c784;
   border-radius: 3px;
-  font-size: 9.5px;
+  font-size: 10px;
   color: #1b5e20;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .deliveryNotice {
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
   color: #111111;
-  margin-top: 8px;
+  margin-top: 10px;
   text-align: left;
 }
 
 .systemAuditLine {
-  font-size: 8.5px;
-  color: #777777;
-  margin-top: 10px;
+  font-size: 9px;
+  color: #666666;
+  margin-top: 12px;
   display: flex;
   justify-content: space-between;
   border-top: 1px dotted #ccc;
-  padding-top: 4px;
+  padding-top: 6px;
 }
 
-/* Print Overrides */
+/* =========================================================================
+   Print Portal Behavior & Edge-to-Edge Full Screen Spooling
+   ========================================================================= */
+
+/* Always hide the dedicated print portal on screen */
+@media screen {
+  :global(#timesheet-print-portal) {
+    display: none !important;
+  }
+}
+
+/* Spooling to Printer Driver */
 @media print {
   @page {
     size: portrait;
-    margin: 0.3in 0.3in 0.4in 0.3in;
+    margin: 0.35in 0.35in 0.4in 0.35in;
   }
 
-  /* Hide all interactive app elements */
-  body * {
-    visibility: hidden;
+  html,
+  body {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
   }
 
-  /* Show only printable sheet and its contents */
-  .printableRoot,
-  .printableRoot * {
-    visibility: visible;
+  /* Hide entire screen UI, modals, headers, backdrops, and navigation */
+  body > *:not(#timesheet-print-portal) {
+    display: none !important;
   }
 
-  .printableRoot {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    background: transparent !important;
+  /* Dedicated print portal mounts directly to <body> and expands to full page */
+  :global(#timesheet-print-portal) {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
-  .sheet {
+  :global(#timesheet-print-portal) .wrapper {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  :global(#timesheet-print-portal) .sheet {
     max-width: 100% !important;
     width: 100% !important;
     padding: 0 !important;
+    margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    margin: 0 !important;
     page-break-inside: avoid;
     break-inside: avoid;
+  }
+
+  .gridTable th,
+  .gridTable td {
+    border: 1.5px solid #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .thDayName {
@@ -323,14 +365,21 @@
 
   .rowTotals td {
     background-color: #e0e0e0 !important;
+    border-top: 2px solid #000000 !important;
+    border-bottom: 2px solid #000000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .approvalBoxCell {
     background-color: #ffffff !important;
+    border: 1.5px solid #000000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .sigUnderline {
+    border-bottom: 1.5px solid #000000 !important;
   }
 
   .digitalApprovalStamp {

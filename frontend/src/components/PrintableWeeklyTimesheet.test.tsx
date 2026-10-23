@@ -218,6 +218,10 @@ describe('TimesheetPrintModal', () => {
     fireEvent.click(printBtn);
     expect(printSpy).toHaveBeenCalledTimes(1);
 
+    // Verify unconstrained print portal mounted directly to document.body
+    const portal = document.body.querySelector('#timesheet-print-portal');
+    expect(portal).toBeInTheDocument();
+
     const closeBtn = screen.getByRole('button', { name: 'Close' });
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalledTimes(1);

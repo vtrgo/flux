@@ -813,8 +813,8 @@ describe('TimesheetPage', () => {
     });
 
     expect(screen.getByText('Print Weekly Timesheet')).toBeInTheDocument();
-    expect(screen.getByText('Weekly Job Schedule')).toBeInTheDocument();
-    expect(screen.getByText('Job allocation approved by')).toBeInTheDocument();
+    expect(screen.getAllByText('Weekly Job Schedule').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Job allocation approved by').length).toBeGreaterThanOrEqual(1);
   });
 });
 
