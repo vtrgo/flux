@@ -276,63 +276,14 @@
   padding-top: 6px;
 }
 
-/* =========================================================================
-   Print Portal Behavior & Edge-to-Edge Full Screen Spooling
-   ========================================================================= */
-
-/* Always hide the dedicated print portal on screen */
-@media screen {
-  :global(#timesheet-print-portal) {
-    display: none !important;
-  }
-}
-
-/* Spooling to Printer Driver */
+/* Fallback print rules for direct page printing */
 @media print {
   @page {
     size: portrait;
     margin: 0.35in 0.35in 0.4in 0.35in;
   }
 
-  html,
-  body {
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    overflow: visible !important;
-  }
-
-  /* Hide entire screen UI, modals, headers, backdrops, and navigation */
-  body > *:not(#timesheet-print-portal) {
-    display: none !important;
-  }
-
-  /* Dedicated print portal mounts directly to <body> and expands to full page */
-  :global(#timesheet-print-portal) {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-    overflow: visible !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-
-  :global(#timesheet-print-portal) .wrapper {
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  :global(#timesheet-print-portal) .sheet {
+  .sheet {
     max-width: 100% !important;
     width: 100% !important;
     padding: 0 !important;

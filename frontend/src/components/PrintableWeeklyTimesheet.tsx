@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { WeeklyTimesheet, TimeEntryType } from '../types';
 import { getWeekDays, formatHours } from '../lib/dateUtils';
+import { TimesheetPrintParams, TimesheetRowPrintData, TimesheetDayCol } from '../lib/printTimesheet';
 import styles from './PrintableWeeklyTimesheet.module.css';
 
 export interface PrintableTimesheetRow {
@@ -21,6 +22,120 @@ export interface PrintableWeeklyTimesheetProps {
   weekStartDate: string; // ISO Sunday 'YYYY-MM-DD'
   rows?: PrintableTimesheetRow[];
   totalTargetRows?: number;
+}
+
+export function buildTimesheetPrintParams(
+  timesheet?: WeeklyTimesheet | null,
+  employeeName?: string,
+  department?: string,
+  weekStartDate: string = '',
+  explicitRows?: PrintableTimesheetRow[],
+  totalTargetRows: number = 18
+): TimesheetPrintParams {
+  const weekDays = getWeekDays(weekStartDate);
+  const saturdayDateStr = weekDays[6]?.dateStr || '';
+  let weekEndingFormatted = '';
+  if (saturdayDateStr) {
+    const [y, m, d] = saturdayDateStr.split('-');
+    weekEndingFormatted = `${parseInt(m, 10)}/${parseInt(d, 10)}/${y}`;
+  }
+
+  const timesheetUserName = timesheet?.user_name;
+  const effectiveEmployeeName =
+    (employeeName && employeeName.trim()) ||
+    (timesheetUserName && timesheetUserName.trim()) ||
+    'Lucas Sinclair';
+
+  let effectiveRows: PrintableTimesheetRow[] = [];
+  if (explicitRows && explicitRows.length > 0) {
+    effectiveRows = explicitRows;
+  } else if (timesheet && Array.isArray(timesheet.entries) && timesheet.entries.length > 0) {
+    const rowMap = new Map<string, PrintableTimesheetRow>();
+    timesheet.entries.forEach(entry => {
+      const orderNum = entry.order_number || '';
+      const taskName = entry.task_name || (entry.rework_part_number ? `Rework: ${entry.rework_part_number}` : 'General Task');
+      const key = `${orderNum}:${taskName}:${entry.entry_type || 'production'}`;
+
+      if (!rowMap.has(key)) {
+        rowMap.set(key, {
+          rowKey: key,
+          order_number: orderNum || undefined,
+          task_name: taskName,
+          department: entry.department,
+          entry_type: entry.entry_type,
+          days: {},
+        });
+      }
+
+      const r = rowMap.get(key)!;
+      r.days[entry.work_date] = (r.days[entry.work_date] || 0) + entry.hours_spent;
+    });
+    effectiveRows = Array.from(rowMap.values());
+  }
+
+  const activeRows = effectiveRows.filter(r => {
+    const hasHours = Object.values(r.days).some(h => (h || 0) > 0);
+    return hasHours || Boolean(r.order_number || r.task_name);
+  });
+
+  const dayTotals: Record<string, number> = {};
+  weekDays.forEach(day => {
+    dayTotals[day.dateStr] = activeRows.reduce<number>((sum, r) => sum + (r.days[day.dateStr] || 0), 0);
+  });
+
+  const grandTotal = Object.values(dayTotals).reduce((sum, h) => sum + h, 0);
+
+  const printRows: TimesheetRowPrintData[] = activeRows.map(r => {
+    const rowTotal = Object.values(r.days).reduce<number>((s, h) => s + (h || 0), 0);
+    const jobLabel = r.order_number
+      ? `${r.order_number}${r.task_name ? ` - ${r.task_name}` : ''}`
+      : r.task_name || 'General Task';
+    return {
+      jobLabel,
+      days: r.days,
+      rowTotal,
+    };
+  });
+
+  const weekDayCols: TimesheetDayCol[] = weekDays.map(day => {
+    const [, m, d] = day.dateStr.split('-');
+    return {
+      dateStr: day.dateStr,
+      dayName: day.dayName,
+      mdFormatted: `${parseInt(m, 10)}/${parseInt(d, 10)}`,
+    };
+  });
+
+  let approvalDateFormatted = '';
+  if (timesheet?.approved_at) {
+    try {
+      const d = new Date(timesheet.approved_at);
+      approvalDateFormatted = d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+      });
+    } catch {
+      approvalDateFormatted = '';
+    }
+  }
+
+  return {
+    employeeName: effectiveEmployeeName,
+    department,
+    weekEndingDate: weekEndingFormatted,
+    weekDays: weekDayCols,
+    rows: printRows,
+    totalTargetRows,
+    dayTotals,
+    grandTotal,
+    isOvertime: grandTotal > 40,
+    timesheetId: timesheet?.id,
+    status: timesheet?.status || 'draft',
+    isApproved: timesheet?.status === 'approved',
+    approverName: timesheet?.approver_name,
+    approvalDate: approvalDateFormatted,
+  };
 }
 
 export function PrintableWeeklyTimesheet({
@@ -94,7 +209,7 @@ export function PrintableWeeklyTimesheet({
   const dayTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     weekDays.forEach(day => {
-      totals[day.dateStr] = activeRows.reduce((sum, r) => sum + (r.days[day.dateStr] || 0), 0);
+      totals[day.dateStr] = activeRows.reduce<number>((sum, r) => sum + (r.days[day.dateStr] || 0), 0);
     });
     return totals;
   }, [activeRows, weekDays]);

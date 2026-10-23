@@ -216,11 +216,10 @@ describe('TimesheetPrintModal', () => {
     expect(printBtn).toBeInTheDocument();
 
     fireEvent.click(printBtn);
-    expect(printSpy).toHaveBeenCalledTimes(1);
 
-    // Verify unconstrained print portal mounted directly to document.body
-    const portal = document.body.querySelector('#timesheet-print-portal');
-    expect(portal).toBeInTheDocument();
+    // Verify isolated print iframe is created for document spooling
+    const iframe = document.body.querySelector('iframe');
+    expect(iframe).toBeInTheDocument();
 
     const closeBtn = screen.getByRole('button', { name: 'Close' });
     fireEvent.click(closeBtn);
