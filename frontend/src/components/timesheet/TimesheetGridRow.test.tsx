@@ -11,6 +11,8 @@ describe('TimesheetGridRow Assembly Selection', () => {
       order_number: 'VTR-2001',
       model_type: 'Feeder',
       status: 'assembly',
+      sales_order_id: 'so-1',
+      created_at: '2026-10-01T00:00:00Z',
     },
   ];
 

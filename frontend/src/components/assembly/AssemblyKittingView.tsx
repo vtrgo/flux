@@ -219,7 +219,7 @@ export function AssemblyKittingView({ initialMachineId }: AssemblyKittingViewPro
                           className={`${styles.partRow} ${isPartDone ? styles.partRowFulfilled : ''}`}
                         >
                           <div className={styles.partInfo}>
-                            <span className={styles.partNumber}>{part.partNumber || part.part_number}</span>
+                            <span className={styles.partNumber}>{part.part_number}</span>
                             {part.description && <span className={styles.partDesc}>{part.description}</span>}
                           </div>
 
