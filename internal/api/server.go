@@ -6,6 +6,7 @@ import (
 
 	"github.com/vtrgo/flux/internal/db"
 	"github.com/vtrgo/flux/internal/domain/conc"
+	"github.com/vtrgo/flux/internal/domain/ncrs"
 	"github.com/vtrgo/flux/internal/notifications"
 )
 
@@ -15,6 +16,7 @@ type Server struct {
 	Hub        *SSEHub
 	Dispatcher *notifications.Dispatcher
 	CoNC       conc.Service
+	NCRs       ncrs.Service
 }
 
 var defaultServerInstance *Server
@@ -22,9 +24,13 @@ var defaultServerInstance *Server
 // NewServer initializes a new Server instance with dependencies injected
 func NewServer(database *sql.DB, hub *SSEHub, dispatcher *notifications.Dispatcher) *Server {
 	var concService conc.Service
+	var ncrService ncrs.Service
 	if database != nil {
 		concRepo := conc.NewRepository(database)
 		concService = conc.NewService(concRepo)
+
+		ncrRepo := ncrs.NewRepository(database)
+		ncrService = ncrs.NewService(ncrRepo)
 	}
 
 	srv := &Server{
@@ -32,6 +38,7 @@ func NewServer(database *sql.DB, hub *SSEHub, dispatcher *notifications.Dispatch
 		Hub:        hub,
 		Dispatcher: dispatcher,
 		CoNC:       concService,
+		NCRs:       ncrService,
 	}
 	defaultServerInstance = srv
 	return srv
