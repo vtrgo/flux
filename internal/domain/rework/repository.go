@@ -598,6 +598,10 @@ func (r *sqlRepository) GetMachineFATReadiness(ctx context.Context, machineID uu
 		SELECT COUNT(*) FROM rework_items WHERE machine_id = $1 AND status != 'complete' AND status != 'cancelled'
 	`, machineID).Scan(&resp.ActiveRework)
 
+	_ = r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM machine_assemblies WHERE machine_id = $1 AND status NOT IN ('assembled', 'qc_verified')
+	`, machineID).Scan(&resp.UncompletedAssemblies)
+
 	if resp.OpenIssues > 0 {
 		resp.Blockers = append(resp.Blockers, fmt.Sprintf("%d unverified defect(s) pending resolution", resp.OpenIssues))
 	}
@@ -606,6 +610,9 @@ func (r *sqlRepository) GetMachineFATReadiness(ctx context.Context, machineID uu
 	}
 	if resp.ActiveRework > 0 {
 		resp.Blockers = append(resp.Blockers, fmt.Sprintf("%d active rework item(s) currently in progress or post-processing", resp.ActiveRework))
+	}
+	if resp.UncompletedAssemblies > 0 {
+		resp.Blockers = append(resp.Blockers, fmt.Sprintf("%d assembly unit(s) pending completion or QC verification", resp.UncompletedAssemblies))
 	}
 
 	resp.CanProceed = len(resp.Blockers) == 0

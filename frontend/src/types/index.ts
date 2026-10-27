@@ -307,6 +307,7 @@ export interface MachineFATReadinessResponse {
   open_issues: number;
   open_ncrs: number;
   active_rework: number;
+  uncompleted_assemblies?: number;
   blockers: string[];
 }
 

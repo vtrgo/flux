@@ -1460,9 +1460,9 @@ func TestLaborCorrelationAndAuthoritativeTasks(t *testing.T) {
 			WorkDescription: "Torquing motor mounts and checking alignment",
 		}
 		bodyBytes, _ := json.Marshal(entryReq)
-		req := httptest.NewRequest(http.MethodPost, "/api/timesheets/entries", bytes.NewReader(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, "/api/time-entries", bytes.NewReader(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Forwarded-User", "admin")
+		req.AddCookie(workerCookie)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
