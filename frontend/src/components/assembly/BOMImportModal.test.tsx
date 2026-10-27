@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { BOMImportModal } from "./BOMImportModal";
 import { fetchApi } from "../../lib/api";
@@ -138,5 +139,16 @@ describe("BOMImportModal Component", () => {
     expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("Successfully imported 1 assemblies"));
     expect(onSuccess).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("calls onClose when Escape key is pressed", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <BOMImportModal isOpen={true} machineId="m-1" onClose={onClose} onSuccess={vi.fn()} />
+    );
+
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

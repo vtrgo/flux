@@ -4,6 +4,7 @@ import React, { useState, useRef } from "react";
 import { fetchApi } from "../../lib/api";
 import { toast } from "sonner";
 import { BOMValidationReport, ParsedBOMNode } from "../../types";
+import { useAppHotkeys } from "../../hooks/useAppHotkeys";
 
 interface BOMImportModalProps {
   isOpen: boolean;
@@ -23,6 +24,17 @@ export function BOMImportModal({
   const [report, setReport] = useState<BOMValidationReport | null>(null);
   const [parsedNodes, setParsedNodes] = useState<ParsedBOMNode[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useAppHotkeys(
+    "escape",
+    () => {
+      if (isOpen && !isProcessing) {
+        onClose();
+      }
+    },
+    { enableOnFormTags: true },
+    [isOpen, isProcessing, onClose]
+  );
 
   if (!isOpen) return null;
 

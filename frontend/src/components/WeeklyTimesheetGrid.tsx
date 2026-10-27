@@ -6,6 +6,7 @@ import { fetchApi } from '../lib/api';
 import { useTimesheetData } from '../hooks/useTimesheetData';
 import { getSundayOfWeek, addWeeks, getWeekDays } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
+import { useAppHotkeys } from '../hooks/useAppHotkeys';
 import {
   Machine,
   MachineAssembly,
@@ -633,6 +634,30 @@ export function WeeklyTimesheetGrid({
       setSubmitting(false);
     }
   }, [weeklyTimesheet, withdrawWeeklyTimesheet]);
+
+  // Hotkey: Cmd/Ctrl + S to Save Timesheet
+  useAppHotkeys(
+    'mod+s',
+    (e) => {
+      e.preventDefault();
+      if (!isLocked && !saving && weeklyTimesheet) {
+        handleSaveTimesheet();
+      }
+    },
+    { enableOnFormTags: true },
+    [isLocked, saving, weeklyTimesheet, handleSaveTimesheet]
+  );
+
+  // Hotkey: Cmd/Ctrl + P to Open Print Timesheet Modal
+  useAppHotkeys(
+    'mod+p',
+    (e) => {
+      e.preventDefault();
+      setIsPrintModalOpen(true);
+    },
+    { enableOnFormTags: true },
+    [setIsPrintModalOpen]
+  );
 
   // Daily totals calculation
   const dayTotals = useMemo(() => {

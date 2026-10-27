@@ -6,21 +6,27 @@ import styles from "../admin.module.css";
 export default function KeyboardShortcutsManual() {
   const shortcuts = [
     {
-      scope: "Global",
+      scope: "Global Navigation & Actions",
       commands: [
-        { keys: ["Cmd/Ctrl", "K"], description: "Open Command Palette to navigate or search." },
-      ],
-    },
-    {
-      scope: "Forms & Data Entry",
-      commands: [
-        { keys: ["Cmd/Ctrl", "Enter"], description: "Submit forms quickly (e.g., creating a new sales order) without clicking submit." },
+        { keys: ["Cmd/Ctrl", "K"], description: "Open Command Palette to quickly search machines, orders, and navigate departments." },
+        { keys: ["C"], description: "Quickly open new Issue creation modal from Dashboard, Department Hubs, and Quality." },
+        { keys: ["/"], description: "Quickly focus the search bar on Department Hubs and tables." },
       ],
     },
     {
       scope: "Modals & Popups",
       commands: [
-        { keys: ["Esc"], description: "Close active modals, dialogs, or the Command Palette." },
+        { keys: ["Esc"], description: "Close active modals, preview dialogs, attachment viewers, or the Command Palette." },
+        { keys: ["Cmd/Ctrl", "Enter"], description: "Quick-submit active modal forms (Issue, Sales Order, Machine, Rework, NCR) without reaching for the mouse." },
+      ],
+    },
+    {
+      scope: "Weekly Timesheet Grid",
+      commands: [
+        { keys: ["Cmd/Ctrl", "S"], description: "Instantly save current draft timesheet and notes." },
+        { keys: ["Cmd/Ctrl", "P"], description: "Open print preview modal for landscape timesheet spooling." },
+        { keys: ["Tab"], description: "Advance to the next daily hours cell or form input." },
+        { keys: ["Shift", "Tab"], description: "Move back to the previous daily hours cell." },
       ],
     },
   ];
