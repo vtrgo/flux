@@ -208,6 +208,26 @@ BOM-01A,BOM-01,Slide Mechanism,VTR-D10-1,A,6.0,SLD-05,Pneumatic Slide,1
 		}
 	})
 
+	// 6.5 Fulfill Tote
+	t.Run("Fulfill_Tote", func(t *testing.T) {
+		req := httptest.NewRequest("POST", fmt.Sprintf("/api/assemblies/%s/fulfill-tote", subID), bytes.NewReader([]byte(`{"fulfilled_by":"test-user"}`)))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200 OK, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var fulfilled models.MachineAssembly
+		if err := json.Unmarshal(w.Body.Bytes(), &fulfilled); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if fulfilled.Status != models.AssemblyStatusKitted {
+			t.Errorf("expected status 'kitted', got %q", fulfilled.Status)
+		}
+	})
+
 	// 7. Delete Assembly
 	t.Run("Delete_Assembly", func(t *testing.T) {
 		req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/assemblies/%s", masterID), nil)

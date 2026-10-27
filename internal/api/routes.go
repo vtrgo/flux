@@ -156,6 +156,7 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/machines/{id}/assemblies/import/commit", handleCommitBOMImport)
 	mux.HandleFunc("POST /api/assemblies/{id}/parts", handleAddAssemblyPart)
 	mux.HandleFunc("PUT /api/kitting/parts/{id}/pick", handleUpdateKittingPartPick)
+	mux.HandleFunc("POST /api/assemblies/{id}/fulfill-tote", handleFulfillTote)
 
 	mux.HandleFunc("/api/sse", SSEHandler)
 }

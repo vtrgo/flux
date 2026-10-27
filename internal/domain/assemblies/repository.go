@@ -21,6 +21,7 @@ type Repository interface {
 	GetKittingPartsForAssembly(ctx context.Context, assemblyID uuid.UUID) ([]models.KittingPart, error)
 	AddPartToAssembly(ctx context.Context, p *models.KittingPart) error
 	UpdateKittingPartPick(ctx context.Context, partID uuid.UUID, qtyPicked int, fulfilledBy string) (*models.KittingPart, error)
+	FulfillTote(ctx context.Context, assemblyID uuid.UUID, fulfilledBy string) (*models.MachineAssembly, error)
 }
 
 type sqlRepository struct {
@@ -385,6 +386,41 @@ func (r *sqlRepository) UpdateKittingPartPick(ctx context.Context, partID uuid.U
 	}
 
 	return &p, nil
+}
+
+func (r *sqlRepository) FulfillTote(ctx context.Context, assemblyID uuid.UUID, fulfilledBy string) (*models.MachineAssembly, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	now := time.Now()
+	_, err = tx.ExecContext(ctx, `
+		UPDATE kitting_parts
+		SET qty_picked = qty_required, status = 'fulfilled', fulfilled_at = $2, fulfilled_by = $3
+		WHERE assembly_id = $1
+	`, assemblyID, now, fulfilledBy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fulfill parts for assembly: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		UPDATE machine_assemblies
+		SET status = $2, updated_at = NOW()
+		WHERE id = $1
+	`, assemblyID, models.AssemblyStatusKitted)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update assembly status to kitted: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit tote fulfillment: %w", err)
+	}
+
+	return r.GetAssemblyByID(ctx, assemblyID)
 }
 
 func (r *sqlRepository) BatchInsert(ctx context.Context, machineID uuid.UUID, nodes []models.ParsedBOMNode) error {

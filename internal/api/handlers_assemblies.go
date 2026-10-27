@@ -284,3 +284,33 @@ func handleUpdateKittingPartPick(w http.ResponseWriter, r *http.Request) {
 
 	respondJSON(w, http.StatusOK, updated)
 }
+
+func handleFulfillTote(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	assemblyID, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid assembly ID", err)
+		return
+	}
+
+	var req struct {
+		FulfilledBy string `json:"fulfilled_by,omitempty"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	if req.FulfilledBy == "" {
+		req.FulfilledBy = r.Header.Get("X-Forwarded-User")
+		if req.FulfilledBy == "" {
+			req.FulfilledBy = "kitting"
+		}
+	}
+
+	updated, err := GetDefaultServer().Assemblies.FulfillTote(r.Context(), assemblyID, req.FulfilledBy)
+	if err != nil {
+		slog.Error("Failed to fulfill assembly tote", "assembly_id", assemblyID, "error", err)
+		respondError(w, http.StatusBadRequest, err.Error(), err)
+		return
+	}
+
+	slog.Info("Assembly tote fulfilled", "assembly_id", assemblyID, "assembly_code", updated.AssemblyCode)
+	respondJSON(w, http.StatusOK, updated)
+}

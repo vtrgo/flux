@@ -56,6 +56,7 @@ type Service interface {
 	CommitBOMImport(ctx context.Context, machineID uuid.UUID, nodes []models.ParsedBOMNode) error
 	AddPart(ctx context.Context, p *models.KittingPart) error
 	UpdatePartPick(ctx context.Context, partID uuid.UUID, qtyPicked int, fulfilledBy string) (*models.KittingPart, error)
+	FulfillTote(ctx context.Context, assemblyID uuid.UUID, fulfilledBy string) (*models.MachineAssembly, error)
 }
 
 type service struct {
@@ -254,4 +255,11 @@ func (s *service) UpdatePartPick(ctx context.Context, partID uuid.UUID, qtyPicke
 		qtyPicked = 0
 	}
 	return s.repo.UpdateKittingPartPick(ctx, partID, qtyPicked, fulfilledBy)
+}
+
+func (s *service) FulfillTote(ctx context.Context, assemblyID uuid.UUID, fulfilledBy string) (*models.MachineAssembly, error) {
+	if assemblyID == uuid.Nil {
+		return nil, errors.New("invalid assembly ID")
+	}
+	return s.repo.FulfillTote(ctx, assemblyID, fulfilledBy)
 }
