@@ -99,6 +99,14 @@ func (m *mockRepo) UpdateKittingPartPick(ctx context.Context, partID uuid.UUID, 
 	return nil, ErrAssemblyNotFound
 }
 
+func (m *mockRepo) FulfillTote(ctx context.Context, assemblyID uuid.UUID, fulfilledBy string) (*models.MachineAssembly, error) {
+	if a, ok := m.assemblies[assemblyID]; ok {
+		a.Status = models.AssemblyStatusKitted
+		return a, nil
+	}
+	return nil, ErrAssemblyNotFound
+}
+
 func TestService_CreateAndValidate(t *testing.T) {
 	repo := newMockRepo()
 	svc := NewService(repo, nil)
