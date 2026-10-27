@@ -12,8 +12,10 @@ import { NCRModal } from "../../../components/NCRModal";
 import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
+import { CoNCWidget } from "../../../components/CoNCWidget";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 import { formatDepartmentName } from "../../../lib/departments";
+import { ChartIcon, ClipboardIcon } from "../../../components/ui/Icons";
 
 export default function QualityResolutionHub() {
   const [defects, setDefects] = useState<Defect[]>([]);
@@ -26,10 +28,13 @@ export default function QualityResolutionHub() {
   const [isNCRModalOpen, setIsNCRModalOpen] = useState(false);
   const [editingNCR, setEditingNCR] = useState<NCR | null>(null);
 
+  const [showCoNC, setShowCoNC] = useState(true);
+
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [activeDepartment, setActiveDepartment] = useState<string>("All");
   const [activeSeverity, setActiveSeverity] = useState<string>("All");
+  const [activeClassification, setActiveClassification] = useState<string>("All");
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -137,8 +142,13 @@ export default function QualityResolutionHub() {
     
     const matchesAssignedDept = activeDepartment === "All" || defect.assigned_department === activeDepartment;
     const matchesSeverity = activeSeverity === "All" || defect.severity === activeSeverity;
+    const isGeneral = defect.label === 'General';
+    const matchesClassification =
+      activeClassification === "All" ||
+      (activeClassification === "General" && isGeneral) ||
+      (activeClassification === "Defects" && !isGeneral);
 
-    return matchesSearch && matchesAssignedDept && matchesSeverity;
+    return matchesSearch && matchesAssignedDept && matchesSeverity && matchesClassification;
   });
 
   const openDefects = filteredDefects.filter(d => d.status === 'open');
@@ -152,8 +162,17 @@ export default function QualityResolutionHub() {
       <header className={`${styles.header} no-print`}>
         <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>Quality / PM Hub</h1>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <Link href="/ncrs" className="vtr-btn vtr-btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
-            📋 NCR Tracker
+          <button
+            type="button"
+            className="vtr-btn vtr-btn-secondary"
+            onClick={() => setShowCoNC(prev => !prev)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            title="Toggle Cost of Non-Conformance metrics"
+          >
+            <ChartIcon size={14} /> {showCoNC ? 'Hide CoNC Metrics' : 'CoNC Metrics'}
+          </button>
+          <Link href="/ncrs" className="vtr-btn vtr-btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
+            <ClipboardIcon size={14} /> NCR Tracker
           </Link>
           <button className="vtr-btn" onClick={openNewNCRModal} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2, borderColor: 'var(--vtr-theme-primary)' }}>
             <span>+ CREATE NCR</span>
@@ -165,6 +184,8 @@ export default function QualityResolutionHub() {
           </button>
         </div>
       </header>
+
+      {showCoNC && <CoNCWidget />}
 
       <div className={`${styles.filters} no-print`}>
         <input 
@@ -198,6 +219,14 @@ export default function QualityResolutionHub() {
             label="Severity" 
           />
         )}
+
+        <FilterButtonGroup 
+          options={["All", "Defects", "General"]} 
+          activeOption={activeClassification} 
+          onChange={setActiveClassification} 
+          label="Type" 
+          formatOption={opt => opt === "Defects" ? "Actionable" : opt === "General" ? "General Issues" : "All Types"}
+        />
       </div>
 
       <div className={`${styles.grid} no-print`}>

@@ -1,18 +1,19 @@
+@import '../styles/tokens.css';
 @import '../styles/theme.css';
 @import '../styles/themes.css';
 
 :root {
-  --bg-primary: #121212;
-  --bg-secondary: #1e1e1e;
+  --bg-primary: var(--surface-base, #121212);
+  --bg-secondary: var(--surface-card, #1e1e1e);
   --text-primary: #e0e0e0;
   --text-secondary: #9e9e9e;
   
-  --accent-green: #00ff00;
-  --accent-amber: #ffb000;
-  --accent-cyan: #00e5ff;
-  --accent-red: #ff3333;
+  --accent-green: var(--color-success, #00e676);
+  --accent-amber: var(--color-warning, #ffb74d);
+  --accent-cyan: var(--color-info, #00e5ff);
+  --accent-red: var(--color-danger, #ff5252);
   
-  --border-color: #333333;
+  --border-color: var(--border-default, #333333);
 }
 
 * {
@@ -106,6 +107,19 @@ a {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Accessibility / Screen Reader Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Print optimization for reports and NCR forms */

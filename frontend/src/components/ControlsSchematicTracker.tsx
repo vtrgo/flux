@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { fetchApi } from "../lib/api";
 import { ControlsSchematicRework, Machine } from "../types";
 import { toast } from "sonner";
+import styles from "./ControlsSchematicTracker.module.css";
 
 interface ControlsSchematicTrackerProps {
   salesOrderId?: string;
@@ -91,9 +92,9 @@ export function ControlsSchematicTracker({ salesOrderId, machineId }: ControlsSc
   if (loading) return <div style={{ padding: "2rem", color: "var(--text-secondary)" }}>Loading Electrical Schematics...</div>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+    <div className={styles.container}>
       {/* SOP 1-003 Section 6 Header */}
-      <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--border-color, #333)", borderRadius: "6px", padding: "1rem 1.25rem" }}>
+      <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid var(--border-default, #333)", borderRadius: "6px", padding: "1rem 1.25rem" }}>
         <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "1rem", color: "var(--vtr-theme-primary)" }}>
           Electrical / Controls Department Procedure (SOP 1-003 Step 6)
         </h3>
@@ -104,13 +105,13 @@ export function ControlsSchematicTracker({ salesOrderId, machineId }: ControlsSc
       </div>
 
       {/* Quick Add Schematic Form */}
-      <form onSubmit={handleCreateSchematic} style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "flex-end" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "200px" }}>
-          <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>Machine / Station</label>
+      <form onSubmit={handleCreateSchematic} className={styles.form}>
+        <div className={styles.formGroup}>
+          <label className={styles.label}>Machine / Station</label>
           <select
             value={newMachineId}
             onChange={(e) => setNewMachineId(e.target.value)}
-            style={{ background: "var(--vtr-theme-background)", border: "1px solid var(--border-color)", color: "#fff", padding: "0.4rem 0.6rem", borderRadius: "4px" }}
+            className={styles.select}
             required
           >
             <option value="">Select Machine</option>
@@ -120,26 +121,26 @@ export function ControlsSchematicTracker({ salesOrderId, machineId }: ControlsSc
           </select>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "220px" }}>
-          <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>Master Schematic #</label>
+        <div className={styles.formGroup} style={{ minWidth: "220px" }}>
+          <label className={styles.label}>Master Schematic #</label>
           <input
             type="text"
             value={newSchematicNumber}
             onChange={(e) => setNewSchematicNumber(e.target.value)}
             placeholder="e.g. SCH-1024-MAIN-REV-A"
-            style={{ background: "var(--vtr-theme-background)", border: "1px solid var(--border-color)", color: "#fff", padding: "0.4rem 0.6rem", borderRadius: "4px" }}
+            className={styles.input}
             required
           />
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", flex: 1, minWidth: "250px" }}>
-          <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontFamily: "var(--font-mono)" }}>Redline Description</label>
+        <div className={styles.formGroup} style={{ flex: 1, minWidth: "250px" }}>
+          <label className={styles.label}>Redline Description</label>
           <input
             type="text"
             value={newRedlines}
             onChange={(e) => setNewRedlines(e.target.value)}
             placeholder="e.g. Changed air solenoid valve relay to 24VDC"
-            style={{ background: "var(--vtr-theme-background)", border: "1px solid var(--border-color)", color: "#fff", padding: "0.4rem 0.6rem", borderRadius: "4px" }}
+            className={styles.input}
           />
         </div>
 
@@ -149,16 +150,16 @@ export function ControlsSchematicTracker({ salesOrderId, machineId }: ControlsSc
       </form>
 
       {/* Schematics Table */}
-      <div style={{ border: "1px solid var(--border-color, #333)", borderRadius: "6px", overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.85rem" }}>
+      <div className={styles.tableWrapper}>
+        <table className={styles.table}>
           <thead>
-            <tr style={{ background: "rgba(0,0,0,0.4)", borderBottom: "1px solid var(--border-color, #333)" }}>
-              <th style={{ padding: "0.75rem 1rem" }}>Schematic #</th>
-              <th style={{ padding: "0.75rem 1rem" }}>Redlines Description</th>
-              <th style={{ padding: "0.75rem 1rem" }}>Master Redlined By</th>
-              <th style={{ padding: "0.75rem 1rem" }}>Digital Update</th>
-              <th style={{ padding: "0.75rem 1rem" }}>Checklist Sign-off</th>
-              <th style={{ padding: "0.75rem 1rem", textAlign: "right" }}>Action</th>
+            <tr>
+              <th>Schematic #</th>
+              <th>Redlines Description</th>
+              <th>Master Redlined By</th>
+              <th>Digital Update</th>
+              <th>Checklist Sign-off</th>
+              <th style={{ textAlign: "right" }}>Action</th>
             </tr>
           </thead>
           <tbody>

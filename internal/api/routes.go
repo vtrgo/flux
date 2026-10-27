@@ -104,6 +104,41 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/rework/controls", handleCreateControlsSchematicRework)
 	mux.HandleFunc("PUT /api/rework/controls/{id}", handleUpdateControlsSchematicRework)
 
+	// Timesheet and Foundational Labor Endpoints
+	mux.HandleFunc("GET /api/machines/{id}/tasks", handleGetMachineTasks)
+	mux.Handle("POST /api/machines/{id}/tasks", RequireRole("admin", "manager", "lead", "sales")(http.HandlerFunc(handleCreateProjectTask)))
+	mux.Handle("PUT /api/tasks/{task_id}/quote", RequireRole("admin", "manager", "lead", "sales")(http.HandlerFunc(handleUpdateTaskQuote)))
+	mux.HandleFunc("POST /api/time-entries", handleCreateTimeEntry)
+	mux.HandleFunc("GET /api/time-entries/my", handleGetMyTimeEntries)
+	mux.HandleFunc("DELETE /api/time-entries/{id}", handleDeleteTimeEntry)
+	mux.HandleFunc("GET /api/machines/{id}/labor-summary", handleGetMachineLaborSummary)
+	mux.HandleFunc("GET /api/machines/{id}/labor-correlation", handleGetMachineLaborCorrelation)
+	mux.HandleFunc("GET /api/timesheets/quoting-review", handleGetQuotingReviewReport)
+	mux.HandleFunc("GET /api/analytics/conc", handleGetCostOfNonConformanceSummary)
+	mux.HandleFunc("GET /api/machines/{id}/conc", handleGetMachineCostOfNonConformance)
+
+	// Weekly Timesheet Endpoints
+	mux.HandleFunc("GET /api/timesheets/weekly", handleGetWeeklyTimesheet)
+	mux.HandleFunc("PUT /api/timesheets/weekly/{id}/save", handleSaveWeeklyTimesheet)
+	mux.HandleFunc("POST /api/timesheets/weekly/{id}/submit", handleSubmitWeeklyTimesheet)
+	mux.HandleFunc("POST /api/timesheets/weekly/{id}/withdraw", handleWithdrawWeeklyTimesheet)
+	mux.Handle("GET /api/timesheets/approvals", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleGetTimesheetApprovals)))
+	mux.Handle("POST /api/timesheets/weekly/{id}/approve", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleApproveWeeklyTimesheet)))
+	mux.Handle("POST /api/timesheets/weekly/{id}/reject", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleRejectWeeklyTimesheet)))
+	mux.Handle("DELETE /api/timesheets/weekly/{id}", RequireRole("admin")(http.HandlerFunc(handleDeleteWeeklyTimesheet)))
+
+	// Department Core Task Catalog Endpoints
+	mux.HandleFunc("GET /api/department-tasks", handleGetDepartmentTasks)
+	mux.Handle("POST /api/department-tasks", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleCreateDepartmentTask)))
+	mux.Handle("PUT /api/department-tasks/{id}", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleUpdateDepartmentTask)))
+	mux.Handle("DELETE /api/department-tasks/{id}", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleDeleteDepartmentTask)))
+
+	// Authoritative Tasks Alias
+	mux.HandleFunc("GET /api/tasks", handleGetDepartmentTasks)
+	mux.Handle("POST /api/tasks", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleCreateDepartmentTask)))
+	mux.Handle("PUT /api/tasks/{id}", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleUpdateDepartmentTask)))
+	mux.Handle("DELETE /api/tasks/{id}", RequireRole("admin", "manager", "lead")(http.HandlerFunc(handleDeleteDepartmentTask)))
+
 	mux.HandleFunc("GET /api/logs", handleGetLogs)
 	mux.HandleFunc("GET /api/system/version", handleGetSystemVersion)
 	mux.HandleFunc("GET /api/system/timezone", handleGetTimezone)

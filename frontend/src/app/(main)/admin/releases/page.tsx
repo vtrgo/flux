@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchApi } from '../../../../lib/api';
 import { toast } from 'sonner';
+import styles from '../admin.module.css';
 
 interface ReleaseTag {
   tag: string;
@@ -52,32 +53,13 @@ export default function AdminReleasesPage() {
   };
 
   return (
-    <main style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-      <header style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '2rem', 
-        borderBottom: '1px solid var(--vtr-card-border, var(--border-color))', 
-        paddingBottom: '1.5rem' 
-      }}>
+    <main className={styles.container}>
+      <header className={styles.header}>
         <div>
-          <h1 style={{ 
-            fontFamily: 'var(--font-mono)', 
-            fontSize: '2rem', 
-            fontWeight: 700, 
-            textTransform: 'uppercase', 
-            color: 'var(--vtr-theme-primary, var(--text-primary))', 
-            margin: 0 
-          }}>
+          <h1 className={styles.title}>
             Releases & Deployment Management
           </h1>
-          <p style={{ 
-            color: 'var(--vtr-theme-accent, var(--text-secondary))', 
-            fontFamily: 'var(--font-mono)', 
-            fontSize: '0.95rem', 
-            marginTop: '0.5rem' 
-          }}>
+          <p className={styles.subtitle}>
             Release tracking, version telemetry, and deployment operations
           </p>
         </div>
@@ -229,16 +211,10 @@ export default function AdminReleasesPage() {
           </div>
 
           {/* Published Milestone Release Tags */}
-          <section style={{
-            backgroundColor: 'var(--vtr-card-bg, var(--bg-secondary))',
-            border: '1px solid var(--vtr-card-border, var(--border-color))',
-            borderRadius: '12px',
-            padding: '2rem',
-            backdropFilter: 'blur(8px)'
-          }}>
+          <section className={styles.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <div>
-                <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', color: 'var(--vtr-theme-primary, var(--text-primary))', margin: 0 }}>
+                <h2 className={styles.cardTitle} style={{ margin: 0 }}>
                   Published Release Tags & Milestones
                 </h2>
                 <p style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
@@ -250,16 +226,17 @@ export default function AdminReleasesPage() {
               </span>
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--vtr-card-border, var(--border-color))', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
-                  <th style={{ padding: '0.75rem 0' }}>Release Tag</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Tagged Date</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Changelog / Release Summary</th>
-                  <th style={{ padding: '0.75rem 0', textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Release Tag</th>
+                    <th>Tagged Date</th>
+                    <th>Changelog / Release Summary</th>
+                    <th style={{ textAlign: 'right' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
                 {data.recent_releases.map((rel) => (
                   <tr key={rel.tag} style={{ borderBottom: '1px solid var(--vtr-card-border, var(--border-color))' }}>
                     <td style={{ padding: '1rem 0' }}>
@@ -296,17 +273,12 @@ export default function AdminReleasesPage() {
                 ))}
               </tbody>
             </table>
-          </section>
+          </div>
+        </section>
 
           {/* Testing & Release Operations Playbook */}
-          <section style={{
-            backgroundColor: 'var(--vtr-card-bg, var(--bg-secondary))',
-            border: '1px solid var(--vtr-card-border, var(--border-color))',
-            borderRadius: '12px',
-            padding: '2rem',
-            backdropFilter: 'blur(8px)'
-          }}>
-            <h2 style={{ fontFamily: 'var(--font-mono)', fontSize: '1.3rem', color: 'var(--vtr-theme-primary, var(--text-primary))', marginBottom: '1rem' }}>
+          <section className={styles.card}>
+            <h2 className={styles.cardTitle}>
               Testing & Release Workflow Guide
             </h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6, fontSize: '0.9rem' }}>

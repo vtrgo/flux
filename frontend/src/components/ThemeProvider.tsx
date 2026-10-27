@@ -40,8 +40,11 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (mounted) {
-      // Apply class to body
-      document.body.className = `vtr-theme-container ${theme}`
+      // Cleanly update theme classes on body without stripping Next.js font variable classes
+      THEMES.forEach(t => document.body.classList.remove(t.id));
+      document.body.classList.add('vtr-theme-container', theme);
+      document.body.dataset.theme = theme;
+      document.documentElement.dataset.theme = theme;
       
       // Dispatch global theme changed event for SVG rendering pipeline if any SVGs listen
       document.dispatchEvent(new CustomEvent('vtr-theme-changed', { detail: { themeId: theme } }));

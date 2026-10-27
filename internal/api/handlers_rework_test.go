@@ -2,10 +2,12 @@ package api
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -105,6 +107,13 @@ func TestReworkHandlers(t *testing.T) {
 		}
 		if created.SalesOrderID != soID {
 			t.Errorf("expected sales_order_id %v, got %v", soID, created.SalesOrderID)
+		}
+
+		// Verify audit note was appended to the linked defect
+		var defNotes string
+		_ = db.DB.QueryRow("SELECT COALESCE(notes, '') FROM defects WHERE id = $1", defectID).Scan(&defNotes)
+		if !strings.Contains(defNotes, "[Escalated to Rework Order: VTR-CH-001]") {
+			t.Errorf("expected defect notes to include escalation note, got: %s", defNotes)
 		}
 
 		createdReworkID = created.ID.String()
@@ -260,14 +269,22 @@ func TestReworkHandlers(t *testing.T) {
 			t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 		}
 
-		// Verify linked defect auto-transitioned to 'fixed'
-		var defStatus string
-		err := db.DB.QueryRow("SELECT status FROM defects WHERE id = $1", defectID).Scan(&defStatus)
+		// Verify linked defect auto-transitioned to 'fixed' with audit trail and notes
+		var defStatus, defNotes string
+		var resolvedAt sql.NullTime
+		var resolvedBy sql.NullString
+		err := db.DB.QueryRow("SELECT status, notes, resolved_at, resolved_by FROM defects WHERE id = $1", defectID).Scan(&defStatus, &defNotes, &resolvedAt, &resolvedBy)
 		if err != nil {
 			t.Fatalf("failed to query defect: %v", err)
 		}
 		if defStatus != "fixed" {
 			t.Errorf("expected linked defect status to be 'fixed', got '%s'", defStatus)
+		}
+		if !resolvedAt.Valid {
+			t.Errorf("expected resolved_at to be set on auto-fixed defect")
+		}
+		if !strings.Contains(defNotes, "[Auto-Resolved via Rework Part") {
+			t.Errorf("expected notes to contain auto-resolved audit note, got: %s", defNotes)
 		}
 	})
 

@@ -32,6 +32,9 @@ export const IssueCard = React.memo(function IssueCard({ issue, onClick, cardSty
           {issue.is_ncr && (
             <span className={styles.ncrBadge}>{issue.ncr_number || 'NCR'}</span>
           )}
+          {issue.label === 'General' && (
+            <span className={styles.generalBadge}>GENERAL</span>
+          )}
         </div>
         <span className={`${styles.severity} ${styles[issue.severity] || ''}`}>{issue.severity}</span>
       </div>

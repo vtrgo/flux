@@ -198,15 +198,7 @@ function MachineDetailContent() {
           </div>
           
           {salesOrder && (
-            <div style={{ 
-              background: 'rgba(255,255,255,0.05)', 
-              border: '1px solid var(--border-color)', 
-              borderRadius: '8px', 
-              padding: '1rem',
-              display: 'flex',
-              gap: '2rem',
-              fontFamily: 'var(--font-mono)'
-            }}>
+            <div className={styles.salesOrderBanner}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Customer</div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{salesOrder.customer_name} {salesOrder.project_name ? `(${salesOrder.project_name})` : ''}</div>
@@ -256,11 +248,11 @@ function MachineDetailContent() {
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', width: '100%' }}>
+      <div className={styles.boardGrid}>
         {/* OPEN COLUMN */}
         <section>
-          <h2 style={{ fontFamily: 'var(--font-mono)', color: 'var(--vtr-theme-primary)', marginBottom: '1rem', textTransform: 'uppercase' }}>
-            Open Issues <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{openDefects.length}</span>
+          <h2 className={styles.boardColumnTitle}>
+            Open Issues <span className={styles.boardBadge}>{openDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {renderGroupedDefects(openDefects)}
@@ -269,8 +261,8 @@ function MachineDetailContent() {
 
         {/* FIXED COLUMN */}
         <section>
-          <h2 style={{ fontFamily: 'var(--font-mono)', color: 'var(--vtr-theme-primary)', marginBottom: '1rem', textTransform: 'uppercase' }}>
-            Fixed (Pending Verification) <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{fixedDefects.length}</span>
+          <h2 className={styles.boardColumnTitle}>
+            Fixed (Pending Verification) <span className={styles.boardBadge}>{fixedDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {renderGroupedDefects(fixedDefects)}
@@ -279,8 +271,8 @@ function MachineDetailContent() {
 
         {/* VERIFIED COLUMN */}
         <section>
-          <h2 style={{ fontFamily: 'var(--font-mono)', color: 'var(--vtr-theme-primary)', marginBottom: '1rem', textTransform: 'uppercase' }}>
-            Verified & Cleared <span style={{ background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.5rem', borderRadius: '1rem', fontSize: '0.75rem', marginLeft: '0.5rem' }}>{verifiedDefects.length}</span>
+          <h2 className={styles.boardColumnTitle}>
+            Verified & Cleared <span className={styles.boardBadge}>{verifiedDefects.length}</span>
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {renderGroupedDefects(verifiedDefects)}

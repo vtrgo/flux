@@ -24,6 +24,7 @@ import { useUsers } from "../hooks/useUsers";
 import { NotificationRoutingCheckbox } from "./NotificationRoutingCheckbox";
 import { Authorize } from "./Authorize";
 import { NCRModal } from "./NCRModal";
+import { ReworkModal } from "./ReworkModal";
 
 export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept = 'quality', preselectedMachineId }: IssueModalProps) {
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -31,6 +32,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isNCRModalOpen, setIsNCRModalOpen] = useState(false);
+  const [isReworkModalOpen, setIsReworkModalOpen] = useState(false);
   const defaultRoutedDept = defaultAssignedDept === 'quality' ? '' : defaultAssignedDept;
   const { users } = useUsers();
   const [sendNotification, setSendNotification] = useState(false);
@@ -43,18 +45,20 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
     severity: 'moderate',
     description: '',
     notes: '',
-    due_date: ''
+    due_date: '',
+    label: 'Defect'
   });
 
   useAppHotkeys('escape', () => {
-    if (isOpen && !isNCRModalOpen) {
+    if (isOpen && !isNCRModalOpen && !isReworkModalOpen) {
       onClose();
     }
-  }, { enableOnFormTags: true }, [isOpen, isNCRModalOpen, onClose]);
+  }, { enableOnFormTags: true }, [isOpen, isNCRModalOpen, isReworkModalOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
       setIsNCRModalOpen(false);
+      setIsReworkModalOpen(false);
     }
   }, [isOpen]);
 
@@ -79,7 +83,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           severity: editingDefect.severity,
           description: editingDefect.description,
           notes: editingDefect.notes || '',
-          due_date: toCalendarDateInput(editingDefect.due_date)
+          due_date: toCalendarDateInput(editingDefect.due_date),
+          label: editingDefect.label || 'Defect'
         });
       } else {
         setSendNotification(false);
@@ -91,7 +96,8 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           severity: 'moderate',
           description: '',
           notes: '',
-          due_date: ''
+          due_date: '',
+          label: 'Defect'
         });
       }
     }
@@ -100,10 +106,15 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const finalAssignedDept = formData.label === 'General' && !formData.assigned_department
+      ? formData.source_department
+      : formData.assigned_department;
+
     const payload = {
       ...formData,
+      assigned_department: finalAssignedDept,
       due_date: formData.due_date ? calendarDateToUtcNoon(formData.due_date) : undefined,
-      send_notification: !editingDefect ? sendNotification : undefined
+      send_notification: !editingDefect && formData.label !== 'General' ? sendNotification : undefined
     };
     try {
       if (editingDefect) {
@@ -186,9 +197,64 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
 
             <div className={styles.modalBody}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.25rem' }}>
+                <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  ISSUE CLASSIFICATION
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, label: 'Defect' }))}
+                    className="vtr-btn"
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-mono)',
+                      border: formData.label === 'General' ? '1px solid var(--border-color)' : '1px solid var(--vtr-theme-primary)',
+                      background: formData.label === 'General' ? 'transparent' : 'rgba(0, 229, 255, 0.12)',
+                      color: formData.label === 'General' ? 'var(--text-secondary)' : 'var(--vtr-theme-primary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ACTIONABLE DEFECT
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, label: 'General', severity: prev.severity === 'critical' ? 'minor' : prev.severity }))}
+                    className="vtr-btn"
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-mono)',
+                      border: formData.label === 'General' ? '1px solid #64b5f6' : '1px solid var(--border-color)',
+                      background: formData.label === 'General' ? 'rgba(100, 181, 246, 0.15)' : 'transparent',
+                      color: formData.label === 'General' ? '#64b5f6' : 'var(--text-secondary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    GENERAL ISSUE (CLOSED)
+                  </button>
+                </div>
+                {formData.label === 'General' && (
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#90caf9',
+                    background: 'rgba(30, 58, 138, 0.25)',
+                    border: '1px solid rgba(144, 202, 249, 0.3)',
+                    borderRadius: '4px',
+                    padding: '0.5rem 0.75rem',
+                    marginTop: '0.25rem',
+                    lineHeight: '1.4'
+                  }}>
+                    ℹ️ <strong>Informational Record:</strong> This issue will automatically exist as closed with a generic &quot;General&quot; label. Useful for capturing details across projects without creating pending tasks or blocking machine readiness.
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>MACHINE / ORDER NUMBER</label>
+            <label htmlFor="issue_machine_id" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>MACHINE / ORDER NUMBER</label>
             <select 
+              id="issue_machine_id"
               value={formData.machine_id} 
               onChange={e => setFormData({...formData, machine_id: e.target.value})}
               required
@@ -202,8 +268,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           
           <div className={styles.routingGrid}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SOURCE DEPT</label>
+              <label htmlFor="issue_source_department" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SOURCE DEPT</label>
               <select 
+                id="issue_source_department"
                 value={formData.source_department} 
                 onChange={e => setFormData({...formData, source_department: e.target.value})}
                 className="vtr-input"
@@ -233,7 +300,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                     assigned_user_id: isUserInNewDept ? formData.assigned_user_id : ''
                   });
                 }}
-                required
+                required={formData.label !== 'General'}
                 className="vtr-input"
                 style={{ borderColor: 'var(--vtr-theme-primary)', color: 'var(--vtr-theme-primary)' }}
               >
@@ -278,8 +345,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
 
           <div className={styles.severityGrid}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SEVERITY</label>
+              <label htmlFor="issue_severity" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>SEVERITY</label>
               <select 
+                id="issue_severity"
                 value={formData.severity} 
                 onChange={e => setFormData({...formData, severity: e.target.value})}
                 className="vtr-input"
@@ -291,8 +359,9 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TARGET RESOLUTION DATE (OPTIONAL)</label>
+              <label htmlFor="issue_due_date" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TARGET RESOLUTION DATE (OPTIONAL)</label>
               <input 
+                id="issue_due_date"
                 type="date"
                 value={formData.due_date}
                 onChange={e => setFormData({...formData, due_date: e.target.value})}
@@ -301,7 +370,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
             </div>
           </div>
 
-          {!editingDefect && (
+          {!editingDefect && formData.label !== 'General' && (
             <NotificationRoutingCheckbox
               checked={sendNotification}
               onChange={setSendNotification}
@@ -311,7 +380,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              <label htmlFor="issue_description" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                 BRIEF DESCRIPTION
               </label>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: formData.description.length >= 240 ? 'var(--accent-red, #ff3366)' : 'var(--text-secondary)' }}>
@@ -319,6 +388,7 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
               </span>
             </div>
             <textarea 
+              id="issue_description"
               value={formData.description} 
               onChange={e => setFormData({...formData, description: e.target.value})}
               required
@@ -332,10 +402,11 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <label style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+            <label htmlFor="issue_notes" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
               DETAILED NOTES & CONTEXT (OPTIONAL)
             </label>
             <textarea 
+              id="issue_notes"
               value={formData.notes} 
               onChange={e => setFormData({...formData, notes: e.target.value})}
               rows={5}
@@ -412,6 +483,23 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
                     </button>
                   )}
                 </Authorize>
+                <Authorize roles={['admin', 'manager', 'lead', 'supervisor']}>
+                  {editingDefect && (
+                    <button
+                      type="button"
+                      className="vtr-btn"
+                      onClick={() => setIsReworkModalOpen(true)}
+                      style={{
+                        backgroundColor: "rgba(255, 112, 67, 0.15)",
+                        color: "#ff7043",
+                        borderColor: "#ff7043",
+                      }}
+                      title="Escalate this issue into an active SOP 1-003 Rework Traveler"
+                    >
+                      ESCALATE TO REWORK
+                    </button>
+                  )}
+                </Authorize>
               </div>
               <div className={styles.footerRight}>
                 <button
@@ -442,6 +530,21 @@ export function IssueModal({ isOpen, onClose, editingDefect, defaultAssignedDept
         upgradeFromDefect={editingDefect}
         onSaved={() => {
           setIsNCRModalOpen(false);
+          onClose();
+        }}
+      />
+    )}
+
+    {editingDefect && isReworkModalOpen && (
+      <ReworkModal
+        isOpen={isReworkModalOpen}
+        onClose={() => setIsReworkModalOpen(false)}
+        preselectedDefectId={editingDefect.id}
+        preselectedMachineId={editingDefect.machine_id}
+        initialDefect={editingDefect}
+        onSaved={() => {
+          setIsReworkModalOpen(false);
+          toast.success("Rework traveler created and linked to issue");
           onClose();
         }}
       />

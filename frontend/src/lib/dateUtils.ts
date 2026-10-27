@@ -175,3 +175,109 @@ export function formatTimestamp(dateString?: string | null, timezone: string = D
     return date.toLocaleString();
   }
 }
+
+/**
+/**
+ * Returns the Sunday (YYYY-MM-DD) for a given date or string (the first day of the work week).
+ * If omitted, defaults to Sunday of the current week.
+ */
+export function getSundayOfWeek(input?: Date | string): string {
+  if (!input) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const day = now.getDate();
+    const dow = now.getDay(); // 0 is Sunday, ..., 6 is Saturday
+    const sunday = new Date(Date.UTC(y, m, day - dow, 12, 0, 0));
+    return `${sunday.getUTCFullYear()}-${String(sunday.getUTCMonth() + 1).padStart(2, '0')}-${String(sunday.getUTCDate()).padStart(2, '0')}`;
+  }
+
+  let d: Date;
+  if (typeof input === 'string') {
+    const [y, m, day] = input.split('T')[0].split('-').map(Number);
+    d = new Date(Date.UTC(y, m - 1, day, 12, 0, 0));
+  } else {
+    d = new Date(input);
+  }
+
+  const dayOfWeek = d.getUTCDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
+  const sunday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dayOfWeek, 12, 0, 0));
+
+  const y = sunday.getUTCFullYear();
+  const m = String(sunday.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(sunday.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Returns the week start date (Sunday). Kept as an alias for backwards compatibility.
+ */
+export function getMondayOfWeek(input?: Date | string): string {
+  return getSundayOfWeek(input);
+}
+
+/**
+ * Adds or subtracts weeks to a YYYY-MM-DD week start date.
+ */
+export function addWeeks(weekStartStr: string, weeks: number): string {
+  const [y, m, d] = weekStartStr.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + weeks * 7, 12, 0, 0));
+  const newY = date.getUTCFullYear();
+  const newM = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const newD = String(date.getUTCDate()).padStart(2, '0');
+  return `${newY}-${newM}-${newD}`;
+}
+
+export interface WeekDayInfo {
+  dateStr: string;   // 'YYYY-MM-DD'
+  dayName: string;   // 'Sun', 'Mon', ...
+  fullName: string;  // 'Sunday', ...
+  shortDate: string; // 'Oct 18'
+}
+
+/**
+ * Returns the 7 days of the work week starting on Sunday.
+ */
+export function getWeekDays(weekStartStr: string): WeekDayInfo[] {
+  const [y, m, d] = weekStartStr.split('-').map(Number);
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fullNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const cur = new Date(Date.UTC(y, m - 1, d + i, 12, 0, 0));
+    const curY = cur.getUTCFullYear();
+    const curM = cur.getUTCMonth();
+    const curD = cur.getUTCDate();
+    const dateStr = `${curY}-${String(curM + 1).padStart(2, '0')}-${String(curD).padStart(2, '0')}`;
+    return {
+      dateStr,
+      dayName: dayNames[i],
+      fullName: fullNames[i],
+      shortDate: `${monthNames[curM]} ${curD}`,
+    };
+  });
+}
+
+/**
+ * Formats a week range (e.g. "Oct 18 – Oct 24, 2026").
+ */
+export function formatWeekRange(weekStartStr: string): string {
+  const days = getWeekDays(weekStartStr);
+  const start = days[0];
+  const end = days[6];
+  const endYear = end.dateStr.split('-')[0];
+  return `${start.shortDate} – ${end.shortDate}, ${endYear}`;
+}
+
+/**
+ * Formats decimal hours cleanly without rounding quarter-hour increments (.25, .5, .75) to 0.1.
+ * e.g., 0.25 -> "0.25", 0.5 -> "0.5", 0.75 -> "0.75", 4.5 -> "4.5", 8 -> "8", 0 -> "0".
+ */
+export function formatHours(hours?: number | null): string {
+  if (hours == null || isNaN(hours) || hours === 0) return '0';
+  const rounded = Math.round((hours + Number.EPSILON) * 100) / 100;
+  return rounded.toString();
+}
+
+

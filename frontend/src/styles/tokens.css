@@ -1,0 +1,106 @@
+/**
+ * Flux MES — Unified Design Tokens
+ * Harmonized design token dictionary establishing standard scales for:
+ * Spacing, Typography, Statuses, Elevation, Radii, and Touch Ergonomics.
+ */
+
+:root {
+  /* ========================================================================
+     1. Spacing Scale (4px base)
+     ======================================================================== */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;       /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;       /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+
+  /* Touch Ergonomics (Factory Floor Tablet standard: min 44px) */
+  --touch-target-min: 44px;
+
+  /* ========================================================================
+     2. Typography Scale
+     ======================================================================== */
+  --text-2xs: 0.65rem;   /* 10.4px - Badges & micro metadata only */
+  --text-xs: 0.75rem;    /* 12px - Secondary table cells, captions */
+  --text-sm: 0.875rem;   /* 14px - Body copy, form controls, tabs */
+  --text-base: 1rem;     /* 16px - Primary text */
+  --text-lg: 1.125rem;   /* 18px - Subheadings, card titles */
+  --text-xl: 1.25rem;    /* 20px - Section headers */
+  --text-2xl: 1.5rem;    /* 24px - Modal titles, prominent metrics */
+  --text-3xl: 2rem;      /* 32px - Page hero headings */
+
+  /* Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+
+  /* ========================================================================
+     3. Harmonized Semantic Status & Severity Colors (WCAG 2.1 AA Compliant)
+     ======================================================================== */
+  /* Danger / Critical Defect / Blocker */
+  --color-danger: #ff5252;
+  --color-danger-hover: #ff3838;
+  --color-danger-bg: rgba(255, 82, 82, 0.12);
+  --color-danger-border: rgba(255, 82, 82, 0.35);
+
+  /* Warning / Moderate Severity / Pending */
+  --color-warning: #ffb74d;
+  --color-warning-hover: #ffa726;
+  --color-warning-bg: rgba(255, 183, 77, 0.12);
+  --color-warning-border: rgba(255, 183, 77, 0.35);
+
+  /* Success / Fixed / Verified / Operational */
+  --color-success: #00e676;
+  --color-success-hover: #00c853;
+  --color-success-bg: rgba(0, 230, 118, 0.12);
+  --color-success-border: rgba(0, 230, 118, 0.35);
+
+  /* Info / Minor Severity / Accent Cyan */
+  --color-info: #00e5ff;
+  --color-info-hover: #00b4d8;
+  --color-info-bg: rgba(0, 229, 255, 0.12);
+  --color-info-border: rgba(0, 229, 255, 0.35);
+
+  /* Neutral / Closed / Muted */
+  --color-neutral: #9e9e9e;
+  --color-neutral-bg: rgba(255, 255, 255, 0.06);
+  --color-neutral-border: rgba(255, 255, 255, 0.15);
+
+  /* ========================================================================
+     4. Surface, Borders & Elevation
+     ======================================================================== */
+  --surface-base: #121212;
+  --surface-card: #1e1e1e;
+  --surface-raised: #252525;
+  --surface-overlay: rgba(18, 18, 18, 0.85);
+  --surface-hover: rgba(255, 255, 255, 0.04);
+  --surface-active: rgba(255, 255, 255, 0.08);
+
+  --border-subtle: #262626;
+  --border-default: #333333;
+  --border-strong: #444444;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 16px var(--vtr-glow-color, rgba(48, 192, 205, 0.4));
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}

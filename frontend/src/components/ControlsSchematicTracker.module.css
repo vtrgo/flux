@@ -1,0 +1,101 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+}
+
+.titleArea {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-base, 1rem);
+  font-family: var(--font-mono, monospace);
+  color: var(--vtr-theme-primary, #00e5ff);
+}
+
+.subtitle {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-secondary, #9e9e9e);
+  margin-top: var(--space-1, 0.25rem);
+}
+
+.form {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-default, #333333);
+  padding: var(--space-4, 1rem);
+  border-radius: var(--radius-md, 6px);
+  display: flex;
+  gap: var(--space-4, 1rem);
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 0.25rem);
+  min-width: 180px;
+}
+
+.label {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-secondary, #9e9e9e);
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.input,
+.select {
+  background: var(--surface-base, #121212);
+  border: 1px solid var(--border-default, #333333);
+  color: var(--text-primary, #ffffff);
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm, 4px);
+  font-size: var(--text-sm, 0.875rem);
+  font-family: var(--font-mono, monospace);
+  outline: none;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--vtr-theme-primary, #00e5ff);
+}
+
+.tableWrapper {
+  border: 1px solid var(--border-default, #333333);
+  border-radius: var(--radius-md, 6px);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.table th {
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid var(--border-default, #333333);
+  color: var(--text-secondary, #9e9e9e);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs, 0.75rem);
+  text-transform: uppercase;
+}
+
+.table td {
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}

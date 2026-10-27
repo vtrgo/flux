@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -115,8 +116,39 @@ func TestDefects(t *testing.T) {
 		if updated.ResolvedAt == nil {
 			t.Error("expected non-nil ResolvedAt timestamp after marking fixed")
 		}
+		if updated.ResolvedBy == nil || *updated.ResolvedBy == "user_quality_01" {
+			t.Errorf("expected ResolvedBy to not be hardcoded 'user_quality_01', got %v", updated.ResolvedBy)
+		}
 		if updated.CreatedAt.IsZero() {
 			t.Error("expected CreatedAt timestamp to persist after update")
+		}
+	})
+
+	t.Run("Update Defect with Authenticated User - Sets Genuine ResolvedBy", func(t *testing.T) {
+		managerCookie := createTestRoleCookie(t, "manager")
+		payload := map[string]interface{}{
+			"status": "verified",
+			"notes":  "Verified by manager",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/defects/%s", defectID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(managerCookie)
+
+		rr := httptest.NewRecorder()
+		AuthMiddleware(mux).ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("handler returned wrong status code: got %v want %v: %s", status, http.StatusOK, rr.Body.String())
+		}
+
+		var updated models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&updated); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if updated.ResolvedBy == nil || *updated.ResolvedBy == "user_quality_01" || *updated.ResolvedBy == "" {
+			t.Errorf("expected genuine ResolvedBy, got %v", updated.ResolvedBy)
 		}
 	})
 
@@ -253,11 +285,28 @@ func TestDefects(t *testing.T) {
 		}
 	})
 
-	t.Run("Create Defect - Description Exceeds 255 Characters (Failure)", func(t *testing.T) {
-		longDescription := string(make([]byte, 256))
-		for i := range longDescription {
-			longDescription = longDescription[:i] + "a" + longDescription[i+1:]
+	t.Run("Create Defect - Long Description > 255 Chars (Success)", func(t *testing.T) {
+		multiLineDescription := strings.Repeat("Detailed shop floor technician notes. Error on linear track. ", 10) // ~600 chars
+		payload := map[string]interface{}{
+			"source_department":   "quality",
+			"assigned_department": "assembly",
+			"severity":            "minor",
+			"description":         multiLineDescription,
 		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/defects", createdMachine.ID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusCreated {
+			t.Errorf("expected 201 Created for description with > 255 chars, got %v: %s", status, rr.Body.String())
+		}
+	})
+
+	t.Run("Create Defect - Description Exceeds 4000 Characters (Failure)", func(t *testing.T) {
+		longDescription := strings.Repeat("a", 4001)
 		payload := map[string]interface{}{
 			"source_department":   "quality",
 			"assigned_department": "assembly",
@@ -272,7 +321,7 @@ func TestDefects(t *testing.T) {
 		mux.ServeHTTP(rr, req)
 
 		if status := rr.Code; status != http.StatusBadRequest {
-			t.Errorf("expected 400 Bad Request for description > 255 chars, got %v", status)
+			t.Errorf("expected 400 Bad Request for description > 4000 chars, got %v", status)
 		}
 	})
 
@@ -402,6 +451,77 @@ func TestDefects(t *testing.T) {
 			t.Errorf("expected assigned_department 'quality', got '%s'", updated.AssignedDepartment)
 		}
 	})
+
+	t.Run("Create General Defect - Automatically Exists as Verified (Closed) with Label 'General'", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"source_department": "assembly",
+			"description":       "Vendor fastener pitch variance noted for future machine builds",
+			"notes":             "No physical rework or action required on current unit",
+			"label":             "General",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/machines/%s/defects", createdMachine.ID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusCreated {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusCreated, rr.Body.String())
+		}
+
+		var defect models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&defect); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if defect.Label != "General" {
+			t.Errorf("expected label 'General', got '%s'", defect.Label)
+		}
+
+		if defect.Status != "verified" {
+			t.Errorf("expected status 'verified' (closed), got '%s'", defect.Status)
+		}
+
+		if defect.ResolvedAt == nil {
+			t.Errorf("expected resolved_at to be automatically populated, got nil")
+		}
+
+		if defect.ResolvedBy == nil || *defect.ResolvedBy == "" {
+			t.Errorf("expected resolved_by to be automatically populated, got empty or nil")
+		}
+	})
+
+	t.Run("Edit Defect - Update Label", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"source_department":   "assembly",
+			"assigned_department": "assembly",
+			"severity":            "minor",
+			"description":         "Label updated to General reference note",
+			"notes":               "Recorded context for future iterations",
+			"label":               "General",
+		}
+		body, _ := json.Marshal(payload)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/defects/%s/edit", defectID), bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Fatalf("handler returned wrong status code: got %v want %v (body: %s)", status, http.StatusOK, rr.Body.String())
+		}
+
+		var updated models.Defect
+		if err := json.NewDecoder(rr.Body).Decode(&updated); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+
+		if updated.Label != "General" {
+			t.Errorf("expected updated label 'General', got '%s'", updated.Label)
+		}
+	})
 }
+
 
 
