@@ -326,7 +326,7 @@ export function PrintableWeeklyTimesheet({
 
           <div className={styles.systemAuditLine}>
             <span>
-              Flux MES &bull; Timesheet ID: {timesheetId ? timesheetId.slice(0, 8) : 'NEW'} &bull; Status: {status.toUpperCase()}
+              Flux MES &bull; Timesheet ID: {timesheetId ? timesheetId.slice(0, 8) : 'NEW'} &bull; Status: {(status || 'draft').toUpperCase()}
             </span>
             <span>
               Generated: {new Date().toLocaleDateString('en-US')}

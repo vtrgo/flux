@@ -4,6 +4,7 @@ import React from 'react';
 import TimesheetPage from './page';
 import { fetchApi } from '../../../lib/api';
 import { useAuth } from '../../../contexts/AuthContext';
+import { getSundayOfWeek, getWeekDays } from '../../../lib/dateUtils';
 
 vi.mock('../../../lib/api');
 vi.mock('../../../contexts/AuthContext', () => ({
@@ -287,6 +288,11 @@ describe('TimesheetPage', () => {
   });
 
   it('displays exact quarter-hour totals for .25, .5, and .75 without rounding to 0.1', async () => {
+    const sunStr = getSundayOfWeek(new Date());
+    const currentWeekDays = getWeekDays(sunStr);
+    const day1 = currentWeekDays[1].dateStr;
+    const day2 = currentWeekDays[2].dateStr;
+
     const quarterHourEntries = [
       {
         id: 'te-qh-1',
@@ -296,10 +302,10 @@ describe('TimesheetPage', () => {
         entry_type: 'production' as const,
         project_task_id: 'task-1',
         task_name: 'Mechanical Assembly',
-        work_date: '2026-10-19',
+        work_date: day1,
         hours_spent: 0.25,
-        created_at: '2026-10-19T08:00:00Z',
-        updated_at: '2026-10-19T08:00:00Z',
+        created_at: `${day1}T08:00:00Z`,
+        updated_at: `${day1}T08:00:00Z`,
       },
       {
         id: 'te-qh-2',
@@ -309,10 +315,10 @@ describe('TimesheetPage', () => {
         entry_type: 'production' as const,
         project_task_id: 'task-1',
         task_name: 'Mechanical Assembly',
-        work_date: '2026-10-20',
+        work_date: day2,
         hours_spent: 0.5,
-        created_at: '2026-10-20T08:00:00Z',
-        updated_at: '2026-10-20T08:00:00Z',
+        created_at: `${day2}T08:00:00Z`,
+        updated_at: `${day2}T08:00:00Z`,
       },
     ];
 
@@ -320,6 +326,7 @@ describe('TimesheetPage', () => {
       if (endpoint.startsWith('timesheets/weekly')) {
         return Promise.resolve({
           ...mockWeeklyTimesheet,
+          week_start_date: sunStr,
           total_hours: 0.75,
           entries: quarterHourEntries,
         });

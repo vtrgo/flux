@@ -53,7 +53,6 @@ func (s *service) GetSummary(ctx context.Context, hourlyRate float64, salesOrder
 	if endDate != "" {
 		baseFilter += fmt.Sprintf(" AND te.work_date <= $%d::date", argIdx)
 		args = append(args, endDate)
-		argIdx++
 	}
 
 	totals, err := s.repo.GetSummaryTotals(ctx, baseFilter, args)
