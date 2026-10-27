@@ -7,34 +7,8 @@
  * Eliminates modal clipping, scroll constraints, dark mode leakage, and blank pages.
  */
 
-export interface TimesheetDayCol {
-  dateStr: string;
-  dayName: string;
-  mdFormatted: string;
-}
-
-export interface TimesheetRowPrintData {
-  jobLabel: string;
-  days: Record<string, number | undefined>;
-  rowTotal: number;
-}
-
-export interface TimesheetPrintParams {
-  employeeName: string;
-  department?: string;
-  weekEndingDate: string; // e.g. "10/24/2026"
-  weekDays: TimesheetDayCol[];
-  rows: TimesheetRowPrintData[];
-  totalTargetRows?: number;
-  dayTotals: Record<string, number>;
-  grandTotal: number;
-  isOvertime: boolean;
-  timesheetId?: string;
-  status?: string;
-  isApproved?: boolean;
-  approverName?: string;
-  approvalDate?: string;
-}
+import { TimesheetDayCol, TimesheetRowPrintData, TimesheetPrintParams } from '../types';
+export type { TimesheetDayCol, TimesheetRowPrintData, TimesheetPrintParams };
 
 export function generateTimesheetHtml(params: TimesheetPrintParams): string {
   const {

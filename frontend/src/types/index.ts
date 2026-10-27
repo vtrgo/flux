@@ -472,6 +472,44 @@ export interface RejectTimesheetRequest {
   reason: string;
 }
 
+export interface PrintableTimesheetRow {
+  rowKey?: string;
+  order_number?: string;
+  task_name: string;
+  department?: string;
+  entry_type?: TimeEntryType;
+  days: Record<string, number | undefined>;
+}
+
+export interface TimesheetDayCol {
+  dateStr: string;
+  dayName: string;
+  mdFormatted: string;
+}
+
+export interface TimesheetRowPrintData {
+  jobLabel: string;
+  days: Record<string, number | undefined>;
+  rowTotal: number;
+}
+
+export interface TimesheetPrintParams {
+  employeeName: string;
+  department?: string;
+  weekEndingDate: string;
+  weekDays: TimesheetDayCol[];
+  rows: TimesheetRowPrintData[];
+  totalTargetRows?: number;
+  dayTotals: Record<string, number>;
+  grandTotal: number;
+  isOvertime: boolean;
+  timesheetId?: string;
+  status?: string;
+  isApproved?: boolean;
+  approverName?: string;
+  approvalDate?: string;
+}
+
 export interface MachineLaborSummary {
   machine_id: string;
   order_number: string;
