@@ -725,6 +725,21 @@ export interface GridRow {
   entry_ids?: Record<string, string>; // dateStr -> time_entry id
 }
 
+export interface NCRFormData {
+  machine_id: string;
+  ncr_number: string;
+  date: string;
+  assembler: string;
+  location: string;
+  description: string;
+  root_cause: string;
+  corrective_action: string;
+  closeout_date: string;
+  team_lead_signature: string;
+  status: string;
+}
+
+
 
 
 
