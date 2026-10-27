@@ -62,12 +62,39 @@ describe('printTimesheet utilities', () => {
     expect(html).toContain('Weekly Job Schedule');
     expect(html).toContain('Week Ending:&nbsp;&nbsp;<strong>10/24/2026</strong>');
     expect(html).toContain('Please add brackets () to time over 40 hours');
-    expect(html).toContain('22-003A1 - EP');
+    expect(html).toContain('Project / Order #');
+    expect(html).toContain('Assembly');
+    expect(html).toContain('Task Description');
+    expect(html).toContain('22-003A1');
+    expect(html).toContain('EP');
     expect(html).toContain('Shop');
     expect(html).toContain('Job allocation approved by');
     expect(html).toContain('Approved timesheets must be delivered to Lisa every Monday morning');
     expect(html).toContain('@page {');
-    expect(html).toContain('size: letter portrait;');
+    expect(html).toContain('size: letter landscape;');
+  });
+
+  it('renders explicit assembly labels and order numbers correctly in landscape columns', () => {
+    const assemblyParams: TimesheetPrintParams = {
+      ...mockParams,
+      rows: [
+        {
+          orderNumber: '22-003A1',
+          assemblyLabel: 'SUB-01 Electrical Panel',
+          taskName: 'Wiring & Termination',
+          jobLabel: '22-003A1 - SUB-01 - Wiring & Termination',
+          days: { '2026-10-19': 5 },
+          rowTotal: 5,
+        },
+      ],
+      grandTotal: 5,
+    };
+
+    const html = generateTimesheetHtml(assemblyParams);
+    expect(html).toContain('22-003A1');
+    expect(html).toContain('SUB-01 Electrical Panel');
+    expect(html).toContain('Wiring &amp; Termination');
+    expect(html).toContain('size: letter landscape;');
   });
 
   it('formats overtime brackets () when isOvertime is true', () => {

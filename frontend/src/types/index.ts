@@ -532,6 +532,9 @@ export interface TimesheetDayCol {
 }
 
 export interface TimesheetRowPrintData {
+  orderNumber?: string;
+  assemblyLabel?: string;
+  taskName?: string;
   jobLabel: string;
   days: Record<string, number | undefined>;
   rowTotal: number;

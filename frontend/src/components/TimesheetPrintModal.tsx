@@ -47,12 +47,12 @@ export function TimesheetPrintModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Print Weekly Timesheet"
-      subtitle="Standard shop timesheet layout (Weekly Job Schedule). Spools full-page portrait directly to your printer or PDF."
+      subtitle="Standard shop timesheet layout (Weekly Job Schedule). Spools full-page landscape directly to your printer or PDF."
       size="xl"
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div style={{ fontSize: '0.8rem', color: '#888' }}>
-            Standard Letter (Portrait) &bull; Isolated print spooling enabled
+            Standard Letter (Landscape) &bull; Isolated print spooling enabled
           </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button

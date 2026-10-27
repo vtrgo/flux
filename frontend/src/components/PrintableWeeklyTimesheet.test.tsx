@@ -79,17 +79,42 @@ describe('PrintableWeeklyTimesheet', () => {
     });
   });
 
-  it('renders job rows with machine numbers, tasks, and daily hours', () => {
+  it('renders job rows with machine numbers, assemblies, tasks, and daily hours', () => {
+    const rowsWithAssembly: PrintableTimesheetRow[] = [
+      ...mockRows,
+      {
+        rowKey: 'row-3',
+        order_number: '23-010',
+        assembly_code: 'ASM-02',
+        assembly_name: 'Feeder Belt',
+        task_name: 'Belt Tensioning',
+        days: {
+          '2026-10-19': 4,
+        },
+      },
+    ];
+
     render(
       <PrintableWeeklyTimesheet
         timesheet={mockTimesheet}
         weekStartDate="2026-10-18"
-        rows={mockRows}
+        rows={rowsWithAssembly}
       />
     );
 
-    expect(screen.getByText('22-003A1 - EP')).toBeInTheDocument();
+    // Landscape columns: Project / Order #, Assembly, Task Description
+    expect(screen.getByText('Project / Order #')).toBeInTheDocument();
+    expect(screen.getByText('Assembly')).toBeInTheDocument();
+    expect(screen.getByText('Task Description')).toBeInTheDocument();
+
+    expect(screen.getByText('22-003A1')).toBeInTheDocument();
+    expect(screen.getByText('EP')).toBeInTheDocument();
     expect(screen.getByText('Shop')).toBeInTheDocument();
+
+    // Assembly verification
+    expect(screen.getByText('23-010')).toBeInTheDocument();
+    expect(screen.getByText('[ASM-02] Feeder Belt')).toBeInTheDocument();
+    expect(screen.getByText('Belt Tensioning')).toBeInTheDocument();
 
     // Row 1 total = 2.25 + 4 + 1 = 7.25
     expect(screen.getByText('7.25')).toBeInTheDocument();

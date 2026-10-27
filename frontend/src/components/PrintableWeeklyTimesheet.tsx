@@ -51,13 +51,17 @@ export function buildTimesheetPrintParams(
     const rowMap = new Map<string, PrintableTimesheetRow>();
     timesheet.entries.forEach(entry => {
       const orderNum = entry.order_number || '';
+      const asmCode = entry.assembly_code || '';
+      const asmName = entry.assembly_name || '';
       const taskName = entry.task_name || (entry.rework_part_number ? `Rework: ${entry.rework_part_number}` : 'General Task');
-      const key = `${orderNum}:${taskName}:${entry.entry_type || 'production'}`;
+      const key = `${orderNum}:${asmCode}:${taskName}:${entry.entry_type || 'production'}`;
 
       if (!rowMap.has(key)) {
         rowMap.set(key, {
           rowKey: key,
           order_number: orderNum || undefined,
+          assembly_code: asmCode || undefined,
+          assembly_name: asmName || undefined,
           task_name: taskName,
           department: entry.department,
           entry_type: entry.entry_type,
@@ -85,10 +89,19 @@ export function buildTimesheetPrintParams(
 
   const printRows: TimesheetRowPrintData[] = activeRows.map(r => {
     const rowTotal = Object.values(r.days).reduce<number>((s, h) => s + (h || 0), 0);
+    const orderNumber = r.order_number || (r.task_name ? 'Shop / Indirect' : '');
+    const assemblyLabel = r.assembly_code
+      ? `[${r.assembly_code}] ${r.assembly_name || ''}`.trim()
+      : r.order_number ? 'General' : '—';
+    const taskName = r.task_name || 'General Task';
     const jobLabel = r.order_number
-      ? `${r.order_number}${r.task_name ? ` - ${r.task_name}` : ''}`
-      : r.task_name || 'General Task';
+      ? `${r.order_number}${assemblyLabel && assemblyLabel !== 'General' ? ` ${assemblyLabel}` : ''} - ${taskName}`
+      : taskName;
+
     return {
+      orderNumber,
+      assemblyLabel,
+      taskName,
       jobLabel,
       days: r.days,
       rowTotal,
@@ -212,7 +225,9 @@ export function PrintableWeeklyTimesheet({
           <thead>
             {/* Row 4: Days */}
             <tr>
-              <th className={`${styles.colJob} ${styles.thDayName}`}>Job # &amp; Segment</th>
+              <th className={`${styles.colProject} ${styles.thDayName}`}>Project / Order #</th>
+              <th className={`${styles.colAssembly} ${styles.thDayName}`}>Assembly</th>
+              <th className={`${styles.colTask} ${styles.thDayName}`}>Task Description</th>
               {weekDays.map(day => (
                 <th key={day.dateStr} className={`${styles.colDay} ${styles.thDayName}`}>
                   {day.dayName}
@@ -222,7 +237,7 @@ export function PrintableWeeklyTimesheet({
             </tr>
             {/* Row 5: Dates */}
             <tr>
-              <th className={`${styles.colJob} ${styles.thDateLabel}`}>Date</th>
+              <th colSpan={3} className={`${styles.colSegmentSpan} ${styles.thDateLabel}`}>Date</th>
               {weekDays.map(day => (
                 <th key={day.dateStr} className={`${styles.colDay} ${styles.thDateValue}`}>
                   {day.mdFormatted}
@@ -235,8 +250,14 @@ export function PrintableWeeklyTimesheet({
             {/* Active Job Rows */}
             {activeRows.map((row, idx) => (
               <tr key={`job-${idx}`} className={styles.rowJob}>
-                <td className={styles.colJob} title={row.jobLabel}>
-                  <span className={styles.jobName}>{row.jobLabel}</span>
+                <td className={styles.colProject} title={row.orderNumber || ''}>
+                  <span className={`${styles.cellText} ${styles.boldText}`}>{row.orderNumber || '—'}</span>
+                </td>
+                <td className={styles.colAssembly} title={row.assemblyLabel || ''}>
+                  <span className={styles.cellText}>{row.assemblyLabel || '—'}</span>
+                </td>
+                <td className={styles.colTask} title={row.taskName || row.jobLabel}>
+                  <span className={styles.cellText}>{row.taskName || row.jobLabel}</span>
                 </td>
                 {weekDays.map(day => {
                   const hours = row.days[day.dateStr];
@@ -255,7 +276,9 @@ export function PrintableWeeklyTimesheet({
             {/* Padded Blank Rows for Write-Ins */}
             {blankRows.map(id => (
               <tr key={id} className={styles.rowBlank}>
-                <td className={styles.colJob}>&nbsp;</td>
+                <td className={styles.colProject}>&nbsp;</td>
+                <td className={styles.colAssembly}>&nbsp;</td>
+                <td className={styles.colTask}>&nbsp;</td>
                 {weekDays.map(day => (
                   <td key={day.dateStr} className={styles.colDay}></td>
                 ))}
@@ -266,7 +289,7 @@ export function PrintableWeeklyTimesheet({
           <tfoot>
             {/* Totals Row */}
             <tr className={styles.rowTotals}>
-              <td className={`${styles.colJob} ${styles.labelTotal}`}>TOTAL</td>
+              <td colSpan={3} className={`${styles.colSegmentSpan} ${styles.labelTotal}`}>TOTAL</td>
               {weekDays.map(day => {
                 const total = dayTotals[day.dateStr] || 0;
                 return (
