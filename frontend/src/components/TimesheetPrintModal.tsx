@@ -15,6 +15,7 @@ export interface TimesheetPrintModalProps {
   weekStartDate: string; // ISO Sunday
   rows?: PrintableTimesheetRow[];
   totalTargetRows?: number;
+  notes?: string;
 }
 
 export function TimesheetPrintModal({
@@ -25,7 +26,8 @@ export function TimesheetPrintModal({
   department,
   weekStartDate,
   rows,
-  totalTargetRows = 18,
+  totalTargetRows = 10,
+  notes,
 }: TimesheetPrintModalProps) {
   const handlePrint = useCallback(() => {
     const params = buildTimesheetPrintParams(
@@ -34,11 +36,12 @@ export function TimesheetPrintModal({
       department,
       weekStartDate,
       rows,
-      totalTargetRows
+      totalTargetRows,
+      notes || timesheet?.notes
     );
     const html = generateTimesheetHtml(params);
     printTimesheetDocument(html);
-  }, [timesheet, employeeName, department, weekStartDate, rows, totalTargetRows]);
+  }, [timesheet, employeeName, department, weekStartDate, rows, totalTargetRows, notes]);
 
   if (!isOpen) return null;
 
@@ -94,6 +97,7 @@ export function TimesheetPrintModal({
           weekStartDate={weekStartDate}
           rows={rows}
           totalTargetRows={totalTargetRows}
+          notes={notes || timesheet?.notes}
         />
       </div>
     </Modal>

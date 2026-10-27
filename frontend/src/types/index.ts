@@ -555,6 +555,7 @@ export interface TimesheetPrintParams {
   isApproved?: boolean;
   approverName?: string;
   approvalDate?: string;
+  notes?: string;
 }
 
 export interface MachineLaborSummary {

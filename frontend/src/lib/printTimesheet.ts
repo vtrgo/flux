@@ -17,7 +17,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     weekEndingDate,
     weekDays,
     rows,
-    totalTargetRows = 18,
+    totalTargetRows = 10,
     dayTotals,
     grandTotal,
     isOvertime,
@@ -26,6 +26,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     isApproved,
     approverName,
     approvalDate,
+    notes,
   } = params;
 
   // Active rows
@@ -314,6 +315,53 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     .overtimeBracket {
       font-weight: 800;
     }
+    .commentsBox {
+      width: 100%;
+      border: 1.5px solid #000000;
+      border-radius: 2px;
+      margin-bottom: 8px;
+      background: #ffffff;
+      box-sizing: border-box;
+      page-break-inside: avoid;
+    }
+    .commentsHeader {
+      background-color: #f0f0f0 !important;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-bottom: 1px solid #000000;
+      color: #000000;
+    }
+    .commentsBody {
+      padding: 6px 10px;
+      min-height: 76px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .commentsText {
+      font-size: 11px;
+      color: #111111;
+      white-space: pre-wrap;
+      margin-bottom: 6px;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+    .commentsLines {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 4px;
+      width: 100%;
+    }
+    .commentRule {
+      width: 100%;
+      border-bottom: 1px dashed #b0b0b0;
+      height: 1px;
+    }
     .footerContainer {
       margin-top: 10px;
       width: 100%;
@@ -441,6 +489,16 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
         </tr>
       </tfoot>
     </table>
+
+    <div class="commentsBox">
+      <div class="commentsHeader">Comments / Notes &amp; Remarks</div>
+      <div class="commentsBody">
+        ${notes ? `<div class="commentsText">${escapeHtml(notes)}</div>` : ''}
+        <div class="commentsLines">
+          ${Array.from({ length: notes ? 3 : 5 }).map(() => `<div class="commentRule"></div>`).join('')}
+        </div>
+      </div>
+    </div>
 
     <div class="footerContainer">
       <table class="approvalTable">

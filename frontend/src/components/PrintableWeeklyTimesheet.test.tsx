@@ -122,19 +122,37 @@ describe('PrintableWeeklyTimesheet', () => {
     expect(screen.getByText('14.75')).toBeInTheDocument();
   });
 
-  it('pads with empty blank rows to match full page appearance for write-ins', () => {
+  it('pads with empty blank rows to match 10 rows of timesheet data total', () => {
     const { container } = render(
       <PrintableWeeklyTimesheet
         timesheet={mockTimesheet}
         weekStartDate="2026-10-18"
         rows={mockRows}
-        totalTargetRows={18}
+        totalTargetRows={10}
       />
     );
 
-    // 2 active rows + 16 padded blank rows = 18 tbody rows in the matrix grid
+    // 2 active rows + 8 padded blank rows = 10 tbody rows in the matrix grid
     const gridTbody = container.querySelector('[data-testid="timesheet-grid-table"] tbody');
-    expect(gridTbody?.children.length).toBe(18);
+    expect(gridTbody?.children.length).toBe(10);
+  });
+
+  it('renders comments, notes and remarks section', () => {
+    render(
+      <PrintableWeeklyTimesheet
+        timesheet={{
+          ...mockTimesheet,
+          notes: 'Shop note: Completed gearhead alignment on Monday morning.',
+        }}
+        weekStartDate="2026-10-18"
+        rows={mockRows}
+      />
+    );
+
+    expect(screen.getByText('Comments / Notes & Remarks')).toBeInTheDocument();
+    expect(
+      screen.getByText('Shop note: Completed gearhead alignment on Monday morning.')
+    ).toBeInTheDocument();
   });
 
   it('formats regular total when <= 40 hours without brackets', () => {

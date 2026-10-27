@@ -20,6 +20,7 @@ export interface PrintableWeeklyTimesheetProps {
   weekStartDate: string; // ISO Sunday 'YYYY-MM-DD'
   rows?: PrintableTimesheetRow[];
   totalTargetRows?: number;
+  notes?: string;
 }
 
 export function buildTimesheetPrintParams(
@@ -28,7 +29,8 @@ export function buildTimesheetPrintParams(
   department?: string,
   weekStartDate: string = '',
   explicitRows?: PrintableTimesheetRow[],
-  totalTargetRows: number = 18
+  totalTargetRows: number = 10,
+  notes?: string
 ): TimesheetPrintParams {
   const weekDays = getWeekDays(weekStartDate);
   const saturdayDateStr = weekDays[6]?.dateStr || '';
@@ -146,6 +148,7 @@ export function buildTimesheetPrintParams(
     isApproved: timesheet?.status === 'approved',
     approverName: timesheet?.approver_name,
     approvalDate: approvalDateFormatted,
+    notes: (notes && notes.trim()) || (timesheet?.notes && timesheet.notes.trim()) || undefined,
   };
 }
 
@@ -155,7 +158,8 @@ export function PrintableWeeklyTimesheet({
   department,
   weekStartDate,
   rows: explicitRows,
-  totalTargetRows = 18,
+  totalTargetRows = 10,
+  notes: notesProp,
 }: PrintableWeeklyTimesheetProps) {
   const printData = useMemo(() => {
     return buildTimesheetPrintParams(
@@ -164,9 +168,10 @@ export function PrintableWeeklyTimesheet({
       department,
       weekStartDate,
       explicitRows,
-      totalTargetRows
+      totalTargetRows,
+      notesProp
     );
-  }, [timesheet, employeeName, department, weekStartDate, explicitRows, totalTargetRows]);
+  }, [timesheet, employeeName, department, weekStartDate, explicitRows, totalTargetRows, notesProp]);
 
   const {
     employeeName: effectiveEmployeeName,
@@ -181,6 +186,7 @@ export function PrintableWeeklyTimesheet({
     approverName,
     status,
     timesheetId,
+    notes,
   } = printData;
 
   const blankRowsCount = Math.max(0, totalTargetRows - activeRows.length);
@@ -308,6 +314,21 @@ export function PrintableWeeklyTimesheet({
             </tr>
           </tfoot>
         </table>
+
+        {/* Comments, Notes & Remarks Section */}
+        <div className={styles.commentsBox}>
+          <div className={styles.commentsHeader}>Comments / Notes &amp; Remarks</div>
+          <div className={styles.commentsBody}>
+            {notes ? (
+              <div className={styles.commentsText}>{notes}</div>
+            ) : null}
+            <div className={styles.commentsLines}>
+              {Array.from({ length: notes ? 3 : 5 }).map((_, idx) => (
+                <div key={idx} className={styles.commentRule}></div>
+              ))}
+            </div>
+          </div>
+        </div>
 
         {/* Footer & Approval Section */}
         <div className={styles.footerContainer}>

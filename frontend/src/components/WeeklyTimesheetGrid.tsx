@@ -811,6 +811,7 @@ export function WeeklyTimesheetGrid({
         department={effectiveDepartment}
         weekStartDate={currentWeekSunday}
         rows={rows}
+        notes={notes || weeklyTimesheet?.notes}
       />
     </div>
   );

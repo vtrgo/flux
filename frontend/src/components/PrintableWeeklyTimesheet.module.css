@@ -222,6 +222,61 @@
   font-weight: 800;
 }
 
+/* Comments, Notes & Remarks Section */
+.commentsBox {
+  width: 100%;
+  border: 1.5px solid #111111;
+  border-radius: 2px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  background-color: #ffffff;
+  box-sizing: border-box;
+  page-break-inside: avoid;
+}
+
+.commentsHeader {
+  background-color: #f0f0f0;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  border-bottom: 1.5px solid #111111;
+  color: #111111;
+}
+
+.commentsBody {
+  padding: 8px 10px;
+  min-height: 76px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.commentsText {
+  font-size: 11px;
+  color: #111111;
+  white-space: pre-wrap;
+  margin-bottom: 8px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.commentsLines {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.commentRule {
+  width: 100%;
+  border-bottom: 1px dashed #b0b0b0;
+  height: 1px;
+}
+
 /* Footer & Approval Section */
 .footerContainer {
   margin-top: 12px;
