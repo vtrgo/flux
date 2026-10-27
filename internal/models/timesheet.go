@@ -47,6 +47,9 @@ type TimeEntry struct {
 	ReworkItemID      *uuid.UUID    `json:"rework_item_id,omitempty"`
 	ReworkPartNum     string        `json:"rework_part_number,omitempty"`
 	DefectID          *uuid.UUID    `json:"defect_id,omitempty"`
+	AssemblyID        *uuid.UUID    `json:"assembly_id,omitempty"`
+	AssemblyCode      string        `json:"assembly_code,omitempty"`
+	AssemblyName      string        `json:"assembly_name,omitempty"`
 	WorkDate          string        `json:"work_date"`
 	HoursSpent        float64       `json:"hours_spent"`
 	WorkDescription   string        `json:"work_description"`

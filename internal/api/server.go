@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/vtrgo/flux/internal/db"
+	"github.com/vtrgo/flux/internal/domain/assemblies"
 	"github.com/vtrgo/flux/internal/domain/conc"
 	"github.com/vtrgo/flux/internal/domain/ncrs"
 	"github.com/vtrgo/flux/internal/domain/rework"
@@ -21,6 +22,7 @@ type Server struct {
 	NCRs       ncrs.Service
 	Rework     rework.Service
 	Timesheets timesheets.Service
+	Assemblies assemblies.Service
 }
 
 var defaultServerInstance *Server
@@ -31,6 +33,7 @@ func NewServer(database *sql.DB, hub *SSEHub, dispatcher *notifications.Dispatch
 	var ncrService ncrs.Service
 	var reworkService rework.Service
 	var timesheetService timesheets.Service
+	var assemblyService assemblies.Service
 	if database != nil {
 		concRepo := conc.NewRepository(database)
 		concService = conc.NewService(concRepo)
@@ -43,6 +46,9 @@ func NewServer(database *sql.DB, hub *SSEHub, dispatcher *notifications.Dispatch
 
 		timesheetRepo := timesheets.NewRepository(database)
 		timesheetService = timesheets.NewService(timesheetRepo)
+
+		assemblyRepo := assemblies.NewRepository(database)
+		assemblyService = assemblies.NewService(assemblyRepo, nil)
 	}
 
 	srv := &Server{
@@ -53,6 +59,7 @@ func NewServer(database *sql.DB, hub *SSEHub, dispatcher *notifications.Dispatch
 		NCRs:       ncrService,
 		Rework:     reworkService,
 		Timesheets: timesheetService,
+		Assemblies: assemblyService,
 	}
 	defaultServerInstance = srv
 	return srv

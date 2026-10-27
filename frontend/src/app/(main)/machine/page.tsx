@@ -11,6 +11,7 @@ import { ACTIVE_DEPARTMENTS } from "../../../lib/departments";
 import { IssueModal } from "../../../components/IssueModal";
 import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
+import { AssemblyTreeBuilder } from "../../../components/assembly";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
 import { calculateDaysLate, formatFatDate } from "../../../lib/dateUtils";
@@ -29,6 +30,7 @@ function MachineDetailContent() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
+  const [activeTab, setActiveTab] = useState<'issues' | 'assemblies'>('issues');
 
   useSSE('defect_added', (newDefect: Defect) => {
     if (newDefect.machine_id === id) {
@@ -248,37 +250,60 @@ function MachineDetailContent() {
         </div>
       </header>
 
-      <div className={styles.boardGrid}>
-        {/* OPEN COLUMN */}
-        <section>
-          <h2 className={styles.boardColumnTitle}>
-            Open Issues <span className={styles.boardBadge}>{openDefects.length}</span>
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {renderGroupedDefects(openDefects)}
-          </div>
-        </section>
+      {/* Tabs */}
+      <nav className={styles.tabs} aria-label="Machine Portal Sections">
+        <button
+          type="button"
+          className={`${styles.tab} ${activeTab === 'issues' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('issues')}
+        >
+          Quality Issues
+          <span className={styles.tabBadge}>{defects.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`${styles.tab} ${activeTab === 'assemblies' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('assemblies')}
+        >
+          Assembly Hierarchy & BOM
+        </button>
+      </nav>
 
-        {/* FIXED COLUMN */}
-        <section>
-          <h2 className={styles.boardColumnTitle}>
-            Fixed (Pending Verification) <span className={styles.boardBadge}>{fixedDefects.length}</span>
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {renderGroupedDefects(fixedDefects)}
-          </div>
-        </section>
+      {activeTab === 'assemblies' ? (
+        <AssemblyTreeBuilder machineId={machine.id} orderNumber={machine.order_number} />
+      ) : (
+        <div className={styles.boardGrid}>
+          {/* OPEN COLUMN */}
+          <section>
+            <h2 className={styles.boardColumnTitle}>
+              Open Issues <span className={styles.boardBadge}>{openDefects.length}</span>
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {renderGroupedDefects(openDefects)}
+            </div>
+          </section>
 
-        {/* VERIFIED COLUMN */}
-        <section>
-          <h2 className={styles.boardColumnTitle}>
-            Verified & Cleared <span className={styles.boardBadge}>{verifiedDefects.length}</span>
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {renderGroupedDefects(verifiedDefects)}
-          </div>
-        </section>
-      </div>
+          {/* FIXED COLUMN */}
+          <section>
+            <h2 className={styles.boardColumnTitle}>
+              Fixed (Pending Verification) <span className={styles.boardBadge}>{fixedDefects.length}</span>
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {renderGroupedDefects(fixedDefects)}
+            </div>
+          </section>
+
+          {/* VERIFIED COLUMN */}
+          <section>
+            <h2 className={styles.boardColumnTitle}>
+              Verified & Cleared <span className={styles.boardBadge}>{verifiedDefects.length}</span>
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {renderGroupedDefects(verifiedDefects)}
+            </div>
+          </section>
+        </div>
+      )}
 
       <IssueModal 
         isOpen={isModalOpen} 

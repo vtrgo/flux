@@ -47,6 +47,50 @@
   box-shadow: 0 0 8px var(--vtr-glow-color, transparent);
 }
 
+.tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--vtr-card-border, var(--border-color));
+  padding-bottom: 0.5rem;
+}
+
+.tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.activeTab {
+  color: var(--vtr-theme-primary, var(--accent-cyan));
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid var(--vtr-theme-primary, var(--accent-cyan));
+}
+
+.tabBadge {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
