@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import { fetchApi } from '../lib/api';
 import { useTimesheetData } from '../hooks/useTimesheetData';
-import { getSundayOfWeek, addWeeks, getWeekDays, formatWeekRange, formatHours } from '../lib/dateUtils';
+import { getSundayOfWeek, addWeeks, getWeekDays } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Machine,
@@ -14,9 +14,16 @@ import {
   WeeklyTimesheetSaveItem,
   ReworkItem,
   Defect,
+  GridRow,
 } from '../types';
 import { TimesheetPrintModal } from './TimesheetPrintModal';
+import { TimesheetHeaderBar } from './timesheet/TimesheetHeaderBar';
+import { TimesheetStatusBanner } from './timesheet/TimesheetStatusBanner';
+import { TimesheetGridRow } from './timesheet/TimesheetGridRow';
+import { TimesheetTotalsFooter } from './timesheet/TimesheetTotalsFooter';
 import styles from './WeeklyTimesheetGrid.module.css';
+
+export type { GridRow };
 
 interface WeeklyTimesheetGridProps {
   machines: Machine[];
@@ -26,22 +33,6 @@ interface WeeklyTimesheetGridProps {
   userDepartment?: string;
   targetUserId?: string;
   hideDateNav?: boolean;
-}
-
-interface GridRow {
-  rowKey: string;
-  machine_id?: string;
-  order_number?: string;
-  project_task_id?: string;
-  task_id?: string;
-  rework_item_id?: string;
-  defect_id?: string;
-  task_name: string;
-  department?: string;
-  entry_type: TimeEntryType;
-  days: Record<string, number>; // dateStr -> hours
-  descriptions: Record<string, string>; // dateStr -> description
-  entry_ids?: Record<string, string>; // dateStr -> time_entry id
 }
 
 const INDIRECT_TASKS = [
@@ -66,18 +57,6 @@ const createBlankRow = (): GridRow => ({
   descriptions: {},
   entry_ids: {},
 });
-
-function matchesDepartment(taskDept?: string, userDept?: string): boolean {
-  if (!userDept) return true;
-  if (!taskDept) return true;
-  const td = taskDept.toLowerCase().replace(/[-_]/g, '');
-  const ud = userDept.toLowerCase().replace(/[-_]/g, '');
-  if (td === ud) return true;
-  if ((td === 'controls' || td === 'electricalcontrols') && (ud === 'controls' || ud === 'electricalcontrols')) {
-    return true;
-  }
-  return false;
-}
 
 export function WeeklyTimesheetGrid({
   machines,
@@ -118,7 +97,7 @@ export function WeeklyTimesheetGrid({
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
 
-  // Cache allocated tasks, rework items, and defects per machine to support inline selects on multiple rows
+  // Cache allocated tasks, rework items, and defects per machine
   const [machineTasksCache, setMachineTasksCache] = useState<Record<string, ProjectTask[]>>({});
   const [machineReworksCache, setMachineReworksCache] = useState<Record<string, ReworkItem[]>>({});
   const [machineDefectsCache, setMachineDefectsCache] = useState<Record<string, Defect[]>>({});
@@ -230,23 +209,23 @@ export function WeeklyTimesheetGrid({
   }, [weeklyTimesheet, readOnlyUserView]);
 
   // Handlers for week navigation
-  const handlePrevWeek = () => {
+  const handlePrevWeek = useCallback(() => {
     if (isDirty && !window.confirm('You have unsaved changes. Discard and switch week?')) return;
     setCurrentWeekSunday(prev => addWeeks(prev, -1));
-  };
+  }, [isDirty]);
 
-  const handleNextWeek = () => {
+  const handleNextWeek = useCallback(() => {
     if (isDirty && !window.confirm('You have unsaved changes. Discard and switch week?')) return;
     setCurrentWeekSunday(prev => addWeeks(prev, 1));
-  };
+  }, [isDirty]);
 
-  const handleThisWeek = () => {
+  const handleThisWeek = useCallback(() => {
     if (isDirty && !window.confirm('You have unsaved changes. Discard and switch week?')) return;
     setCurrentWeekSunday(getSundayOfWeek());
-  };
+  }, [isDirty]);
 
   // Inline row changes
-  const handleMachineChange = async (rowKey: string, machineId: string) => {
+  const handleMachineChange = useCallback(async (rowKey: string, machineId: string) => {
     if (isLocked) return;
     const selectedMachine = machines.find(m => m.id === machineId);
     const isValidMachine = machineId && machineId !== 'none';
@@ -290,9 +269,9 @@ export function WeeklyTimesheetGrid({
       })
     );
     setIsDirty(true);
-  };
+  }, [isLocked, machines, machineTasksCache, machineReworksCache, machineDefectsCache]);
 
-  const handleTaskChange = (rowKey: string, taskIdentifier: string) => {
+  const handleTaskChange = useCallback((rowKey: string, taskIdentifier: string) => {
     if (isLocked) return;
     setRows(prev =>
       prev.map(r => {
@@ -347,9 +326,9 @@ export function WeeklyTimesheetGrid({
       })
     );
     setIsDirty(true);
-  };
+  }, [isLocked, departmentTasks, machineTasksCache]);
 
-  const handleReworkItemChange = (rowKey: string, reworkId: string) => {
+  const handleReworkItemChange = useCallback((rowKey: string, reworkId: string) => {
     if (isLocked) return;
     setRows(prev =>
       prev.map(r => {
@@ -378,9 +357,9 @@ export function WeeklyTimesheetGrid({
       })
     );
     setIsDirty(true);
-  };
+  }, [isLocked, machineReworksCache]);
 
-  const handleDefectChange = (rowKey: string, defectId: string) => {
+  const handleDefectChange = useCallback((rowKey: string, defectId: string) => {
     if (isLocked) return;
     setRows(prev =>
       prev.map(r => {
@@ -409,9 +388,9 @@ export function WeeklyTimesheetGrid({
       })
     );
     setIsDirty(true);
-  };
+  }, [isLocked, machineDefectsCache, effectiveDepartment]);
 
-  const handleTypeChange = (rowKey: string, type: TimeEntryType) => {
+  const handleTypeChange = useCallback((rowKey: string, type: TimeEntryType) => {
     if (isLocked) return;
     setRows(prev =>
       prev.map(r => {
@@ -475,10 +454,10 @@ export function WeeklyTimesheetGrid({
       })
     );
     setIsDirty(true);
-  };
+  }, [isLocked, machineReworksCache, machineDefectsCache]);
 
   // Cell change handler
-  const handleCellChange = (rowKey: string, dateStr: string, valueStr: string) => {
+  const handleCellChange = useCallback((rowKey: string, dateStr: string, valueStr: string) => {
     if (isLocked) return;
     const hours = valueStr === '' ? 0 : parseFloat(valueStr);
     if (isNaN(hours) || hours < 0 || hours > 24) return;
@@ -496,16 +475,16 @@ export function WeeklyTimesheetGrid({
       })
     );
     setIsDirty(true);
-  };
+  }, [isLocked]);
 
   // Add a blank row directly into the grid
-  const handleAddRow = () => {
+  const handleAddRow = useCallback(() => {
     if (isLocked) return;
     const newRow = createBlankRow();
     setPendingFocusRowKey(newRow.rowKey);
     setRows(prev => [...prev, newRow]);
     setIsDirty(true);
-  };
+  }, [isLocked]);
 
   // Automatically focus the Machine select on newly created row
   useEffect(() => {
@@ -521,14 +500,14 @@ export function WeeklyTimesheetGrid({
   }, [pendingFocusRowKey, rows]);
 
   // Remove row handler (always maintain at least 1 row)
-  const handleRemoveRow = (rowKey: string) => {
+  const handleRemoveRow = useCallback((rowKey: string) => {
     if (isLocked) return;
     setRows(prev => {
       const filtered = prev.filter(r => r.rowKey !== rowKey);
       return filtered.length === 0 ? [createBlankRow()] : filtered;
     });
     setIsDirty(true);
-  };
+  }, [isLocked]);
 
   // Build payload
   const buildSavePayload = useCallback((): WeeklyTimesheetSaveItem[] => {
@@ -557,7 +536,7 @@ export function WeeklyTimesheetGrid({
   }, [rows]);
 
   // Save Timesheet
-  const handleSaveTimesheet = async () => {
+  const handleSaveTimesheet = useCallback(async () => {
     if (!weeklyTimesheet || isLocked) return;
     try {
       setSaving(true);
@@ -574,10 +553,10 @@ export function WeeklyTimesheetGrid({
     } finally {
       setSaving(false);
     }
-  };
+  }, [weeklyTimesheet, isLocked, buildSavePayload, saveWeeklyTimesheet, notes]);
 
   // Submit Timesheet to Manager for Approval
-  const handleSubmitTimesheet = async () => {
+  const handleSubmitTimesheet = useCallback(async () => {
     if (!weeklyTimesheet || isLocked) return;
     try {
       setSubmitting(true);
@@ -597,10 +576,10 @@ export function WeeklyTimesheetGrid({
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [weeklyTimesheet, isLocked, isDirty, buildSavePayload, saveWeeklyTimesheet, notes, submitWeeklyTimesheet]);
 
   // Withdraw Submitted Timesheet for Edits
-  const handleWithdrawTimesheet = async () => {
+  const handleWithdrawTimesheet = useCallback(async () => {
     if (!weeklyTimesheet) return;
     try {
       setSubmitting(true);
@@ -612,7 +591,7 @@ export function WeeklyTimesheetGrid({
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [weeklyTimesheet, withdrawWeeklyTimesheet]);
 
   // Daily totals calculation
   const dayTotals = useMemo(() => {
@@ -630,153 +609,31 @@ export function WeeklyTimesheetGrid({
   return (
     <div className={styles.container}>
       {/* Top Bar: Week Switcher & Status Controls */}
-      {!hideDateNav && !readOnlyUserView && (
-        <div className={styles.topBar}>
-          <div className={styles.weekNav}>
-            <button
-              className={styles.navBtn}
-              onClick={handlePrevWeek}
-              title="Previous Week"
-              type="button"
-            >
-              ◀ Prev Week
-            </button>
-            <span className={styles.weekLabel}>{formatWeekRange(currentWeekSunday)}</span>
-            <button
-              className={styles.navBtn}
-              onClick={handleNextWeek}
-              title="Next Week"
-              type="button"
-            >
-              Next Week ▶
-            </button>
-            {!isCurrentWeek && (
-              <button
-                className={styles.navBtn}
-                onClick={handleThisWeek}
-                title="Jump to Current Week"
-                type="button"
-              >
-                Current Week
-              </button>
-            )}
-          </div>
-
-          <div className={styles.statusAndActions}>
-            {weeklyTimesheet && (
-              <span
-                className={`${styles.statusBadge} ${
-                  weeklyTimesheet.status === 'approved'
-                    ? styles.statusApproved
-                    : weeklyTimesheet.status === 'rejected'
-                    ? styles.statusRejected
-                    : weeklyTimesheet.total_hours > 0
-                    ? styles.statusSubmitted
-                    : styles.statusDraft
-                }`}
-              >
-                {weeklyTimesheet.status === 'approved'
-                  ? 'APPROVED'
-                  : weeklyTimesheet.status === 'rejected'
-                  ? 'REJECTED'
-                  : weeklyTimesheet.total_hours > 0
-                  ? 'SAVED'
-                  : 'DRAFT'}
-              </span>
-            )}
-
-            <button
-              className={styles.navBtn}
-              onClick={() => setIsPrintModalOpen(true)}
-              type="button"
-              title="Print standard shop timesheet schedule"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-            >
-              <span>🖨️</span>
-              <span>Print</span>
-            </button>
-
-            <button
-              className={styles.btnPrimary}
-              onClick={handleSaveTimesheet}
-              disabled={isLocked || saving || !isDirty}
-              type="button"
-            >
-              {saving
-                ? 'Saving...'
-                : isDirty
-                ? 'Save Changes *'
-                : 'Save Timesheet'}
-            </button>
-
-            {!isLocked && weeklyTimesheet && weeklyTimesheet.status !== 'submitted' && (grandTotal > 0 || weeklyTimesheet.total_hours > 0) && (
-              <button
-                className={styles.navBtn}
-                onClick={handleSubmitTimesheet}
-                disabled={submitting || saving}
-                type="button"
-                title="Submit weekly timesheet to department manager for approval"
-                style={{
-                  background: 'rgba(0, 229, 255, 0.15)',
-                  color: 'var(--vtr-theme-primary, #00e5ff)',
-                  border: '1px solid rgba(0, 229, 255, 0.4)',
-                  fontWeight: 700,
-                }}
-              >
-                {submitting ? 'Submitting...' : 'Submit to Manager ➔'}
-              </button>
-            )}
-
-            {!isLocked && weeklyTimesheet?.status === 'submitted' && (
-              <button
-                className={styles.navBtn}
-                onClick={handleWithdrawTimesheet}
-                disabled={submitting}
-                type="button"
-                title="Withdraw submitted timesheet back to draft for edits"
-                style={{
-                  background: 'rgba(255, 170, 0, 0.15)',
-                  color: '#ffb300',
-                  border: '1px solid rgba(255, 170, 0, 0.4)',
-                }}
-              >
-                Withdraw for Edits
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {readOnlyUserView && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
-          <button
-            className={styles.navBtn}
-            onClick={() => setIsPrintModalOpen(true)}
-            type="button"
-            title="Print standard shop timesheet schedule"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-          >
-            <span>🖨️</span>
-            <span>Print Timesheet</span>
-          </button>
-        </div>
-      )}
+      <TimesheetHeaderBar
+        hideDateNav={hideDateNav}
+        readOnlyUserView={readOnlyUserView}
+        currentWeekSunday={currentWeekSunday}
+        isCurrentWeek={isCurrentWeek}
+        weeklyTimesheet={weeklyTimesheet}
+        isLocked={isLocked}
+        saving={saving}
+        submitting={submitting}
+        isDirty={isDirty}
+        grandTotal={grandTotal}
+        onPrevWeek={handlePrevWeek}
+        onNextWeek={handleNextWeek}
+        onThisWeek={handleThisWeek}
+        onOpenPrint={() => setIsPrintModalOpen(true)}
+        onSave={handleSaveTimesheet}
+        onSubmit={handleSubmitTimesheet}
+        onWithdraw={handleWithdrawTimesheet}
+      />
 
       {/* Lockout / Status Banners */}
-      {!readOnlyUserView && weeklyTimesheet?.status === 'approved' && (
-        <div className={`${styles.banner} ${styles.bannerApproved}`}>
-          <span>
-            ✅ <strong>Timesheet Approved</strong>
-          </span>
-        </div>
-      )}
-      {!readOnlyUserView && weeklyTimesheet?.status === 'rejected' && (
-        <div className={`${styles.banner} ${styles.bannerRejected}`}>
-          <span>
-            ❌ <strong>Rejection Notice:</strong> {weeklyTimesheet?.rejection_reason || 'Please review your logged hours and re-submit.'}
-          </span>
-        </div>
-      )}
+      <TimesheetStatusBanner
+        weeklyTimesheet={weeklyTimesheet}
+        readOnlyUserView={readOnlyUserView}
+      />
 
       {/* Matrix Table */}
       <div className={styles.gridCard}>
@@ -808,284 +665,27 @@ export function WeeklyTimesheetGrid({
                   </td>
                 </tr>
               ) : (
-                rows.map(row => {
-                  const rowTotal = Object.values(row.days).reduce((s, h) => s + (h || 0), 0);
-                  const selectedMachineTasks = row.machine_id ? machineTasksCache[row.machine_id] || [] : [];
-                  const deptMachineTasks = selectedMachineTasks.filter(
-                    t => matchesDepartment(t.department, effectiveDepartment) || t.id === row.project_task_id
-                  );
-
-                  const availableDeptTasks = departmentTasks.filter(
-                    t => t.is_active && (matchesDepartment(t.department, effectiveDepartment) || t.id === row.task_id)
-                  );
-
-                  return (
-                    <tr key={row.rowKey}>
-                      {/* Machine Selection */}
-                      <td>
-                        {!isLocked ? (
-                          <select
-                            aria-label="Machine / Order #"
-                            data-row-key={row.rowKey}
-                            className={styles.rowSelect}
-                            value={row.machine_id || (row.task_name && !row.machine_id ? 'none' : '')}
-                            onChange={e => handleMachineChange(row.rowKey, e.target.value)}
-                          >
-                            <option value="">Select Machine...</option>
-                            <option value="none">None (Indirect / General Shop)</option>
-                            {machines.map(m => (
-                              <option key={m.id} value={m.id}>
-                                {m.order_number} ({m.model_type})
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <strong>{row.order_number || 'Indirect / Shop'}</strong>
-                        )}
-                      </td>
-
-                      {/* Task Selection */}
-                      <td>
-                        {!isLocked ? (
-                          row.entry_type === 'rework' ? (
-                            row.machine_id && row.machine_id !== 'none' ? (
-                              <select
-                                aria-label="Rework / Allocation Target"
-                                className={styles.rowSelect}
-                                value={row.rework_item_id || ''}
-                                onChange={e => handleReworkItemChange(row.rowKey, e.target.value)}
-                              >
-                                <option value="">Select Rework Item...</option>
-                                {(machineReworksCache[row.machine_id] || []).length > 0 && (
-                                  <optgroup label="🔧 Active Rework Orders">
-                                    {(machineReworksCache[row.machine_id] || []).map(rw => (
-                                      <option key={rw.id} value={rw.id}>
-                                        {rw.is_ncr && rw.ncr_number ? `[NCR #${rw.ncr_number}] ` : ''}
-                                        {rw.part_number} - {rw.description} ({rw.status.replace(/_/g, ' ')})
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                                {(machineReworksCache[row.machine_id] || []).length === 0 && (
-                                  <option disabled value="">
-                                    No rework orders found for this machine
-                                  </option>
-                                )}
-                                {row.rework_item_id &&
-                                  !(machineReworksCache[row.machine_id] || []).some(rw => rw.id === row.rework_item_id) && (
-                                    <option value={row.rework_item_id}>
-                                      {row.task_name || 'Linked Rework Order'}
-                                    </option>
-                                  )}
-                              </select>
-                            ) : (
-                              <select
-                                aria-label="Rework / Allocation Target"
-                                className={styles.rowSelect}
-                                disabled
-                                value=""
-                              >
-                                <option value="">Select a Machine first...</option>
-                              </select>
-                            )
-                          ) : row.entry_type === 'issue_fix' ? (
-                            row.machine_id && row.machine_id !== 'none' ? (
-                              <select
-                                aria-label="Defect / Allocation Target"
-                                className={styles.rowSelect}
-                                value={row.defect_id || ''}
-                                onChange={e => handleDefectChange(row.rowKey, e.target.value)}
-                              >
-                                <option value="">Select Issue / Defect...</option>
-                                {(machineDefectsCache[row.machine_id] || []).length > 0 && (
-                                  <optgroup label="⚠️ Machine Defects & Issues">
-                                    {(machineDefectsCache[row.machine_id] || []).map(d => (
-                                      <option key={d.id} value={d.id}>
-                                        [{d.severity.toUpperCase()}] {d.description} ({d.status})
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                )}
-                                {(machineDefectsCache[row.machine_id] || []).length === 0 && (
-                                  <option disabled value="">
-                                    No open defects found for this machine
-                                  </option>
-                                )}
-                                {row.defect_id &&
-                                  !(machineDefectsCache[row.machine_id] || []).some(d => d.id === row.defect_id) && (
-                                    <option value={row.defect_id}>
-                                      {row.task_name || 'Linked Defect'}
-                                    </option>
-                                  )}
-                              </select>
-                            ) : (
-                              <select
-                                aria-label="Defect / Allocation Target"
-                                className={styles.rowSelect}
-                                disabled
-                                value=""
-                              >
-                                <option value="">Select a Machine first...</option>
-                              </select>
-                            )
-                          ) : row.machine_id && row.machine_id !== 'none' ? (
-                            <select
-                              aria-label="Task / Allocation Target"
-                              className={styles.rowSelect}
-                              value={
-                                row.task_id
-                                  ? `dept:${row.task_id}`
-                                  : row.project_task_id
-                                  ? `task:${row.project_task_id}`
-                                  : row.task_name
-                                  ? `task_name:${row.task_name}`
-                                  : ''
-                              }
-                              onChange={e => handleTaskChange(row.rowKey, e.target.value)}
-                            >
-                              <option value="">Select a task...</option>
-                              {availableDeptTasks.length > 0 && (
-                                <optgroup label={`📋 Authoritative ${effectiveDepartment ? `${effectiveDepartment.toUpperCase()} ` : ''}Tasks`}>
-                                  {availableDeptTasks.map(t => {
-                                    const matchingPt = selectedMachineTasks.find(
-                                      pt => (pt.task_id && pt.task_id === t.id) || pt.task_code === t.task_code || pt.task_name === t.task_name
-                                    );
-                                    const budgetNote = matchingPt ? `(Budget: ${matchingPt.quoted_hours}h)` : `(Std: ${t.default_quoted_hours}h)`;
-                                    return (
-                                      <option key={t.id} value={`dept:${t.id}`}>
-                                        [{t.department}] {t.task_name} {budgetNote}
-                                      </option>
-                                    );
-                                  })}
-                                </optgroup>
-                              )}
-                              {deptMachineTasks.filter(pt => !availableDeptTasks.some(dt => (pt.task_id && pt.task_id === dt.id) || pt.task_code === dt.task_code)).length > 0 && (
-                                <optgroup label="⚙️ Custom Quoted Project Tasks">
-                                  {deptMachineTasks
-                                    .filter(pt => !availableDeptTasks.some(dt => (pt.task_id && pt.task_id === dt.id) || pt.task_code === dt.task_code))
-                                    .map(t => (
-                                      <option key={t.id} value={`task:${t.id}`}>
-                                        [{t.department}] {t.task_name} (Quoted: {t.quoted_hours}h)
-                                      </option>
-                                    ))}
-                                </optgroup>
-                              )}
-                              {availableDeptTasks.length === 0 && deptMachineTasks.length === 0 && (
-                                <option disabled value="">
-                                  No tasks available for {effectiveDepartment || 'department'}
-                                </option>
-                              )}
-                              {row.task_name &&
-                                !row.task_id &&
-                                !availableDeptTasks.some(t => t.task_name === row.task_name) &&
-                                !deptMachineTasks.some(t => t.task_name === row.task_name) && (
-                                  <option value={`task_name:${row.task_name}`}>
-                                    {row.task_name}
-                                  </option>
-                                )}
-                            </select>
-                          ) : (
-                            <select
-                              aria-label="Task / Allocation Target"
-                              className={styles.rowSelect}
-                              value={row.task_name || ''}
-                              onChange={e => handleTaskChange(row.rowKey, e.target.value)}
-                            >
-                              <option value="">Select indirect task...</option>
-                              <optgroup label="🛠️ Indirect Shop Tasks">
-                                {INDIRECT_TASKS.map(task => (
-                                  <option key={task} value={task}>
-                                    {task}
-                                  </option>
-                                ))}
-                              </optgroup>
-                            </select>
-                          )
-                        ) : (
-                          <div>
-                            <div>{row.task_name || 'General Task'}</div>
-                            {row.department && (
-                              <span style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase' }}>
-                                {row.department}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Type Selection */}
-                      <td>
-                        {!isLocked ? (
-                          <select
-                            aria-label="Type"
-                            className={styles.rowTypeSelect}
-                            value={row.entry_type}
-                            onChange={e => handleTypeChange(row.rowKey, e.target.value as TimeEntryType)}
-                          >
-                            <option value="production">Production</option>
-                            <option value="rework">Rework</option>
-                            <option value="issue_fix">Issue Fix</option>
-                            <option value="indirect">Indirect</option>
-                          </select>
-                        ) : (
-                          <span
-                            style={{
-                              fontSize: '0.75rem',
-                              textTransform: 'uppercase',
-                              fontWeight: 700,
-                              color:
-                                row.entry_type === 'production'
-                                  ? '#00e5ff'
-                                  : row.entry_type === 'rework'
-                                  ? '#ff7043'
-                                  : row.entry_type === 'issue_fix'
-                                  ? '#ffca28'
-                                  : '#aaa',
-                            }}
-                          >
-                            {row.entry_type}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Day Hour Inputs across Sunday -> Saturday */}
-                      {weekDays.map(day => {
-                        const val = row.days[day.dateStr];
-                        return (
-                          <td key={day.dateStr} style={{ textAlign: 'center' }}>
-                            <input
-                              type="number"
-                              step="0.25"
-                              min="0"
-                              max="24"
-                              aria-label={`${row.task_name || 'Task'} on ${day.fullName}`}
-                              className={styles.cellInput}
-                              value={val !== undefined && val !== 0 ? val : ''}
-                              placeholder="—"
-                              disabled={isLocked}
-                              onChange={e => handleCellChange(row.rowKey, day.dateStr, e.target.value)}
-                            />
-                          </td>
-                        );
-                      })}
-
-                      <td className={styles.rowTotal}>{formatHours(rowTotal)}h</td>
-
-                      {!isLocked && (
-                        <td style={{ textAlign: 'center' }}>
-                          <button
-                            className={styles.removeRowBtn}
-                            onClick={() => handleRemoveRow(row.rowKey)}
-                            title="Remove row"
-                            type="button"
-                          >
-                            ✕
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })
+                rows.map(row => (
+                  <TimesheetGridRow
+                    key={row.rowKey}
+                    row={row}
+                    machines={machines}
+                    departmentTasks={departmentTasks}
+                    machineTasks={row.machine_id ? machineTasksCache[row.machine_id] || [] : []}
+                    machineReworks={row.machine_id ? machineReworksCache[row.machine_id] || [] : []}
+                    machineDefects={row.machine_id ? machineDefectsCache[row.machine_id] || [] : []}
+                    weekDays={weekDays}
+                    effectiveDepartment={effectiveDepartment}
+                    isLocked={isLocked}
+                    onMachineChange={handleMachineChange}
+                    onTaskChange={handleTaskChange}
+                    onReworkItemChange={handleReworkItemChange}
+                    onDefectChange={handleDefectChange}
+                    onTypeChange={handleTypeChange}
+                    onCellChange={handleCellChange}
+                    onRemoveRow={handleRemoveRow}
+                  />
+                ))
               )}
               {!isLocked && (
                 <tr
@@ -1113,22 +713,12 @@ export function WeeklyTimesheetGrid({
               )}
             </tbody>
             {rows.length > 0 && (
-              <tfoot>
-                <tr className={styles.footerRow}>
-                  <td colSpan={3} style={{ textAlign: 'right', paddingRight: '1rem' }}>
-                    Daily Total:
-                  </td>
-                  {weekDays.map(day => (
-                    <td key={day.dateStr} style={{ textAlign: 'center' }}>
-                      {formatHours(dayTotals[day.dateStr] || 0)}h
-                    </td>
-                  ))}
-                  <td className={`${styles.rowTotal} ${styles.grandTotal}`}>
-                    {formatHours(grandTotal)}h
-                  </td>
-                  {!isLocked && <td></td>}
-                </tr>
-              </tfoot>
+              <TimesheetTotalsFooter
+                weekDays={weekDays}
+                dayTotals={dayTotals}
+                grandTotal={grandTotal}
+                isLocked={isLocked}
+              />
             )}
           </table>
         </div>

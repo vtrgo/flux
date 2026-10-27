@@ -709,5 +709,22 @@ export interface CoNCMachineDetailResponse {
   defect_items: CoNCDefectItemDetail[];
 }
 
+export interface GridRow {
+  rowKey: string;
+  machine_id?: string;
+  order_number?: string;
+  project_task_id?: string;
+  task_id?: string;
+  rework_item_id?: string;
+  defect_id?: string;
+  task_name: string;
+  department?: string;
+  entry_type: TimeEntryType;
+  days: Record<string, number>; // dateStr -> hours
+  descriptions: Record<string, string>; // dateStr -> description
+  entry_ids?: Record<string, string>; // dateStr -> time_entry id
+}
+
+
 
 
