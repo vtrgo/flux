@@ -86,6 +86,7 @@ type UpdateTaskQuoteRequest struct {
 
 type CreateTimeEntryRequest struct {
 	MachineID       *uuid.UUID    `json:"machine_id,omitempty"`
+	AssemblyID      *uuid.UUID    `json:"assembly_id,omitempty"`
 	EntryType       TimeEntryType `json:"entry_type"`
 	ProjectTaskID   *uuid.UUID    `json:"project_task_id,omitempty"`
 	TaskID          *uuid.UUID    `json:"task_id,omitempty"`
@@ -203,6 +204,7 @@ type WeeklyTimesheet struct {
 type WeeklyTimesheetSaveItem struct {
 	ID              *uuid.UUID    `json:"id,omitempty"`
 	MachineID       *uuid.UUID    `json:"machine_id,omitempty"`
+	AssemblyID      *uuid.UUID    `json:"assembly_id,omitempty"`
 	EntryType       TimeEntryType `json:"entry_type"`
 	ProjectTaskID   *uuid.UUID    `json:"project_task_id,omitempty"`
 	TaskID          *uuid.UUID    `json:"task_id,omitempty"`

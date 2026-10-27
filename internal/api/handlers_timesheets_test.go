@@ -1437,6 +1437,83 @@ func TestLaborCorrelationAndAuthoritativeTasks(t *testing.T) {
 			t.Errorf("unbudgeted task not found in report tasks: %+v", report.Tasks)
 		}
 	})
+
+	t.Run("Assembly Labor Attribution and Tree Variance", func(t *testing.T) {
+		// 1. Create a machine assembly directly in DB
+		var asmID uuid.UUID
+		err := db.DB.QueryRow(`
+			INSERT INTO machine_assemblies (machine_id, assembly_code, name, department, quoted_hours, status)
+			VALUES ($1, 'ASM-TS-01', 'Test Drive Assembly', 'assembly', 12.00, 'ready_for_kitting')
+			RETURNING id
+		`, machineID).Scan(&asmID)
+		if err != nil {
+			t.Fatalf("failed to insert test assembly: %v", err)
+		}
+
+		// 2. Create time entry attributed to this assembly
+		entryReq := models.CreateTimeEntryRequest{
+			MachineID:       &machineID,
+			AssemblyID:      &asmID,
+			EntryType:       models.TimeEntryTypeProduction,
+			WorkDate:        "2026-10-20",
+			HoursSpent:      7.5,
+			WorkDescription: "Torquing motor mounts and checking alignment",
+		}
+		bodyBytes, _ := json.Marshal(entryReq)
+		req := httptest.NewRequest(http.MethodPost, "/api/timesheets/entries", bytes.NewReader(bodyBytes))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Forwarded-User", "admin")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("expected status 201 Created, got %d: %s", w.Code, w.Body.String())
+		}
+
+		var createdEntry models.TimeEntry
+		if err := json.Unmarshal(w.Body.Bytes(), &createdEntry); err != nil {
+			t.Fatalf("failed to parse created time entry: %v", err)
+		}
+		if createdEntry.AssemblyID == nil || *createdEntry.AssemblyID != asmID {
+			t.Fatalf("expected assembly_id %v, got %v", asmID, createdEntry.AssemblyID)
+		}
+		if createdEntry.AssemblyCode != "ASM-TS-01" {
+			t.Errorf("expected assembly code 'ASM-TS-01', got %q", createdEntry.AssemblyCode)
+		}
+		if createdEntry.AssemblyName != "Test Drive Assembly" {
+			t.Errorf("expected assembly name 'Test Drive Assembly', got %q", createdEntry.AssemblyName)
+		}
+
+		// 3. Query assemblies tree for machine, verify actual_hours and variance
+		treeReq := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/machines/%s/assemblies", machineID), nil)
+		treeW := httptest.NewRecorder()
+		mux.ServeHTTP(treeW, treeReq)
+
+		if treeW.Code != http.StatusOK {
+			t.Fatalf("expected status 200, got %d: %s", treeW.Code, treeW.Body.String())
+		}
+
+		var assemblies []models.MachineAssembly
+		if err := json.Unmarshal(treeW.Body.Bytes(), &assemblies); err != nil {
+			t.Fatalf("failed to unmarshal assembly tree: %v", err)
+		}
+
+		var found bool
+		for _, a := range assemblies {
+			if a.ID == asmID {
+				found = true
+				if a.ActualHours != 7.5 {
+					t.Errorf("expected actual hours 7.5, got %v", a.ActualHours)
+				}
+				if a.Variance != -4.5 { // 7.5 - 12.0
+					t.Errorf("expected variance -4.5, got %v", a.Variance)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("created assembly %v not found in assembly tree", asmID)
+		}
+	})
 }
 
 

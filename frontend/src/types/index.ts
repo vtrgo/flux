@@ -492,6 +492,7 @@ export interface WeeklyTimesheet {
 export interface WeeklyTimesheetSaveItem {
   id?: string;
   machine_id?: string;
+  assembly_id?: string;
   entry_type: TimeEntryType;
   project_task_id?: string;
   task_id?: string;
@@ -515,6 +516,8 @@ export interface RejectTimesheetRequest {
 export interface PrintableTimesheetRow {
   rowKey?: string;
   order_number?: string;
+  assembly_code?: string;
+  assembly_name?: string;
   task_name: string;
   department?: string;
   entry_type?: TimeEntryType;
@@ -753,6 +756,9 @@ export interface GridRow {
   rowKey: string;
   machine_id?: string;
   order_number?: string;
+  assembly_id?: string;
+  assembly_code?: string;
+  assembly_name?: string;
   project_task_id?: string;
   task_id?: string;
   rework_item_id?: string;

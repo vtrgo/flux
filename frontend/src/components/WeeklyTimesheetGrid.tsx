@@ -8,6 +8,7 @@ import { getSundayOfWeek, addWeeks, getWeekDays } from '../lib/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Machine,
+  MachineAssembly,
   DepartmentTask,
   ProjectTask,
   TimeEntryType,
@@ -101,6 +102,7 @@ export function WeeklyTimesheetGrid({
   const [machineTasksCache, setMachineTasksCache] = useState<Record<string, ProjectTask[]>>({});
   const [machineReworksCache, setMachineReworksCache] = useState<Record<string, ReworkItem[]>>({});
   const [machineDefectsCache, setMachineDefectsCache] = useState<Record<string, Defect[]>>({});
+  const [machineAssembliesCache, setMachineAssembliesCache] = useState<Record<string, MachineAssembly[]>>({});
 
   const weekDays = useMemo(() => getWeekDays(currentWeekSunday), [currentWeekSunday]);
   const isCurrentWeek = useMemo(() => getSundayOfWeek() === currentWeekSunday, [currentWeekSunday]);
@@ -127,15 +129,19 @@ export function WeeklyTimesheetGrid({
 
     entries.forEach(entry => {
       const machineKey = entry.machine_id || 'none';
+      const assemblyKey = entry.assembly_id || 'general';
       const taskKey = entry.rework_item_id || entry.defect_id || entry.task_id || entry.project_task_id || entry.task_name || 'general';
       const typeKey = entry.entry_type || 'production';
-      const rowKey = `${machineKey}:${taskKey}:${typeKey}`;
+      const rowKey = `${machineKey}:${assemblyKey}:${taskKey}:${typeKey}`;
 
       if (!rowMap.has(rowKey)) {
         rowMap.set(rowKey, {
           rowKey,
           machine_id: entry.machine_id,
           order_number: entry.order_number || (entry.machine_id ? machines.find(m => m.id === entry.machine_id)?.order_number : undefined),
+          assembly_id: entry.assembly_id,
+          assembly_code: entry.assembly_code,
+          assembly_name: entry.assembly_name,
           project_task_id: entry.project_task_id,
           task_id: entry.task_id,
           rework_item_id: entry.rework_item_id,
@@ -199,8 +205,17 @@ export function WeeklyTimesheetGrid({
             console.error('Failed to load defects for machine', machineId, err);
           });
       }
+      if (!machineAssembliesCache[machineId]) {
+        fetchApi<MachineAssembly[]>(`machines/${machineId}/assemblies/list`)
+          .then(assemblies => {
+            setMachineAssembliesCache(prev => ({ ...prev, [machineId]: assemblies || [] }));
+          })
+          .catch(err => {
+            console.error('Failed to load assemblies for machine', machineId, err);
+          });
+      }
     });
-  }, [uniqueMachineIds, machineTasksCache, machineReworksCache, machineDefectsCache]);
+  }, [uniqueMachineIds, machineTasksCache, machineReworksCache, machineDefectsCache, machineAssembliesCache]);
 
   const isLocked = useMemo(() => {
     if (readOnlyUserView) return true;
@@ -246,6 +261,11 @@ export function WeeklyTimesheetGrid({
           .then(defects => setMachineDefectsCache(prev => ({ ...prev, [machineId]: defects || [] })))
           .catch(err => console.error('Failed to load defects for machine', machineId, err));
       }
+      if (!machineAssembliesCache[machineId]) {
+        fetchApi<MachineAssembly[]>(`machines/${machineId}/assemblies/list`)
+          .then(assemblies => setMachineAssembliesCache(prev => ({ ...prev, [machineId]: assemblies || [] })))
+          .catch(err => console.error('Failed to load assemblies for machine', machineId, err));
+      }
     }
 
     setRows(prev =>
@@ -258,6 +278,9 @@ export function WeeklyTimesheetGrid({
           ...r,
           machine_id: machineId === 'none' ? undefined : (machineId || undefined),
           order_number: selectedMachine?.order_number,
+          assembly_id: undefined,
+          assembly_code: undefined,
+          assembly_name: undefined,
           project_task_id: undefined,
           task_id: undefined,
           rework_item_id: undefined,
@@ -269,7 +292,24 @@ export function WeeklyTimesheetGrid({
       })
     );
     setIsDirty(true);
-  }, [isLocked, machines, machineTasksCache, machineReworksCache, machineDefectsCache]);
+  }, [isLocked, machines, machineTasksCache, machineReworksCache, machineDefectsCache, machineAssembliesCache]);
+
+  const handleAssemblyChange = useCallback((rowKey: string, assemblyId: string) => {
+    if (isLocked) return;
+    setRows(prev =>
+      prev.map(r => {
+        if (r.rowKey !== rowKey) return r;
+        const asm = r.machine_id && machineAssembliesCache[r.machine_id]?.find(a => a.id === assemblyId);
+        return {
+          ...r,
+          assembly_id: assemblyId || undefined,
+          assembly_code: asm ? asm.assembly_code : undefined,
+          assembly_name: asm ? asm.name : undefined,
+        };
+      })
+    );
+    setIsDirty(true);
+  }, [isLocked, machineAssembliesCache]);
 
   const handleTaskChange = useCallback((rowKey: string, taskIdentifier: string) => {
     if (isLocked) return;
@@ -519,6 +559,7 @@ export function WeeklyTimesheetGrid({
           items.push({
             id: row.entry_ids?.[dateStr] || undefined,
             machine_id: row.machine_id && row.machine_id !== 'none' ? row.machine_id : undefined,
+            assembly_id: row.assembly_id || undefined,
             entry_type: row.entry_type,
             project_task_id: row.project_task_id || undefined,
             task_id: row.task_id || undefined,
@@ -642,6 +683,7 @@ export function WeeklyTimesheetGrid({
             <thead>
               <tr>
                 <th style={{ minWidth: '180px' }}>Machine #</th>
+                <th style={{ minWidth: '170px' }}>Assembly</th>
                 <th style={{ minWidth: '240px' }}>Task Description</th>
                 <th style={{ minWidth: '105px' }}>Type</th>
                 {weekDays.map(day => (
@@ -660,7 +702,7 @@ export function WeeklyTimesheetGrid({
             <tbody>
               {loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
+                  <td colSpan={12} style={{ textAlign: 'center', padding: '2rem', color: '#888' }}>
                     Loading weekly timesheet...
                   </td>
                 </tr>
@@ -670,6 +712,7 @@ export function WeeklyTimesheetGrid({
                     key={row.rowKey}
                     row={row}
                     machines={machines}
+                    machineAssemblies={row.machine_id ? machineAssembliesCache[row.machine_id] || [] : []}
                     departmentTasks={departmentTasks}
                     machineTasks={row.machine_id ? machineTasksCache[row.machine_id] || [] : []}
                     machineReworks={row.machine_id ? machineReworksCache[row.machine_id] || [] : []}
@@ -678,6 +721,7 @@ export function WeeklyTimesheetGrid({
                     effectiveDepartment={effectiveDepartment}
                     isLocked={isLocked}
                     onMachineChange={handleMachineChange}
+                    onAssemblyChange={handleAssemblyChange}
                     onTaskChange={handleTaskChange}
                     onReworkItemChange={handleReworkItemChange}
                     onDefectChange={handleDefectChange}
@@ -702,7 +746,7 @@ export function WeeklyTimesheetGrid({
                   aria-label="Add row"
                   title="Click to insert a new row"
                 >
-                  <td colSpan={weekDays.length + 5} className={styles.newRowSlotCell}>
+                  <td colSpan={weekDays.length + 6} className={styles.newRowSlotCell}>
                     <div className={styles.newRowSlotContent}>
                       <span className={styles.newRowSlotIcon}>➕</span>
                       <span className={styles.newRowSlotLabel}>Add Row</span>

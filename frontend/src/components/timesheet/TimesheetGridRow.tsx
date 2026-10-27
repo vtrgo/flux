@@ -4,6 +4,7 @@ import React, { memo } from 'react';
 import {
   GridRow,
   Machine,
+  MachineAssembly,
   DepartmentTask,
   ProjectTask,
   TimeEntryType,
@@ -45,6 +46,7 @@ function matchesDepartment(taskDept?: string, userDept?: string): boolean {
 interface TimesheetGridRowProps {
   row: GridRow;
   machines: Machine[];
+  machineAssemblies?: MachineAssembly[];
   departmentTasks: DepartmentTask[];
   machineTasks: ProjectTask[];
   machineReworks: ReworkItem[];
@@ -53,6 +55,7 @@ interface TimesheetGridRowProps {
   effectiveDepartment: string;
   isLocked: boolean;
   onMachineChange: (rowKey: string, machineId: string) => void;
+  onAssemblyChange: (rowKey: string, assemblyId: string) => void;
   onTaskChange: (rowKey: string, taskIdentifier: string) => void;
   onReworkItemChange: (rowKey: string, reworkId: string) => void;
   onDefectChange: (rowKey: string, defectId: string) => void;
@@ -64,6 +67,7 @@ interface TimesheetGridRowProps {
 export const TimesheetGridRow = memo(function TimesheetGridRow({
   row,
   machines,
+  machineAssemblies,
   departmentTasks,
   machineTasks,
   machineReworks,
@@ -72,6 +76,7 @@ export const TimesheetGridRow = memo(function TimesheetGridRow({
   effectiveDepartment,
   isLocked,
   onMachineChange,
+  onAssemblyChange,
   onTaskChange,
   onReworkItemChange,
   onDefectChange,
@@ -111,6 +116,50 @@ export const TimesheetGridRow = memo(function TimesheetGridRow({
           </select>
         ) : (
           <strong>{row.order_number || 'Indirect / Shop'}</strong>
+        )}
+      </td>
+
+      {/* Assembly Selection */}
+      <td>
+        {!isLocked ? (
+          row.machine_id && row.machine_id !== 'none' ? (
+            <select
+              aria-label="Assembly / Sub-assembly"
+              className={styles.rowSelect}
+              value={row.assembly_id || ''}
+              onChange={e => onAssemblyChange(row.rowKey, e.target.value)}
+            >
+              <option value="">General Machine Labor (No Assembly)</option>
+              {machineAssemblies && machineAssemblies.length > 0 && (
+                <optgroup label="📦 Machine Assemblies">
+                  {machineAssemblies.map(a => (
+                    <option key={a.id} value={a.id}>
+                      [{a.assembly_code}] {a.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          ) : (
+            <select
+              aria-label="Assembly / Sub-assembly"
+              className={styles.rowSelect}
+              disabled
+              value=""
+            >
+              <option value="">N/A (Indirect / Shop)</option>
+            </select>
+          )
+        ) : (
+          <div>
+            {row.assembly_code ? (
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
+                [{row.assembly_code}] {row.assembly_name || ''}
+              </span>
+            ) : (
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>General</span>
+            )}
+          </div>
         )}
       </td>
 
