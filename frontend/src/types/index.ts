@@ -385,6 +385,43 @@ export interface UpdateReworkItemRequest {
   assembler_id?: string;
 }
 
+export interface ReworkFormData {
+  sales_order_id: string;
+  machine_id: string;
+  defect_id: string;
+  project_number: string;
+  sub_assembly: string;
+  part_number: string;
+  description: string;
+  revision: string;
+  material: string;
+  qty: number;
+  part_type: ReworkPartType;
+  mech_designer_id: string;
+  pm_released_to_id: string;
+  pdm_vault_released: boolean;
+  reason_for_rework: string;
+  date_released_to_mfg: string;
+  requested_completion_date: string;
+  pm_delivered_to: string;
+  expected_completion_date: string;
+  material_ordered_date: string;
+  assigned_machinist_id: string;
+  date_mfg_completed: string;
+  part_given_to_or_left_at: string;
+  estimated_hours: number;
+  actual_hours: number;
+  requires_outside_processing: boolean;
+  outside_vendor: string;
+  date_sent_for_processing: string;
+  date_expected_from_processing: string;
+  date_received_from_processing: string;
+  kitting_delivered_to: string;
+  status: ReworkStatus;
+  parts_collected_by_pm: boolean;
+  assembler_id: string;
+}
+
 export type TimeEntryType = 'production' | 'rework' | 'issue_fix' | 'indirect';
 
 export interface ProjectTask {
