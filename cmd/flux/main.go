@@ -43,9 +43,10 @@ func main() {
 	}()
 
 	api.InitHub()
+	srv := api.NewServer(db.DB, api.Hub, notifications.GetDispatcher())
 
 	mux := http.NewServeMux()
-	api.RegisterRoutes(mux)
+	srv.RegisterRoutes(mux)
 
 	uiFS, err := fs.Sub(flux.UIFS, "frontend/out")
 	if err != nil {
