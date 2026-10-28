@@ -79,17 +79,42 @@ describe('PrintableWeeklyTimesheet', () => {
     });
   });
 
-  it('renders job rows with machine numbers, tasks, and daily hours', () => {
+  it('renders job rows with machine numbers, assemblies, tasks, and daily hours', () => {
+    const rowsWithAssembly: PrintableTimesheetRow[] = [
+      ...mockRows,
+      {
+        rowKey: 'row-3',
+        order_number: '23-010',
+        assembly_code: 'ASM-02',
+        assembly_name: 'Feeder Belt',
+        task_name: 'Belt Tensioning',
+        days: {
+          '2026-10-19': 4,
+        },
+      },
+    ];
+
     render(
       <PrintableWeeklyTimesheet
         timesheet={mockTimesheet}
         weekStartDate="2026-10-18"
-        rows={mockRows}
+        rows={rowsWithAssembly}
       />
     );
 
-    expect(screen.getByText('22-003A1 - EP')).toBeInTheDocument();
+    // Landscape columns: Project / Order #, Assembly, Task Description
+    expect(screen.getByText('Project / Order #')).toBeInTheDocument();
+    expect(screen.getByText('Assembly')).toBeInTheDocument();
+    expect(screen.getByText('Task Description')).toBeInTheDocument();
+
+    expect(screen.getByText('22-003A1')).toBeInTheDocument();
+    expect(screen.getByText('EP')).toBeInTheDocument();
     expect(screen.getByText('Shop')).toBeInTheDocument();
+
+    // Assembly verification
+    expect(screen.getByText('23-010')).toBeInTheDocument();
+    expect(screen.getByText('[ASM-02] Feeder Belt')).toBeInTheDocument();
+    expect(screen.getByText('Belt Tensioning')).toBeInTheDocument();
 
     // Row 1 total = 2.25 + 4 + 1 = 7.25
     expect(screen.getByText('7.25')).toBeInTheDocument();
@@ -97,19 +122,37 @@ describe('PrintableWeeklyTimesheet', () => {
     expect(screen.getByText('14.75')).toBeInTheDocument();
   });
 
-  it('pads with empty blank rows to match full page appearance for write-ins', () => {
+  it('pads with empty blank rows to match 10 rows of timesheet data total', () => {
     const { container } = render(
       <PrintableWeeklyTimesheet
         timesheet={mockTimesheet}
         weekStartDate="2026-10-18"
         rows={mockRows}
-        totalTargetRows={18}
+        totalTargetRows={10}
       />
     );
 
-    // 2 active rows + 16 padded blank rows = 18 tbody rows in the matrix grid
+    // 2 active rows + 8 padded blank rows = 10 tbody rows in the matrix grid
     const gridTbody = container.querySelector('[data-testid="timesheet-grid-table"] tbody');
-    expect(gridTbody?.children.length).toBe(18);
+    expect(gridTbody?.children.length).toBe(10);
+  });
+
+  it('renders comments, notes and remarks section', () => {
+    render(
+      <PrintableWeeklyTimesheet
+        timesheet={{
+          ...mockTimesheet,
+          notes: 'Shop note: Completed gearhead alignment on Monday morning.',
+        }}
+        weekStartDate="2026-10-18"
+        rows={mockRows}
+      />
+    );
+
+    expect(screen.getByText('Comments / Notes & Remarks')).toBeInTheDocument();
+    expect(
+      screen.getByText('Shop note: Completed gearhead alignment on Monday morning.')
+    ).toBeInTheDocument();
   });
 
   it('formats regular total when <= 40 hours without brackets', () => {

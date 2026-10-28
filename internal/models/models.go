@@ -259,12 +259,13 @@ type ProjectReworkSummary struct {
 
 // MachineFATReadinessResponse represents quality and rework blockers prior to FAT or shipping
 type MachineFATReadinessResponse struct {
-	MachineID    uuid.UUID `json:"machine_id"`
-	CanProceed   bool      `json:"can_proceed"`
-	OpenIssues   int       `json:"open_issues"`
-	OpenNCRs     int       `json:"open_ncrs"`
-	ActiveRework int       `json:"active_rework"`
-	Blockers     []string  `json:"blockers"`
+	MachineID             uuid.UUID `json:"machine_id"`
+	CanProceed            bool      `json:"can_proceed"`
+	OpenIssues            int       `json:"open_issues"`
+	OpenNCRs              int       `json:"open_ncrs"`
+	ActiveRework          int       `json:"active_rework"`
+	UncompletedAssemblies int       `json:"uncompleted_assemblies"`
+	Blockers              []string  `json:"blockers"`
 }
 
 // ControlsSchematicRework tracks redlines and sign-offs for master electrical schematics

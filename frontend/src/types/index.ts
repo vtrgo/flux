@@ -307,6 +307,7 @@ export interface MachineFATReadinessResponse {
   open_issues: number;
   open_ncrs: number;
   active_rework: number;
+  uncompleted_assemblies?: number;
   blockers: string[];
 }
 
@@ -456,6 +457,9 @@ export interface TimeEntry {
   rework_item_id?: string;
   rework_part_number?: string;
   defect_id?: string;
+  assembly_id?: string;
+  assembly_code?: string;
+  assembly_name?: string;
   work_date: string;
   hours_spent: number;
   work_description?: string;
@@ -489,6 +493,7 @@ export interface WeeklyTimesheet {
 export interface WeeklyTimesheetSaveItem {
   id?: string;
   machine_id?: string;
+  assembly_id?: string;
   entry_type: TimeEntryType;
   project_task_id?: string;
   task_id?: string;
@@ -512,6 +517,8 @@ export interface RejectTimesheetRequest {
 export interface PrintableTimesheetRow {
   rowKey?: string;
   order_number?: string;
+  assembly_code?: string;
+  assembly_name?: string;
   task_name: string;
   department?: string;
   entry_type?: TimeEntryType;
@@ -525,6 +532,9 @@ export interface TimesheetDayCol {
 }
 
 export interface TimesheetRowPrintData {
+  orderNumber?: string;
+  assemblyLabel?: string;
+  taskName?: string;
   jobLabel: string;
   days: Record<string, number | undefined>;
   rowTotal: number;
@@ -545,6 +555,7 @@ export interface TimesheetPrintParams {
   isApproved?: boolean;
   approverName?: string;
   approvalDate?: string;
+  notes?: string;
 }
 
 export interface MachineLaborSummary {
@@ -750,6 +761,9 @@ export interface GridRow {
   rowKey: string;
   machine_id?: string;
   order_number?: string;
+  assembly_id?: string;
+  assembly_code?: string;
+  assembly_name?: string;
   project_task_id?: string;
   task_id?: string;
   rework_item_id?: string;
@@ -775,6 +789,84 @@ export interface NCRFormData {
   team_lead_signature: string;
   status: string;
 }
+
+export type AssemblyStatus = 
+  | 'design_draft' 
+  | 'ready_for_kitting' 
+  | 'kitting_in_progress' 
+  | 'kitted' 
+  | 'in_assembly' 
+  | 'assembled' 
+  | 'qc_verified';
+
+export interface KittingPart {
+  id: string;
+  machine_id: string;
+  assembly_id?: string;
+  department: string;
+  part_number: string;
+  description?: string;
+  qty_required: number;
+  qty_picked: number;
+  status: 'pending' | 'in_progress' | 'fulfilled';
+  fulfilled_at?: string;
+  fulfilled_by?: string;
+}
+
+export interface MachineAssembly {
+  id: string;
+  machine_id: string;
+  parent_assembly_id?: string;
+  assembly_code: string;
+  name: string;
+  description?: string;
+  drawing_number?: string;
+  revision: string;
+  department: string;
+  quoted_hours: number;
+  actual_hours: number;
+  variance: number;
+  status: AssemblyStatus;
+  sequence_order: number;
+  created_at: string;
+  updated_at: string;
+  sub_assemblies?: MachineAssembly[];
+  parts?: KittingPart[];
+}
+
+export interface ParsedBOMPart {
+  part_number: string;
+  description?: string;
+  qty_required: number;
+}
+
+export interface ParsedBOMNode {
+  assembly_code: string;
+  parent_code?: string;
+  name: string;
+  description?: string;
+  drawing_number?: string;
+  revision?: string;
+  department?: string;
+  quoted_hours?: number;
+  parts?: ParsedBOMPart[];
+}
+
+export interface BOMValidationError {
+  row: number;
+  code: string;
+  message: string;
+}
+
+export interface BOMValidationReport {
+  is_valid: boolean;
+  total_nodes: number;
+  total_parts: number;
+  errors?: BOMValidationError[];
+  warnings?: string[];
+  preview_tree?: MachineAssembly[];
+}
+
 
 
 

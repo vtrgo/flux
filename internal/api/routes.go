@@ -145,6 +145,19 @@ func RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/system/timezones", handleGetAvailableTimezones)
 	mux.Handle("PUT /api/system/timezone", RequireRole("admin")(http.HandlerFunc(handleUpdateTimezone)))
 
+	// Assembly & BOM Hierarchy endpoints
+	mux.HandleFunc("GET /api/machines/{id}/assemblies", handleGetMachineAssemblies)
+	mux.HandleFunc("GET /api/machines/{id}/assemblies/list", handleGetMachineAssembliesList)
+	mux.HandleFunc("POST /api/machines/{id}/assemblies", handleCreateMachineAssembly)
+	mux.HandleFunc("GET /api/assemblies/{id}", handleGetAssemblyByID)
+	mux.HandleFunc("PUT /api/assemblies/{id}", handleUpdateAssembly)
+	mux.HandleFunc("DELETE /api/assemblies/{id}", handleDeleteAssembly)
+	mux.HandleFunc("POST /api/machines/{id}/assemblies/import/preview", handlePreviewBOMImport)
+	mux.HandleFunc("POST /api/machines/{id}/assemblies/import/commit", handleCommitBOMImport)
+	mux.HandleFunc("POST /api/assemblies/{id}/parts", handleAddAssemblyPart)
+	mux.HandleFunc("PUT /api/kitting/parts/{id}/pick", handleUpdateKittingPartPick)
+	mux.HandleFunc("POST /api/assemblies/{id}/fulfill-tote", handleFulfillTote)
+
 	mux.HandleFunc("/api/sse", SSEHandler)
 }
 

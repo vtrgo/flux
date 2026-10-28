@@ -1,0 +1,194 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.controlsBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: var(--vtr-card-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--vtr-card-border, var(--border-color));
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.machineSelectGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--vtr-theme-primary);
+}
+
+.fatBannerReady {
+  background: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #00e676;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.fatBannerBlocked {
+  background: rgba(255, 112, 67, 0.1);
+  border: 1px solid rgba(255, 112, 67, 0.35);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #ff7043;
+}
+
+.fatBlockedTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.fatBlockersList {
+  margin: 0;
+  padding-left: 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.metricsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.metricCard {
+  background: var(--vtr-card-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--vtr-card-border, var(--border-color));
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metricLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.metricValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--vtr-theme-primary);
+}
+
+.assemblyTableCard {
+  background: var(--vtr-card-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--vtr-card-border, var(--border-color));
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.assemblyTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.assemblyTable th {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.assemblyTable td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.assemblyTable tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.codeCell {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--vtr-theme-primary);
+}
+
+.dwgBadge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--vtr-theme-primary);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.statusSelect {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.statusSelect:focus {
+  outline: none;
+  border-color: var(--vtr-theme-primary);
+}
+
+.emptyNotice {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+}

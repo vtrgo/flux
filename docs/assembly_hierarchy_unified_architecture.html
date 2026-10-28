@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VTR MES - Unified Assembly Hierarchy Architecture</title>
+  <style>
+    @page {
+      size: letter portrait;
+      margin: 10mm 14mm 12mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Liberation Sans", Arial, sans-serif;
+      font-size: 8.8pt;
+      line-height: 1.38;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Page container to strictly enforce 1 page per section */
+    .sheet {
+      page-break-after: always;
+      break-after: page;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .sheet:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    .sheet-content {
+      flex: 1;
+    }
+
+    /* Document Header */
+    .doc-header {
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .doc-header-compact {
+      border-bottom: 1.5px solid #0284c7;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .doc-title-area h1 {
+      font-size: 15pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 2px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .doc-title-area .subtitle {
+      font-size: 8.8pt;
+      font-weight: 600;
+      color: #0284c7;
+      margin: 0;
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 7.5pt;
+      color: #64748b;
+      font-family: ui-monospace, "Liberation Mono", Menlo, monospace;
+      line-height: 1.3;
+    }
+
+    .doc-meta .badge {
+      display: inline-block;
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 7pt;
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Section Headings */
+    h2 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 3px;
+      margin: 10px 0 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    h2 .sec-num {
+      background: #0f172a;
+      color: #fff;
+      font-size: 7.5pt;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: ui-monospace, monospace;
+    }
+
+    h3 {
+      font-size: 9.2pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 8px 0 4px 0;
+    }
+
+    p {
+      margin: 0 0 6px 0;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin: 0 0 6px 0;
+      padding-left: 18px;
+    }
+
+    li {
+      margin-bottom: 2px;
+    }
+
+    /* Highlights & Callouts */
+    .callout {
+      background: #f8fafc;
+      border-left: 3px solid #0284c7;
+      border-radius: 0 4px 4px 0;
+      padding: 6px 10px;
+      margin: 6px 0;
+      font-size: 8.2pt;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 2px;
+    }
+
+    /* Code Blocks */
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-size: 7.2pt;
+      font-family: ui-monospace, "Liberation Mono", "DejaVu Sans Mono", monospace;
+      line-height: 1.32;
+      margin: 6px 0;
+      border: 1px solid #1e293b;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    code {
+      font-family: ui-monospace, "Liberation Mono", monospace;
+      font-size: 7.8pt;
+      background: #f1f5f9;
+      color: #0369a1;
+      padding: 1px 3px;
+      border-radius: 3px;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* Diagrams: Custom SVG / CSS tailored for 100% printed width */
+    .diagram-container {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 8px 10px;
+      margin: 6px 0 8px 0;
+    }
+
+    .diagram-header {
+      font-size: 7.8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #475569;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px dashed #e2e8f0;
+      padding-bottom: 3px;
+    }
+
+    /* Digital Thread Pipeline Grid */
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+      align-items: stretch;
+    }
+
+    .pipeline-step {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-top: 3px solid #0284c7;
+      border-radius: 4px;
+      padding: 6px 5px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .step-num {
+      font-size: 6.5pt;
+      font-weight: 800;
+      color: #0284c7;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+
+    .step-title {
+      font-size: 7.8pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 3px;
+      line-height: 1.15;
+    }
+
+    .step-desc {
+      font-size: 6.8pt;
+      color: #475569;
+      line-height: 1.25;
+    }
+
+    .pipeline-step::after {
+      content: "➔";
+      position: absolute;
+      right: -6.5px;
+      top: 38%;
+      font-size: 8.5pt;
+      color: #94a3b8;
+      z-index: 2;
+    }
+
+    .pipeline-step:last-child::after {
+      display: none;
+    }
+
+    /* Visual Tree Diagram */
+    .tree-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 7.8pt;
+    }
+
+    .tree-machine {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tree-branches {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-left: 8px;
+      border-left: 2px dashed #cbd5e1;
+      padding-left: 8px;
+    }
+
+    .tree-node {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      padding: 6px 8px;
+    }
+
+    .tree-node-title {
+      font-weight: 700;
+      color: #0369a1;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+      font-size: 8pt;
+    }
+
+    .sub-tree {
+      margin-top: 4px;
+      border-left: 2px solid #94a3b8;
+      padding-left: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .sub-node {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      padding: 3px 5px;
+      border-radius: 3px;
+      font-size: 7.2pt;
+    }
+
+    .badge-chip {
+      font-size: 6.2pt;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .chip-green { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .chip-blue  { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
+    .chip-amber { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+    .chip-red   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* Tables */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.6pt;
+      margin: 6px 0;
+    }
+
+    table.data-table th {
+      background: #0f172a;
+      color: #ffffff;
+      font-weight: 600;
+      text-align: left;
+      padding: 4px 6px;
+      font-size: 7.4pt;
+      letter-spacing: 0.03em;
+    }
+
+    table.data-table td {
+      padding: 3.5px 6px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+
+    table.data-table tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    table.data-table tr.total-row {
+      background: #e2e8f0;
+      font-weight: 700;
+      border-top: 1.5px solid #64748b;
+      color: #0f172a;
+    }
+
+    /* Roadmap Phase Cards */
+    .phase-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin: 6px 0;
+    }
+
+    .phase-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .phase-card-header {
+      background: #f1f5f9;
+      border-bottom: 1px solid #cbd5e1;
+      padding: 4px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .phase-card-title {
+      font-size: 8pt;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .phase-card-body {
+      padding: 6px 8px;
+      font-size: 7.3pt;
+      color: #334155;
+      line-height: 1.32;
+    }
+
+    .phase-card-body ul {
+      margin: 0;
+      padding-left: 14px;
+    }
+
+    /* Document Footer */
+    .doc-footer {
+      border-top: 1px solid #cbd5e1;
+      margin-top: 8px;
+      padding-top: 4px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.2pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PAGE 1 ==================== -->
+  <div class="sheet">
+    <div class="sheet-content">
+      <div class="doc-header">
+        <div class="doc-title-area">
+          <div style="font-size: 8pt; font-weight: 700; color: #64748b; letter-spacing: 0.1em; text-transform: uppercase;">
+            VTR Manufacturing Execution System (MES) • Architecture Specification
+          </div>
+          <h1>Unified Assembly Hierarchy Architecture</h1>
+          <div class="subtitle">The Digital Thread: Connecting Design, Kitting, Assembly Execution &amp; Timesheet Costing</div>
+        </div>
+        <div class="doc-meta">
+          <span class="badge">Architecture Plan</span><br>
+          <strong>Target:</strong> Production MES<br>
+          <strong>Date:</strong> October 27, 2026<br>
+          <strong>Status:</strong> Approved Proposal
+        </div>
+      </div>
+
+      <h2><span class="sec-num">01</span> Operational Reality vs. The Digital Gap</h2>
+      <p>
+        In custom automation machinery manufacturing at VTR, machines are engineered, staged, and assembled as a modular hierarchy of <strong>Assemblies and Sub-Assemblies</strong> (e.g., <em>Bowl Drive Unit, Linear Track Feed, Escapement Mechanism, Pick-and-Place</em>).
+      </p>
+      <p>
+        <strong>The Shop Floor Reality Today:</strong> The BOM from Design is <em>already passed to Kitting</em> so that parts are physically sorted and "kitted" into totes according to assemblies. Similarly, the design drawings passed to the Assembly team are <em>already organized according to these same assemblies</em>.
+      </p>
+      <p>
+        <strong>The Software Gap in Flux:</strong> The <code>vtrFlux</code> application does not have this infrastructure yet:
+      </p>
+      <ul style="margin-bottom: 6px;">
+        <li><strong>In Kitting:</strong> Flux presents parts as a flat list, lacking the assembly tote containers that clerks physically build.</li>
+        <li><strong>In Timesheets:</strong> Workers holding physical assembly drawing packages are forced to log hours against generic machine buckets.</li>
+        <li><strong>In Quality:</strong> SOP 1-003 rework records sub-assemblies only as unvalidated, free-form text strings.</li>
+      </ul>
+
+      <!-- Remade Diagram 1: Digital Thread Pipeline -->
+      <div class="diagram-container">
+        <div class="diagram-header">
+          <span>Figure 1: The Unified Digital Thread Lifecycle (Design ➔ Kitting ➔ Build ➔ Costing)</span>
+          <span>Continuous Dataflow</span>
+        </div>
+        <div class="pipeline-grid">
+          <div class="pipeline-step">
+            <div class="step-num">Step 01</div>
+            <div class="step-title">Design (PDM)</div>
+            <div class="step-desc">Hierarchical BOM; SolidWorks drawings &amp; initial quote budgets.</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">Step 02</div>
+            <div class="step-title">Kitting Hub</div>
+            <div class="step-desc">Assembly-centric tote staging; 100% kit gating before build start.</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">Step 03</div>
+            <div class="step-title">Shop Assembly</div>
+            <div class="step-desc">Modular build progress tracking, stage signoffs &amp; FAT gating.</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">Step 04</div>
+            <div class="step-title">Timesheet Ledger</div>
+            <div class="step-desc">Assembly-granular time allocation in weekly shop matrix.</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">Step 05</div>
+            <div class="step-title">Cost Analytics</div>
+            <div class="step-desc">Quoted vs. actual variance per sub-mechanism; CoNC root-cause.</div>
+          </div>
+        </div>
+      </div>
+
+      <h2><span class="sec-num">02</span> Relational Entity Architecture &amp; Database Schema</h2>
+      <p>
+        Rather than separate rigid tables, Flux will use a <strong>recursive adjacency tree</strong> (<code>parent_assembly_id</code>) in PostgreSQL. This allows infinite sub-assembly nesting while enabling fast queries via recursive Common Table Expressions (CTEs).
+      </p>
+
+      <pre><code>-- 1. Create recursive assemblies table with self-referencing parent
+CREATE TABLE machine_assemblies (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    machine_id UUID NOT NULL REFERENCES machines(id) ON DELETE CASCADE,
+    parent_assembly_id UUID REFERENCES machine_assemblies(id) ON DELETE CASCADE, -- NULL for Root Node
+    assembly_code VARCHAR(50) NOT NULL,        -- e.g. "ASM-01", "SUB-01A"
+    name VARCHAR(255) NOT NULL,                -- e.g. "Centrifugal Bowl Drive", "Singulator Mechanism"
+    description TEXT,
+    drawing_number VARCHAR(100),               -- SolidWorks PDM Drawing Reference
+    revision VARCHAR(20) DEFAULT 'A',
+    department VARCHAR(50) NOT NULL DEFAULT 'assembly',
+    quoted_hours NUMERIC(6, 2) NOT NULL DEFAULT 0.00,
+    status VARCHAR(50) NOT NULL DEFAULT 'design_draft',
+    sequence_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_machine_assembly_code UNIQUE (machine_id, assembly_code)
+);
+
+-- 2. Link Timesheets, Kitting Parts, and Rework directly to Assembly Nodes
+ALTER TABLE time_entries ADD COLUMN assembly_id UUID REFERENCES machine_assemblies(id) ON DELETE SET NULL;
+ALTER TABLE kitting_parts ADD COLUMN assembly_id UUID REFERENCES machine_assemblies(id) ON DELETE CASCADE;
+ALTER TABLE rework_items ADD COLUMN assembly_id UUID REFERENCES machine_assemblies(id) ON DELETE SET NULL;
+
+CREATE INDEX idx_assemblies_machine ON machine_assemblies(machine_id);
+CREATE INDEX idx_assemblies_parent ON machine_assemblies(parent_assembly_id);
+CREATE INDEX idx_time_entries_assembly ON time_entries(assembly_id);
+CREATE INDEX idx_kitting_parts_assembly ON kitting_parts(assembly_id);</code></pre>
+    </div>
+
+    <div class="doc-footer">
+      <span>VTR MES Architectural Plan • Confidential &amp; Proprietary</span>
+      <span>Page 1 of 3</span>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 2 ==================== -->
+  <div class="sheet">
+    <div class="sheet-content">
+      <div class="doc-header-compact">
+        <div style="font-size: 8pt; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em;">
+          VTR MES Architecture • Section 02 (Cont.) &amp; 03: Hierarchy Structure &amp; Cost Variance
+        </div>
+        <div style="font-size: 7.5pt; color: #64748b;">October 27, 2026</div>
+      </div>
+
+      <!-- Remade Diagram 2: Visual Tree & Entity Linkage -->
+      <div class="diagram-container">
+        <div class="diagram-header">
+          <span>Figure 2: Unified Assembly Tree &amp; Domain Linkages</span>
+          <span>PostgreSQL Hierarchy Model</span>
+        </div>
+        <div class="tree-diagram">
+          <div class="tree-machine">
+            <span>MACHINE: VTR-1024 Centrifugal Feeder (Order # 1024)</span>
+            <span class="badge-chip chip-blue">Machine Scope Root</span>
+          </div>
+          <div class="tree-branches">
+            <!-- Assembly 1 -->
+            <div class="tree-node">
+              <div class="tree-node-title">
+                <span>ASM-01: Bowl Drive Assembly</span>
+                <span class="badge-chip chip-green">14.5h / 16h Quoted</span>
+              </div>
+              <div style="font-size: 7pt; color: #475569; margin-bottom: 3px;">Drawing: VTR-1024-D01 Rev B • Status: Assembled</div>
+              <div class="sub-tree">
+                <div class="sub-node">
+                  <strong>SUB-01A: Motor &amp; Mount:</strong> 3.5h actual (4h quote) • 2 Parts Kitted
+                </div>
+                <div class="sub-node">
+                  <strong>SUB-01B: Reduction Gearbox:</strong> 6.0h actual (6h quote) • 4 Parts Kitted
+                </div>
+                <div class="sub-node" style="border-left: 2px solid #0284c7; background: #f0f9ff;">
+                  <em>Timesheet Attribution:</em> <code>time_entries.assembly_id</code> ➔ ASM-01
+                </div>
+              </div>
+            </div>
+
+            <!-- Assembly 2 -->
+            <div class="tree-node">
+              <div class="tree-node-title">
+                <span>ASM-02: Escapement &amp; Track</span>
+                <span class="badge-chip chip-red">38h / 24h (Over Budget!)</span>
+              </div>
+              <div style="font-size: 7pt; color: #475569; margin-bottom: 3px;">Drawing: VTR-1024-D02 Rev C • Status: In Assembly</div>
+              <div class="sub-tree">
+                <div class="sub-node">
+                  <strong>SUB-02A: Singulator Gate:</strong> 18.5h actual (8h quote) • Rework Fitment
+                </div>
+                <div class="sub-node">
+                  <strong>SUB-02B: Pneumatic Slide:</strong> 11.5h actual (10h quote) • 100% Kitted
+                </div>
+                <div class="sub-node" style="border-left: 2px solid #dc2626; background: #fef2f2;">
+                  <em>Rework &amp; CoNC Attribution:</em> <code>rework_items.assembly_id</code> ➔ SUB-02A
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2><span class="sec-num">03</span> Departmental Workflows &amp; Timesheet Integration</h2>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+        <div class="callout" style="margin: 0;">
+          <div class="callout-title">1. CAD Design &amp; CSV Ingestion Provision</div>
+          <p style="font-size: 7.5pt; margin: 0;">
+            Design engineers already group the entire machine build by assembly in CAD. Design will soon export structured CSV BOMs. Flux provides an extensible <code>BOMImporter</code> interface and two-stage preview/commit pipeline ready to plug in as soon as the format is finalized.
+          </p>
+        </div>
+        <div class="callout" style="margin: 0; border-left-color: #10b981;">
+          <div class="callout-title">2. Kitting Staging Gating</div>
+          <p style="font-size: 7.6pt; margin: 0;">
+            Kitting clerks pick parts into assembly-labeled totes. An assembly only transitions to <code>kitted</code> when 100% of required parts are verified, preventing technicians waiting on missing parts.
+          </p>
+        </div>
+        <div class="callout" style="margin: 0; border-left-color: #f59e0b;">
+          <div class="callout-title">3. Frictionless Timesheet Logging</div>
+          <p style="font-size: 7.6pt; margin: 0;">
+            When selecting a machine in <code>WeeklyTimesheetGrid</code>, an optional <em>Assembly</em> dropdown cascades. Selecting an assembly is 1-click; general shop or framing hours can leave it blank without friction.
+          </p>
+        </div>
+        <div class="callout" style="margin: 0; border-left-color: #8b5cf6;">
+          <div class="callout-title">4. FAT Readiness Shield Integration</div>
+          <p style="font-size: 7.6pt; margin: 0;">
+            Uncompleted assemblies act as active blockers on the machine's Dashboard FAT Readiness Shield, guaranteeing that no machine is scheduled for customer runoff until all sub-units pass inspection.
+          </p>
+        </div>
+      </div>
+
+      <h2><span class="sec-num">04</span> Labor Variance &amp; Assembly Costing Analytics</h2>
+      <p>
+        By capturing quoted budgets at the assembly node and actual hours via weekly time entries, Flux computes automated variance and cost overruns per mechanism:
+      </p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Assembly Node &amp; Sub-Units</th>
+            <th>Drawing / Rev</th>
+            <th style="text-align: right;">Quoted</th>
+            <th style="text-align: right;">Actual</th>
+            <th style="text-align: right;">Variance</th>
+            <th style="text-align: right;">Labor Cost ($85/hr)</th>
+            <th style="text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ASM-01 Bowl Drive Assembly</strong></td>
+            <td>VTR-1024-D01 Rev B</td>
+            <td style="text-align: right;">16.0h</td>
+            <td style="text-align: right;">14.5h</td>
+            <td style="text-align: right; color: #166534; font-weight: 700;">-1.5h</td>
+            <td style="text-align: right;">$1,232.50</td>
+            <td style="text-align: center;"><span class="badge-chip chip-green">Assembled</span></td>
+          </tr>
+          <tr>
+            <td style="padding-left: 14px;">↳ SUB-01A Motor &amp; Mount Plate</td>
+            <td>VTR-1024-D01-1</td>
+            <td style="text-align: right;">4.0h</td>
+            <td style="text-align: right;">3.5h</td>
+            <td style="text-align: right; color: #166534;">-0.5h</td>
+            <td style="text-align: right;">$297.50</td>
+            <td style="text-align: center;"><span class="badge-chip chip-green">Assembled</span></td>
+          </tr>
+          <tr>
+            <td style="padding-left: 14px;">↳ SUB-01B Reduction Gearbox</td>
+            <td>VTR-1024-D01-2</td>
+            <td style="text-align: right;">6.0h</td>
+            <td style="text-align: right;">6.0h</td>
+            <td style="text-align: right; color: #475569;">0.0h</td>
+            <td style="text-align: right;">$510.00</td>
+            <td style="text-align: center;"><span class="badge-chip chip-green">Assembled</span></td>
+          </tr>
+          <tr>
+            <td><strong>ASM-02 Escapement &amp; Track</strong></td>
+            <td>VTR-1024-D02 Rev C</td>
+            <td style="text-align: right;">24.0h</td>
+            <td style="text-align: right;">38.0h</td>
+            <td style="text-align: right; color: #991b1b; font-weight: 700;">+14.0h ⚠</td>
+            <td style="text-align: right; color: #991b1b; font-weight: 700;">$3,230.00</td>
+            <td style="text-align: center;"><span class="badge-chip chip-red">In Assembly</span></td>
+          </tr>
+          <tr>
+            <td style="padding-left: 14px;">↳ SUB-02A Singulator Gate Mechanism</td>
+            <td>VTR-1024-D02-1</td>
+            <td style="text-align: right;">8.0h</td>
+            <td style="text-align: right;">18.5h</td>
+            <td style="text-align: right; color: #991b1b; font-weight: 700;">+10.5h ⚠</td>
+            <td style="text-align: right;">$1,572.50</td>
+            <td style="text-align: center;"><span class="badge-chip chip-amber">Rework Fit</span></td>
+          </tr>
+          <tr>
+            <td style="padding-left: 14px;">↳ SUB-02B Pneumatic Infeed Track</td>
+            <td>VTR-1024-D02-2</td>
+            <td style="text-align: right;">10.0h</td>
+            <td style="text-align: right;">11.5h</td>
+            <td style="text-align: right; color: #991b1b;">+1.5h</td>
+            <td style="text-align: right;">$977.50</td>
+            <td style="text-align: center;"><span class="badge-chip chip-blue">Testing</span></td>
+          </tr>
+          <tr>
+            <td><strong>ASM-03 Stand, Guarding &amp; Controls Base</strong></td>
+            <td>VTR-1024-D03 Rev A</td>
+            <td style="text-align: right;">12.0h</td>
+            <td style="text-align: right;">11.0h</td>
+            <td style="text-align: right; color: #166534; font-weight: 700;">-1.0h</td>
+            <td style="text-align: right;">$935.00</td>
+            <td style="text-align: center;"><span class="badge-chip chip-green">Assembled</span></td>
+          </tr>
+          <tr class="total-row">
+            <td>TOTAL ASSEMBLY LABOR ROLLUP</td>
+            <td>7 Sub-Units</td>
+            <td style="text-align: right;">52.0h</td>
+            <td style="text-align: right;">63.5h</td>
+            <td style="text-align: right; color: #991b1b; font-weight: 800;">+11.5h Over</td>
+            <td style="text-align: right;">$5,397.50</td>
+            <td style="text-align: center;"><span class="badge-chip chip-amber">78% Complete</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="doc-footer">
+      <span>VTR MES Architectural Plan • Confidential &amp; Proprietary</span>
+      <span>Page 2 of 3</span>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 3 ==================== -->
+  <div class="sheet">
+    <div class="sheet-content">
+      <div class="doc-header-compact">
+        <div style="font-size: 8pt; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em;">
+          VTR MES Architecture • Section 05 &amp; 06: Roadmap &amp; Implementation Governance
+        </div>
+        <div style="font-size: 7.5pt; color: #64748b;">October 27, 2026</div>
+      </div>
+
+      <h2><span class="sec-num">05</span> Implementation Roadmap</h2>
+      <p>
+        Following the recently established 3-tier domain architecture, the feature will be engineered in four non-breaking, incremental phases:
+      </p>
+
+      <!-- Remade Diagram 3: Phase Construction Pipeline -->
+      <div class="phase-grid">
+        <div class="phase-card">
+          <div class="phase-card-header">
+            <span class="phase-card-title">Phase 1: Domain Core &amp; Schema</span>
+            <span class="badge-chip chip-blue">Foundation</span>
+          </div>
+          <div class="phase-card-body">
+            <ul>
+              <li>Create <code>machine_assemblies</code> table with self-referential parent key.</li>
+              <li>Implement <code>internal/domain/assemblies/</code> (repository &amp; service).</li>
+              <li>Add REST endpoints: <code>GET/POST/PUT/DELETE /api/machines/{id}/assemblies</code>.</li>
+              <li>Unit &amp; integration tests validating recursive hierarchy serialization.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-card-header">
+            <span class="phase-card-title">Phase 2: Timesheet Labor Attribution</span>
+            <span class="badge-chip chip-green">Shop Floor ROI</span>
+          </div>
+          <div class="phase-card-body">
+            <ul>
+              <li>Add <code>assembly_id</code> FK column to <code>time_entries</code> table.</li>
+              <li>Update <code>WeeklyTimesheetGrid</code> &amp; <code>TimesheetGridRow</code> with optional assembly selector.</li>
+              <li>Update labor correlation queries to compute actual vs. quote per assembly.</li>
+              <li>Verify timesheet submission workflows remain 100% backward compatible.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-card-header">
+            <span class="phase-card-title">Phase 3: Kitting Staging Engine</span>
+            <span class="badge-chip chip-amber">Parts Staging</span>
+          </div>
+          <div class="phase-card-body">
+            <ul>
+              <li>Link <code>kitting_parts.assembly_id</code> to target assembly nodes.</li>
+              <li>Overhaul Kitting Hub UI into an assembly-centric kit staging station.</li>
+              <li>Implement 1-click part pick toggles and assembly completeness gating.</li>
+              <li>Broadcast real-time SSE event <code>assembly_kitted</code> to assembly technicians.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="phase-card">
+          <div class="phase-card-header">
+            <span class="phase-card-title">Phase 4: Assembly Shop Hub &amp; FAT Gating</span>
+            <span class="badge-chip chip-blue">Executive Visibility</span>
+          </div>
+          <div class="phase-card-body">
+            <ul>
+              <li>Create dedicated Assembly Hub with stage progress Kanban boards.</li>
+              <li>Wire uncompleted assemblies into the Dashboard FAT Readiness Shield.</li>
+              <li>Expose assembly-level labor variance metrics to team leads and quoting estimators.</li>
+              <li>Connect SOP 1-003 rework items directly to assembly root causes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h2><span class="sec-num">06</span> Architectural Guardrails &amp; Sign-Off Decisions</h2>
+      <div class="callout" style="border-left-color: #0f172a; margin: 4px 0 8px 0;">
+        <div class="callout-title">Guaranteed Backward Compatibility Safeguards:</div>
+        <ul style="margin-bottom: 0;">
+          <li><strong>Non-Disruptive Adoption:</strong> Existing machines without defined assembly hierarchies continue operating normally. Top-level machine tasks (e.g. <em>Mechanical Assembly</em>) remain valid fallback targets.</li>
+          <li><strong>Nullable Foreign Keys:</strong> <code>time_entries.assembly_id</code> is strictly nullable. Non-assembly shop floor tasks (indirect labor, shop cleanup, general troubleshooting) will never be blocked by mandatory assembly validation.</li>
+          <li><strong>Sub-Millisecond Recursive Queries:</strong> Typical machine assembly hierarchies range between 5 and 30 nodes. PostgreSQL recursive CTE queries execute in &lt; 2ms, maintaining instant UI loading on the shop floor.</li>
+        </ul>
+      </div>
+
+      <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px 10px; background: #f8fafc;">
+        <div style="font-weight: 700; font-size: 8pt; color: #0f172a; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em;">
+          Decision Gate Sign-Off Matrix:
+        </div>
+        <table style="width: 100%; font-size: 7.5pt; border-collapse: collapse;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 3px 0; font-weight: 600; width: 32%;">1. BOM Ingestion Strategy:</td>
+            <td style="padding: 3px 0; color: #334155;">Manual tree builder in Phase 1; provision pluggable BOMImporter interface with CSV preview/commit pipeline once export structure is finalized.</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 3px 0; font-weight: 600;">2. Quoting Authority:</td>
+            <td style="padding: 3px 0; color: #334155;">Allow quoted hours at both the Assembly level and Task level, rolling up automatically.</td>
+          </tr>
+          <tr>
+            <td style="padding: 3px 0; font-weight: 600;">3. Timesheet Usability:</td>
+            <td style="padding: 3px 0; color: #334155;">Keep Assembly selection optional on weekly matrix; highlight assembly context when active.</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <span>VTR MES Architectural Plan • Compiled from Live Codebase &amp; Roadmap</span>
+      <span>Page 3 of 3</span>
+    </div>
+  </div>
+
+</body>
+</html>

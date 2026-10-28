@@ -17,7 +17,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     weekEndingDate,
     weekDays,
     rows,
-    totalTargetRows = 18,
+    totalTargetRows = 10,
     dayTotals,
     grandTotal,
     isOvertime,
@@ -26,6 +26,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     isApproved,
     approverName,
     approvalDate,
+    notes,
   } = params;
 
   // Active rows
@@ -58,10 +59,20 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       dayCells += `<td class="colDay cellHours">${fmt(h)}</td>`;
     });
 
+    const orderNum = row.orderNumber || (row.jobLabel && row.jobLabel.includes(' - ') ? row.jobLabel.split(' - ')[0] : (row.jobLabel || '—'));
+    const asmLabel = row.assemblyLabel || '—';
+    const taskName = row.taskName || (row.jobLabel && row.jobLabel.includes(' - ') ? row.jobLabel.split(' - ').slice(1).join(' - ') : (row.jobLabel || 'General Task'));
+
     rowsHtml += `
       <tr class="rowJob">
-        <td class="colJob" title="${escapeHtml(row.jobLabel)}">
-          <span class="jobName">${escapeHtml(row.jobLabel)}</span>
+        <td class="colProject" title="${escapeHtml(orderNum)}">
+          <span class="cellText boldText">${escapeHtml(orderNum)}</span>
+        </td>
+        <td class="colAssembly" title="${escapeHtml(asmLabel)}">
+          <span class="cellText">${escapeHtml(asmLabel)}</span>
+        </td>
+        <td class="colTask" title="${escapeHtml(taskName)}">
+          <span class="cellText">${escapeHtml(taskName)}</span>
         </td>
         ${dayCells}
         <td class="colTotal cellRowTotal">${fmtTotal(row.rowTotal)}</td>
@@ -77,7 +88,9 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     });
     rowsHtml += `
       <tr class="rowBlank">
-        <td class="colJob">&nbsp;</td>
+        <td class="colProject">&nbsp;</td>
+        <td class="colAssembly">&nbsp;</td>
+        <td class="colTask">&nbsp;</td>
         ${blankDayCells}
         <td class="colTotal cellRowTotal">0</td>
       </tr>
@@ -120,8 +133,8 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
   <title>Weekly Job Schedule - ${escapeHtml(employeeName)} - Week Ending ${escapeHtml(weekEndingDate)}</title>
   <style>
     @page {
-      size: letter portrait;
-      margin: 0.35in 0.35in 0.4in 0.35in;
+      size: letter landscape;
+      margin: 0.35in 0.35in 0.35in 0.35in;
     }
     *, *::before, *::after {
       box-sizing: border-box;
@@ -194,17 +207,39 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       color: #000000;
       vertical-align: middle;
     }
-    .colJob {
-      width: 31%;
+    .colProject {
+      width: 14%;
+      text-align: left;
+    }
+    .colAssembly {
+      width: 18%;
+      text-align: left;
+    }
+    .colTask {
+      width: 22%;
       text-align: left;
     }
     .colDay {
-      width: 8.7%;
+      width: 5.5%;
       text-align: center;
     }
     .colTotal {
-      width: 8.1%;
+      width: 7.5%;
       text-align: right;
+    }
+    .colJob {
+      width: 54%;
+      text-align: left;
+    }
+    .cellText {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: block;
+    }
+    .boldText {
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
     .thDayName {
       background-color: #f0f0f0 !important;
@@ -229,8 +264,8 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       height: 24px;
     }
     .rowJob td {
-      height: 30px;
-      font-size: 11.5px;
+      height: 26px;
+      font-size: 11px;
     }
     .jobName {
       font-weight: 600;
@@ -252,7 +287,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       font-size: 12px;
     }
     .rowBlank td {
-      height: 30px;
+      height: 26px;
     }
     .rowTotals td {
       background-color: #e5e5e5 !important;
@@ -279,6 +314,53 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     }
     .overtimeBracket {
       font-weight: 800;
+    }
+    .commentsBox {
+      width: 100%;
+      border: 1.5px solid #000000;
+      border-radius: 2px;
+      margin-bottom: 8px;
+      background: #ffffff;
+      box-sizing: border-box;
+      page-break-inside: avoid;
+    }
+    .commentsHeader {
+      background-color: #f0f0f0 !important;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-bottom: 1px solid #000000;
+      color: #000000;
+    }
+    .commentsBody {
+      padding: 6px 10px;
+      min-height: 76px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .commentsText {
+      font-size: 11px;
+      color: #111111;
+      white-space: pre-wrap;
+      margin-bottom: 6px;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+    .commentsLines {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 4px;
+      width: 100%;
+    }
+    .commentRule {
+      width: 100%;
+      border-bottom: 1px dashed #b0b0b0;
+      height: 1px;
     }
     .footerContainer {
       margin-top: 10px;
@@ -384,12 +466,14 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     <table class="gridTable">
       <thead>
         <tr>
-          <th class="colJob thDayName">Job # &amp; Segment</th>
+          <th class="colProject thDayName">Project / Order #</th>
+          <th class="colAssembly thDayName">Assembly</th>
+          <th class="colTask thDayName">Task Description</th>
           ${thDayCells}
           <th class="colTotal thDayName">Total</th>
         </tr>
         <tr>
-          <th class="colJob thDateLabel">Date</th>
+          <th colspan="3" class="thDateLabel">Date</th>
           ${thDateCells}
           <th class="colTotal thDateValue"></th>
         </tr>
@@ -399,12 +483,22 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       </tbody>
       <tfoot>
         <tr class="rowTotals">
-          <td class="colJob labelTotal">TOTAL</td>
+          <td colspan="3" class="labelTotal">TOTAL</td>
           ${dayTotalCells}
           <td class="colTotal cellGrandTotal">${grandTotalStr}</td>
         </tr>
       </tfoot>
     </table>
+
+    <div class="commentsBox">
+      <div class="commentsHeader">Comments / Notes &amp; Remarks</div>
+      <div class="commentsBody">
+        ${notes ? `<div class="commentsText">${escapeHtml(notes)}</div>` : ''}
+        <div class="commentsLines">
+          ${Array.from({ length: notes ? 3 : 5 }).map(() => `<div class="commentRule"></div>`).join('')}
+        </div>
+      </div>
+    </div>
 
     <div class="footerContainer">
       <table class="approvalTable">

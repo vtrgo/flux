@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import TimesheetPage from './page';
 import { fetchApi } from '../../../lib/api';
@@ -822,6 +823,16 @@ describe('TimesheetPage', () => {
     expect(screen.getByText('Print Weekly Timesheet')).toBeInTheDocument();
     expect(screen.getAllByText('Weekly Job Schedule').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Job allocation approved by').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('opens printable timesheet modal when Cmd/Ctrl+P shortcut is pressed', async () => {
+    const user = userEvent.setup();
+    await act(async () => {
+      render(<TimesheetPage />);
+    });
+
+    await user.keyboard('{Control>}p{/Control}');
+    expect(screen.getByText('Print Weekly Timesheet')).toBeInTheDocument();
   });
 });
 

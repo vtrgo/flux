@@ -570,15 +570,15 @@ func (r *sqlRepository) CreateTimeEntry(ctx context.Context, userID uuid.UUID, r
 
 	insertQuery := `
 		INSERT INTO time_entries (
-			user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, task_id, rework_item_id, defect_id,
+			user_id, weekly_timesheet_id, machine_id, assembly_id, entry_type, project_task_id, task_id, rework_item_id, defect_id,
 			work_date, hours_spent, work_description, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
-		RETURNING id, user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, task_id, rework_item_id, defect_id,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+		RETURNING id, user_id, weekly_timesheet_id, machine_id, assembly_id, entry_type, project_task_id, task_id, rework_item_id, defect_id,
 		          work_date, hours_spent, work_description, created_at, updated_at
 	`
 
 	var entry models.TimeEntry
-	var mID, taskID, aTaskID, rwID, defID, wtID uuid.NullUUID
+	var mID, asmID, taskID, aTaskID, rwID, defID, wtID uuid.NullUUID
 	var wDate time.Time
 
 	var wtIDParam *uuid.UUID
@@ -586,11 +586,16 @@ func (r *sqlRepository) CreateTimeEntry(ctx context.Context, userID uuid.UUID, r
 		wtIDParam = &weeklyTimesheetID
 	}
 
+	var asmIDParam *uuid.UUID
+	if req.AssemblyID != nil && *req.AssemblyID != uuid.Nil {
+		asmIDParam = req.AssemblyID
+	}
+
 	err := r.db.QueryRowContext(ctx, insertQuery,
-		userID, wtIDParam, machineID, req.EntryType, req.ProjectTaskID, authorTaskID, req.ReworkItemID, req.DefectID,
+		userID, wtIDParam, machineID, asmIDParam, req.EntryType, req.ProjectTaskID, authorTaskID, req.ReworkItemID, req.DefectID,
 		workDate, req.HoursSpent, req.WorkDescription,
 	).Scan(
-		&entry.ID, &entry.UserID, &wtID, &mID, &entry.EntryType, &taskID, &aTaskID, &rwID, &defID,
+		&entry.ID, &entry.UserID, &wtID, &mID, &asmID, &entry.EntryType, &taskID, &aTaskID, &rwID, &defID,
 		&wDate, &entry.HoursSpent, &entry.WorkDescription, &entry.CreatedAt, &entry.UpdatedAt,
 	)
 	if err != nil {
@@ -603,6 +608,10 @@ func (r *sqlRepository) CreateTimeEntry(ctx context.Context, userID uuid.UUID, r
 	}
 	if aTaskID.Valid {
 		entry.TaskID = &aTaskID.UUID
+	}
+	if asmID.Valid {
+		entry.AssemblyID = &asmID.UUID
+		_ = r.db.QueryRowContext(ctx, `SELECT assembly_code, name FROM machine_assemblies WHERE id = $1`, asmID.UUID).Scan(&entry.AssemblyCode, &entry.AssemblyName)
 	}
 	if weeklyTimesheetID != uuid.Nil {
 		_, _ = r.db.ExecContext(ctx, `
@@ -643,6 +652,7 @@ func (r *sqlRepository) CreateTimeEntry(ctx context.Context, userID uuid.UUID, r
 func (r *sqlRepository) GetTimeEntries(ctx context.Context, userID *uuid.UUID, machineID *uuid.UUID, startDate, endDate string) ([]models.TimeEntry, error) {
 	query := `
 		SELECT te.id, te.user_id, u.username, te.machine_id, COALESCE(m.order_number, ''),
+		       te.assembly_id, COALESCE(ma.assembly_code, ''), COALESCE(ma.name, ''),
 		       te.entry_type, te.project_task_id, te.task_id,
 		       COALESCE(pt.task_name, dt.task_name, te.work_description),
 		       COALESCE(pt.department, dt.department, ''),
@@ -653,6 +663,7 @@ func (r *sqlRepository) GetTimeEntries(ctx context.Context, userID *uuid.UUID, m
 		FROM time_entries te
 		JOIN users u ON te.user_id = u.id
 		LEFT JOIN machines m ON te.machine_id = m.id
+		LEFT JOIN machine_assemblies ma ON te.assembly_id = ma.id
 		LEFT JOIN project_tasks pt ON te.project_task_id = pt.id
 		LEFT JOIN department_tasks dt ON te.task_id = dt.id
 		LEFT JOIN rework_items rw ON te.rework_item_id = rw.id
@@ -692,9 +703,10 @@ func (r *sqlRepository) GetTimeEntries(ctx context.Context, userID *uuid.UUID, m
 	entries := make([]models.TimeEntry, 0)
 	for rows.Next() {
 		var e models.TimeEntry
-		var mID, ptID, tID, rwID, defID uuid.NullUUID
+		var mID, asmID, ptID, tID, rwID, defID uuid.NullUUID
 		if err := rows.Scan(
 			&e.ID, &e.UserID, &e.UserName, &mID, &e.OrderNumber,
+			&asmID, &e.AssemblyCode, &e.AssemblyName,
 			&e.EntryType, &ptID, &tID, &e.TaskName, &e.Department,
 			&rwID, &e.ReworkPartNum, &defID,
 			&e.WorkDate, &e.HoursSpent, &e.WorkDescription,
@@ -704,6 +716,9 @@ func (r *sqlRepository) GetTimeEntries(ctx context.Context, userID *uuid.UUID, m
 		}
 		if mID.Valid {
 			e.MachineID = &mID.UUID
+		}
+		if asmID.Valid {
+			e.AssemblyID = &asmID.UUID
 		}
 		if ptID.Valid {
 			e.ProjectTaskID = &ptID.UUID
@@ -804,6 +819,7 @@ func (r *sqlRepository) FetchWeeklyTimesheet(ctx context.Context, timesheetID uu
 	entriesQuery := `
 		SELECT 
 			te.id, te.user_id, u.username, te.weekly_timesheet_id, te.machine_id, COALESCE(m.order_number, ''),
+			te.assembly_id, COALESCE(ma.assembly_code, ''), COALESCE(ma.name, ''),
 			te.entry_type, te.project_task_id, te.task_id,
 			COALESCE(dt.task_name, pt.task_name, te.work_description, 'General Task'),
 			COALESCE(dt.department, pt.department, ''),
@@ -814,6 +830,7 @@ func (r *sqlRepository) FetchWeeklyTimesheet(ctx context.Context, timesheetID uu
 		FROM time_entries te
 		JOIN users u ON te.user_id = u.id
 		LEFT JOIN machines m ON te.machine_id = m.id
+		LEFT JOIN machine_assemblies ma ON te.assembly_id = ma.id
 		LEFT JOIN project_tasks pt ON te.project_task_id = pt.id
 		LEFT JOIN department_tasks dt ON te.task_id = dt.id
 		LEFT JOIN rework_items rw ON te.rework_item_id = rw.id
@@ -829,9 +846,10 @@ func (r *sqlRepository) FetchWeeklyTimesheet(ctx context.Context, timesheetID uu
 	wt.Entries = make([]models.TimeEntry, 0)
 	for rows.Next() {
 		var e models.TimeEntry
-		var wtID, mID, ptID, tID, rwID, defID uuid.NullUUID
+		var wtID, mID, asmID, ptID, tID, rwID, defID uuid.NullUUID
 		if err := rows.Scan(
 			&e.ID, &e.UserID, &e.UserName, &wtID, &mID, &e.OrderNumber,
+			&asmID, &e.AssemblyCode, &e.AssemblyName,
 			&e.EntryType, &ptID, &tID, &e.TaskName,
 			&e.Department,
 			&rwID, &e.ReworkPartNum,
@@ -846,6 +864,9 @@ func (r *sqlRepository) FetchWeeklyTimesheet(ctx context.Context, timesheetID uu
 		}
 		if mID.Valid {
 			e.MachineID = &mID.UUID
+		}
+		if asmID.Valid {
+			e.AssemblyID = &asmID.UUID
 		}
 		if ptID.Valid {
 			e.ProjectTaskID = &ptID.UUID
@@ -1021,11 +1042,11 @@ func (r *sqlRepository) SaveWeeklyTimesheet(ctx context.Context, timesheetID uui
 		if item.ID != nil && existingIDs[*item.ID] {
 			_, err = tx.ExecContext(ctx, `
 				UPDATE time_entries
-				SET machine_id = $1, entry_type = $2, project_task_id = $3, task_id = $4,
-				    rework_item_id = $5, defect_id = $6,
-				    work_date = $7::date, hours_spent = $8, work_description = $9, updated_at = NOW()
-				WHERE id = $10 AND weekly_timesheet_id = $11
-			`, machineID, entryType, item.ProjectTaskID, authorTaskID, item.ReworkItemID, item.DefectID, item.WorkDate, item.HoursSpent, item.WorkDescription, *item.ID, timesheetID)
+				SET machine_id = $1, assembly_id = $2, entry_type = $3, project_task_id = $4, task_id = $5,
+				    rework_item_id = $6, defect_id = $7,
+				    work_date = $8::date, hours_spent = $9, work_description = $10, updated_at = NOW()
+				WHERE id = $11 AND weekly_timesheet_id = $12
+			`, machineID, item.AssemblyID, entryType, item.ProjectTaskID, authorTaskID, item.ReworkItemID, item.DefectID, item.WorkDate, item.HoursSpent, item.WorkDescription, *item.ID, timesheetID)
 			if err != nil {
 				return nil, err
 			}
@@ -1034,12 +1055,12 @@ func (r *sqlRepository) SaveWeeklyTimesheet(ctx context.Context, timesheetID uui
 			var newEntryID uuid.UUID
 			err = tx.QueryRowContext(ctx, `
 				INSERT INTO time_entries (
-					user_id, weekly_timesheet_id, machine_id, entry_type, project_task_id, task_id,
+					user_id, weekly_timesheet_id, machine_id, assembly_id, entry_type, project_task_id, task_id,
 					rework_item_id, defect_id, work_date, hours_spent, work_description
 				)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::date, $10, $11)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::date, $11, $12)
 				RETURNING id
-			`, ownerID, timesheetID, machineID, entryType, item.ProjectTaskID, authorTaskID, item.ReworkItemID, item.DefectID, item.WorkDate, item.HoursSpent, item.WorkDescription).Scan(&newEntryID)
+			`, ownerID, timesheetID, machineID, item.AssemblyID, entryType, item.ProjectTaskID, authorTaskID, item.ReworkItemID, item.DefectID, item.WorkDate, item.HoursSpent, item.WorkDescription).Scan(&newEntryID)
 			if err != nil {
 				return nil, err
 			}

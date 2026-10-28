@@ -13,7 +13,7 @@
 .sheet {
   box-sizing: border-box;
   width: 100%;
-  max-width: 860px;
+  max-width: 1040px;
   background-color: #ffffff !important;
   color: #111111 !important;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -85,20 +85,51 @@
   color: #000000;
 }
 
-/* Column Widths (matching ~31% Col A, 8.7% each Col B-H, 8.1% Col I) */
-.colJob {
-  width: 31%;
+/* Column Widths for Landscape Timesheet */
+.colProject {
+  width: 14%;
+  text-align: left;
+}
+
+.colAssembly {
+  width: 18%;
+  text-align: left;
+}
+
+.colTask {
+  width: 22%;
   text-align: left;
 }
 
 .colDay {
-  width: 8.7%;
+  width: 5.5%;
   text-align: center;
 }
 
 .colTotal {
-  width: 8.1%;
+  width: 7.5%;
   text-align: right;
+}
+
+.colJob {
+  width: 54%;
+  text-align: left;
+}
+
+.colSegmentSpan {
+  text-align: left;
+}
+
+.cellText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.boldText {
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* Header Rows */
@@ -129,7 +160,7 @@
 
 /* Task / Job Rows */
 .rowJob td {
-  height: 30px;
+  height: 26px;
   font-size: 11.5px;
 }
 
@@ -157,7 +188,7 @@
 
 /* Blank / Write-in Rows */
 .rowBlank td {
-  height: 30px;
+  height: 26px;
 }
 
 /* Totals Row */
@@ -189,6 +220,61 @@
 
 .overtimeBracket {
   font-weight: 800;
+}
+
+/* Comments, Notes & Remarks Section */
+.commentsBox {
+  width: 100%;
+  border: 1.5px solid #111111;
+  border-radius: 2px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  background-color: #ffffff;
+  box-sizing: border-box;
+  page-break-inside: avoid;
+}
+
+.commentsHeader {
+  background-color: #f0f0f0;
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  border-bottom: 1.5px solid #111111;
+  color: #111111;
+}
+
+.commentsBody {
+  padding: 8px 10px;
+  min-height: 76px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.commentsText {
+  font-size: 11px;
+  color: #111111;
+  white-space: pre-wrap;
+  margin-bottom: 8px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.commentsLines {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.commentRule {
+  width: 100%;
+  border-bottom: 1px dashed #b0b0b0;
+  height: 1px;
 }
 
 /* Footer & Approval Section */

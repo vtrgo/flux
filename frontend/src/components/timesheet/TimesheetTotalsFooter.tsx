@@ -27,7 +27,7 @@ export const TimesheetTotalsFooter = memo(function TimesheetTotalsFooter({
   return (
     <tfoot>
       <tr className={styles.footerRow}>
-        <td colSpan={3} style={{ textAlign: 'right', paddingRight: '1rem' }}>
+        <td colSpan={4} style={{ textAlign: 'right', paddingRight: '1rem' }}>
           Daily Total:
         </td>
         {weekDays.map(day => (
