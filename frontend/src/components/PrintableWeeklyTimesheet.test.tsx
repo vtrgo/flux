@@ -58,7 +58,7 @@ describe('PrintableWeeklyTimesheet', () => {
     expect(screen.getByText('Weekly Job Schedule')).toBeInTheDocument();
     // Week Ending Saturday date for 2026-10-18 is 2026-10-24 (10/24/2026)
     expect(screen.getByText('10/24/2026')).toBeInTheDocument();
-    expect(screen.getByText('Please add brackets () to time over 40 hours')).toBeInTheDocument();
+    expect(screen.queryByText('Please add brackets () to time over 40 hours')).not.toBeInTheDocument();
   });
 
   it('renders days of week header (Sun - Sat) and M/D calendar dates', () => {
@@ -122,19 +122,18 @@ describe('PrintableWeeklyTimesheet', () => {
     expect(screen.getByText('14.75')).toBeInTheDocument();
   });
 
-  it('pads with empty blank rows to match 10 rows of timesheet data total', () => {
+  it('pads with empty blank rows to match 15 rows of timesheet data total by default', () => {
     const { container } = render(
       <PrintableWeeklyTimesheet
         timesheet={mockTimesheet}
         weekStartDate="2026-10-18"
         rows={mockRows}
-        totalTargetRows={10}
       />
     );
 
-    // 2 active rows + 8 padded blank rows = 10 tbody rows in the matrix grid
+    // 2 active rows + 13 padded blank rows = 15 tbody rows in the matrix grid
     const gridTbody = container.querySelector('[data-testid="timesheet-grid-table"] tbody');
-    expect(gridTbody?.children.length).toBe(10);
+    expect(gridTbody?.children.length).toBe(15);
   });
 
   it('renders comments, notes and remarks section', () => {
@@ -196,7 +195,7 @@ describe('PrintableWeeklyTimesheet', () => {
     expect(screen.getByText('(54)')).toBeInTheDocument();
   });
 
-  it('renders approval signature box and Lisa delivery notice', () => {
+  it('omits approval signature box and renders Lisa delivery notice', () => {
     render(
       <PrintableWeeklyTimesheet
         timesheet={mockTimesheet}
@@ -205,33 +204,12 @@ describe('PrintableWeeklyTimesheet', () => {
       />
     );
 
-    expect(screen.getByText('Job allocation approved by')).toBeInTheDocument();
-    expect(screen.getByText(/Signature:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Date:/i)).toBeInTheDocument();
+    expect(screen.queryByText('Job allocation approved by')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Signature:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Date:/i)).not.toBeInTheDocument();
     expect(
       screen.getByText('Approved timesheets must be delivered to Lisa every Monday morning')
     ).toBeInTheDocument();
-  });
-
-  it('displays digital approval seal when timesheet has been approved in Flux', () => {
-    const approvedTimesheet: WeeklyTimesheet = {
-      ...mockTimesheet,
-      status: 'approved',
-      approved_by: 'mgr-1',
-      approver_name: 'Sarah Connor',
-      approved_at: '2026-10-24T14:30:00Z',
-    };
-
-    render(
-      <PrintableWeeklyTimesheet
-        timesheet={approvedTimesheet}
-        weekStartDate="2026-10-18"
-        rows={mockRows}
-      />
-    );
-
-    expect(screen.getByText(/Digitally Approved in Flux by/i)).toBeInTheDocument();
-    expect(screen.getByText(/Sarah Connor/i)).toBeInTheDocument();
   });
 });
 

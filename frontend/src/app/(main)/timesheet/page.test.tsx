@@ -822,7 +822,7 @@ describe('TimesheetPage', () => {
 
     expect(screen.getByText('Print Weekly Timesheet')).toBeInTheDocument();
     expect(screen.getAllByText('Weekly Job Schedule').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Job allocation approved by').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Approved timesheets must be delivered to Lisa/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('opens printable timesheet modal when Cmd/Ctrl+P shortcut is pressed', async () => {

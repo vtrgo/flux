@@ -29,7 +29,7 @@ export function buildTimesheetPrintParams(
   department?: string,
   weekStartDate: string = '',
   explicitRows?: PrintableTimesheetRow[],
-  totalTargetRows: number = 10,
+  totalTargetRows: number = 15,
   notes?: string
 ): TimesheetPrintParams {
   const weekDays = getWeekDays(weekStartDate);
@@ -158,7 +158,7 @@ export function PrintableWeeklyTimesheet({
   department,
   weekStartDate,
   rows: explicitRows,
-  totalTargetRows = 10,
+  totalTargetRows = 15,
   notes: notesProp,
 }: PrintableWeeklyTimesheetProps) {
   const printData = useMemo(() => {
@@ -216,11 +216,6 @@ export function PrintableWeeklyTimesheet({
             <tr>
               <td colSpan={2} className={styles.weekEndingCell}>
                 Week Ending:&nbsp;&nbsp;<strong>{weekEndingFormatted}</strong>
-              </td>
-            </tr>
-            <tr>
-              <td colSpan={2} className={styles.instructionCell}>
-                Please add brackets () to time over 40 hours
               </td>
             </tr>
           </tbody>
@@ -323,47 +318,15 @@ export function PrintableWeeklyTimesheet({
               <div className={styles.commentsText}>{notes}</div>
             ) : null}
             <div className={styles.commentsLines}>
-              {Array.from({ length: notes ? 3 : 5 }).map((_, idx) => (
+              {Array.from({ length: notes ? 4 : 7 }).map((_, idx) => (
                 <div key={idx} className={styles.commentRule}></div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Footer & Approval Section */}
+        {/* Footer Section */}
         <div className={styles.footerContainer}>
-          <table className={styles.approvalTable}>
-            <tbody>
-              <tr>
-                <td className={styles.approvalLabelCell}>
-                  Job allocation approved by
-                </td>
-                <td className={styles.approvalBoxCell}>
-                  <div className={styles.signatureLines}>
-                    <div className={styles.sigRow}>
-                      <span>Signature:</span>
-                      <div className={styles.sigUnderline}></div>
-                    </div>
-                    <div className={styles.sigRow}>
-                      <span>Date:</span>
-                      <div className={styles.sigUnderline} style={{ maxWidth: '120px' }}></div>
-                    </div>
-                  </div>
-
-                  {isApproved && (
-                    <div className={styles.digitalApprovalStamp}>
-                      <span>✅</span>
-                      <span>
-                        Digitally Approved in Flux by <strong>{approverName || 'Department Manager'}</strong>
-                        {approvalDateFormatted ? ` on ${approvalDateFormatted}` : ''}
-                      </span>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
           <div className={styles.deliveryNotice}>
             Approved timesheets must be delivered to Lisa every Monday morning
           </div>
