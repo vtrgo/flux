@@ -16,8 +16,10 @@ import { CoNCWidget } from "../../../components/CoNCWidget";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 import { formatDepartmentName } from "../../../lib/departments";
 import { ChartIcon, ClipboardIcon } from "../../../components/ui/Icons";
+import { useAuth } from "../../../contexts/AuthContext";
 
 export default function QualityResolutionHub() {
+  const { isAdmin } = useAuth();
   const [defects, setDefects] = useState<Defect[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export default function QualityResolutionHub() {
   const [isNCRModalOpen, setIsNCRModalOpen] = useState(false);
   const [editingNCR, setEditingNCR] = useState<NCR | null>(null);
 
-  const [showCoNC, setShowCoNC] = useState(true);
+  const [showCoNC, setShowCoNC] = useState(false);
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -162,15 +164,17 @@ export default function QualityResolutionHub() {
       <header className={`${styles.header} no-print`}>
         <h1 className={styles.title} style={{ color: 'var(--vtr-theme-primary)' }}>Quality / PM Hub</h1>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="vtr-btn vtr-btn-secondary"
-            onClick={() => setShowCoNC(prev => !prev)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-            title="Toggle Cost of Non-Conformance metrics"
-          >
-            <ChartIcon size={14} /> {showCoNC ? 'Hide CoNC Metrics' : 'CoNC Metrics'}
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="vtr-btn vtr-btn-secondary"
+              onClick={() => setShowCoNC(prev => !prev)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              title="Toggle Cost of Non-Conformance metrics"
+            >
+              <ChartIcon size={14} /> {showCoNC ? 'Hide CoNC Metrics' : 'CoNC Metrics'}
+            </button>
+          )}
           <Link href="/ncrs" className="vtr-btn vtr-btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
             <ClipboardIcon size={14} /> NCR Tracker
           </Link>
@@ -185,7 +189,7 @@ export default function QualityResolutionHub() {
         </div>
       </header>
 
-      {showCoNC && <CoNCWidget />}
+      {isAdmin && showCoNC && <CoNCWidget />}
 
       <div className={`${styles.filters} no-print`}>
         <input 
