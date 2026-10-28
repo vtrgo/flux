@@ -195,7 +195,7 @@ describe('PrintableWeeklyTimesheet', () => {
     expect(screen.getByText('(54)')).toBeInTheDocument();
   });
 
-  it('omits approval signature box and renders Lisa delivery notice', () => {
+  it('omits approval signature box and Lisa delivery notice for clean single-page footer', () => {
     render(
       <PrintableWeeklyTimesheet
         timesheet={mockTimesheet}
@@ -207,9 +207,8 @@ describe('PrintableWeeklyTimesheet', () => {
     expect(screen.queryByText('Job allocation approved by')).not.toBeInTheDocument();
     expect(screen.queryByText(/Signature:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Date:/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByText('Approved timesheets must be delivered to Lisa every Monday morning')
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/Approved timesheets must be delivered to Lisa/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Flux MES/i)).toBeInTheDocument();
   });
 });
 

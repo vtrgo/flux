@@ -318,7 +318,7 @@ export function PrintableWeeklyTimesheet({
               <div className={styles.commentsText}>{notes}</div>
             ) : null}
             <div className={styles.commentsLines}>
-              {Array.from({ length: notes ? 4 : 7 }).map((_, idx) => (
+              {Array.from({ length: notes ? 3 : 5 }).map((_, idx) => (
                 <div key={idx} className={styles.commentRule}></div>
               ))}
             </div>
@@ -327,10 +327,6 @@ export function PrintableWeeklyTimesheet({
 
         {/* Footer Section */}
         <div className={styles.footerContainer}>
-          <div className={styles.deliveryNotice}>
-            Approved timesheets must be delivered to Lisa every Monday morning
-          </div>
-
           <div className={styles.systemAuditLine}>
             <span>
               Flux MES &bull; Timesheet ID: {timesheetId ? timesheetId.slice(0, 8) : 'NEW'} &bull; Status: {(status || 'draft').toUpperCase()}
