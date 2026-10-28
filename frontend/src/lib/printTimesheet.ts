@@ -17,7 +17,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     weekEndingDate,
     weekDays,
     rows,
-    totalTargetRows = 10,
+    totalTargetRows = 15,
     dayTotals,
     grandTotal,
     isOvertime,
@@ -244,9 +244,9 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     .thDayName {
       background-color: #f0f0f0 !important;
       font-weight: 700;
-      font-size: 12px;
+      font-size: 11.5px;
       text-align: center;
-      height: 28px;
+      height: 26px;
       letter-spacing: 0.25px;
     }
     .thDateLabel {
@@ -254,17 +254,17 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       font-weight: 700;
       font-size: 11px;
       text-align: left;
-      height: 24px;
+      height: 22px;
     }
     .thDateValue {
       background-color: #f8f8f8 !important;
       font-weight: 600;
       font-size: 11px;
       text-align: center;
-      height: 24px;
+      height: 22px;
     }
     .rowJob td {
-      height: 26px;
+      height: 23px;
       font-size: 11px;
     }
     .jobName {
@@ -277,23 +277,23 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     .cellHours {
       text-align: center;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 500;
     }
     .cellRowTotal {
       text-align: right;
       font-weight: 700;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
+      font-size: 11.5px;
     }
     .rowBlank td {
-      height: 26px;
+      height: 23px;
     }
     .rowTotals td {
       background-color: #e5e5e5 !important;
       font-weight: 800;
       font-size: 12px;
-      height: 32px;
+      height: 28px;
       border-top: 2px solid #000000 !important;
       border-bottom: 2px solid #000000 !important;
     }
@@ -304,11 +304,11 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     .cellDayTotal {
       text-align: center;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
+      font-size: 11.5px;
     }
     .cellGrandTotal {
       text-align: right;
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 800;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
@@ -319,7 +319,8 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       width: 100%;
       border: 1.5px solid #000000;
       border-radius: 2px;
-      margin-bottom: 8px;
+      margin-top: 6px;
+      margin-bottom: 6px;
       background: #ffffff;
       box-sizing: border-box;
       page-break-inside: avoid;
@@ -336,7 +337,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     }
     .commentsBody {
       padding: 6px 10px;
-      min-height: 76px;
+      min-height: 115px;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -353,7 +354,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     .commentsLines {
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 16px;
       margin-top: 4px;
       width: 100%;
     }
@@ -455,11 +456,6 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
             Week Ending:&nbsp;&nbsp;<strong>${escapeHtml(weekEndingDate)}</strong>
           </td>
         </tr>
-        <tr>
-          <td colspan="2" class="instructionCell">
-            Please add brackets () to time over 40 hours
-          </td>
-        </tr>
       </tbody>
     </table>
 
@@ -495,35 +491,12 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       <div class="commentsBody">
         ${notes ? `<div class="commentsText">${escapeHtml(notes)}</div>` : ''}
         <div class="commentsLines">
-          ${Array.from({ length: notes ? 3 : 5 }).map(() => `<div class="commentRule"></div>`).join('')}
+          ${Array.from({ length: notes ? 4 : 7 }).map(() => `<div class="commentRule"></div>`).join('')}
         </div>
       </div>
     </div>
 
     <div class="footerContainer">
-      <table class="approvalTable">
-        <tbody>
-          <tr>
-            <td class="approvalLabelCell">
-              Job allocation approved by
-            </td>
-            <td class="approvalBoxCell">
-              <div class="signatureLines">
-                <div class="sigRow">
-                  <span>Signature:</span>
-                  <div class="sigUnderline"></div>
-                </div>
-                <div class="sigRow">
-                  <span>Date:</span>
-                  <div class="sigUnderline" style="max-width: 120px;"></div>
-                </div>
-              </div>
-              ${digitalSealHtml}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
       <div class="deliveryNotice">
         Approved timesheets must be delivered to Lisa every Monday morning
       </div>

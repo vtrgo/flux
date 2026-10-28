@@ -61,14 +61,14 @@ describe('printTimesheet utilities', () => {
     expect(html).toContain('EMPLOYEE NAME:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Lucas Sinclair');
     expect(html).toContain('Weekly Job Schedule');
     expect(html).toContain('Week Ending:&nbsp;&nbsp;<strong>10/24/2026</strong>');
-    expect(html).toContain('Please add brackets () to time over 40 hours');
+    expect(html).not.toContain('Please add brackets () to time over 40 hours');
     expect(html).toContain('Project / Order #');
     expect(html).toContain('Assembly');
     expect(html).toContain('Task Description');
     expect(html).toContain('22-003A1');
     expect(html).toContain('EP');
     expect(html).toContain('Shop');
-    expect(html).toContain('Job allocation approved by');
+    expect(html).not.toContain('Job allocation approved by');
     expect(html).toContain('Approved timesheets must be delivered to Lisa every Monday morning');
     expect(html).toContain('Comments / Notes &amp; Remarks');
     expect(html).toContain('@page {');
@@ -121,7 +121,7 @@ describe('printTimesheet utilities', () => {
     expect(html).toContain('(53)');
   });
 
-  it('renders digital approval seal when timesheet is approved', () => {
+  it('omits approval signature section and renders status audit line', () => {
     const approvedParams: TimesheetPrintParams = {
       ...mockParams,
       status: 'approved',
@@ -131,8 +131,8 @@ describe('printTimesheet utilities', () => {
     };
 
     const html = generateTimesheetHtml(approvedParams);
-    expect(html).toContain('Digitally Approved in Flux by <strong>Sarah Connor</strong>');
-    expect(html).toContain('on 10/24/2026');
+    expect(html).not.toContain('Job allocation approved by');
+    expect(html).toContain('Status: APPROVED');
   });
 
   it('prints via isolated iframe without errors', () => {

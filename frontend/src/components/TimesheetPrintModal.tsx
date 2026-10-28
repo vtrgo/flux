@@ -26,7 +26,7 @@ export function TimesheetPrintModal({
   department,
   weekStartDate,
   rows,
-  totalTargetRows = 10,
+  totalTargetRows = 15,
   notes,
 }: TimesheetPrintModalProps) {
   const handlePrint = useCallback(() => {
