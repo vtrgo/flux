@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { fetchApi } from "../lib/api";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { calendarDateToUtcNoon } from "../lib/dateUtils";
@@ -21,17 +21,17 @@ export function SpawnMachineModal({ isOpen, onClose, orderId, orderName, onSucce
   const [newMachineFatDate, setNewMachineFatDate] = useState("");
   const [newMachineLead, setNewMachineLead] = useState("");
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setNewMachineModel("");
     setNewMachineSN("");
     setNewMachineFatDate("");
     setNewMachineLead("");
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     onClose();
     resetForm();
-  };
+  }, [onClose, resetForm]);
 
   const spawnMachine = async () => {
     if (!newMachineModel || !newMachineSN) return;

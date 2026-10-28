@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { fetchApi } from "../lib/api";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 import { calendarDateToUtcNoon } from "../lib/dateUtils";
@@ -22,7 +22,7 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess }: SalesOrderModalP
   const [salesRep, setSalesRep] = useState("");
   const [targetDate, setTargetDate] = useState("");
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setCustomerName("");
     setPoNumber("");
     setInternalProjectNumber("");
@@ -30,12 +30,12 @@ export function SalesOrderModal({ isOpen, onClose, onSuccess }: SalesOrderModalP
     setResponsiblePerson("");
     setSalesRep("");
     setTargetDate("");
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     onClose();
     resetForm();
-  };
+  }, [onClose, resetForm]);
 
   const createOrder = async () => {
     if (!customerName || !poNumber) return;

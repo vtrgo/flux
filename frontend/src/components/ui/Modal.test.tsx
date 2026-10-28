@@ -110,4 +110,51 @@ describe('Modal Primitive Component', () => {
     expect(document.activeElement).toBe(triggerBtn);
     document.body.removeChild(triggerBtn);
   });
+
+  it('focuses input in modal body rather than close button upon opening', async () => {
+    vi.useFakeTimers();
+    render(
+      <Modal isOpen={true} onClose={vi.fn()} title="Focus Dialog">
+        <input data-testid="target-input" placeholder="Enter text" />
+      </Modal>
+    );
+
+    vi.runAllTimers();
+
+    const targetInput = screen.getByTestId('target-input');
+    const closeBtn = screen.getByTestId('modal-close-btn');
+
+    expect(document.activeElement).toBe(targetInput);
+    expect(document.activeElement).not.toBe(closeBtn);
+    vi.useRealTimers();
+  });
+
+  it('does not hijack focus to close button when re-rendered with new onClose reference', async () => {
+    vi.useFakeTimers();
+    const { rerender } = render(
+      <Modal isOpen={true} onClose={() => {}} title="Re-render Dialog">
+        <input data-testid="typing-input" placeholder="Typing here" />
+      </Modal>
+    );
+
+    vi.runAllTimers();
+    const typingInput = screen.getByTestId('typing-input');
+    const closeBtn = screen.getByTestId('modal-close-btn');
+
+    typingInput.focus();
+    expect(document.activeElement).toBe(typingInput);
+
+    // Simulate parent re-render passing a new onClose function (e.g. on every keystroke)
+    rerender(
+      <Modal isOpen={true} onClose={() => {}} title="Re-render Dialog">
+        <input data-testid="typing-input" placeholder="Typing here" />
+      </Modal>
+    );
+
+    vi.runAllTimers();
+
+    expect(document.activeElement).toBe(typingInput);
+    expect(document.activeElement).not.toBe(closeBtn);
+    vi.useRealTimers();
+  });
 });
