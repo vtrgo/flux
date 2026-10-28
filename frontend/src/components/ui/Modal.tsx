@@ -27,11 +27,16 @@ export const Modal: React.FC<ModalProps> = function Modal({
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousActiveElementRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -61,7 +66,7 @@ export const Modal: React.FC<ModalProps> = function Modal({
         }
       }
     },
-    [onClose]
+    []
   );
 
   useEffect(() => {
@@ -76,14 +81,38 @@ export const Modal: React.FC<ModalProps> = function Modal({
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    // Auto-focus the first focusable element inside the dialog
+    // Auto-focus the first appropriate element inside the dialog when opened
     const focusTimer = setTimeout(() => {
       if (dialogRef.current) {
-        const firstFocusable = dialogRef.current.querySelector<HTMLElement>(
+        // Do not move focus if focus is already within the dialog
+        if (dialogRef.current.contains(document.activeElement) && document.activeElement !== dialogRef.current) {
+          return;
+        }
+
+        // 1. Prioritize element with autofocus attribute
+        const autofocusElement = dialogRef.current.querySelector<HTMLElement>(
+          '[autofocus]:not([disabled])'
+        );
+        if (autofocusElement) {
+          autofocusElement.focus();
+          return;
+        }
+
+        // 2. Prioritize first focusable control inside the modal body
+        const bodyFocusable = dialogRef.current.querySelector<HTMLElement>(
+          `.${styles.body} button:not([disabled]), .${styles.body} [href], .${styles.body} input:not([disabled]), .${styles.body} select:not([disabled]), .${styles.body} textarea:not([disabled]), .${styles.body} [tabindex]:not([tabindex="-1"])`
+        );
+        if (bodyFocusable) {
+          bodyFocusable.focus();
+          return;
+        }
+
+        // 3. Fallback to any focusable element (e.g. footer button or close button)
+        const anyFocusable = dialogRef.current.querySelector<HTMLElement>(
           'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
         );
-        if (firstFocusable) {
-          firstFocusable.focus();
+        if (anyFocusable) {
+          anyFocusable.focus();
         } else {
           dialogRef.current.focus();
         }
