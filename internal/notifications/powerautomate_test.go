@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,22 +66,134 @@ func TestPowerAutomateChannel_BuildAdaptiveCard(t *testing.T) {
 	}
 
 	// Element 2: FactSet
-	if card.Body[2].Type != "FactSet" || len(card.Body[2].Facts) != 4 {
+	if card.Body[2].Type != "FactSet" {
 		t.Fatalf("unexpected factset item: %+v", card.Body[2])
 	}
 
-	facts := card.Body[2].Facts
-	if facts[0].Title != "Machine ID:" || facts[0].Value != "25-115G" {
-		t.Errorf("unexpected Machine ID fact: %+v", facts[0])
+	factsMap := make(map[string]string)
+	for _, f := range card.Body[2].Facts {
+		factsMap[f.Title] = f.Value
 	}
-	if facts[1].Title != "Opened By:" || facts[1].Value != "Lucas Rettore" {
-		t.Errorf("unexpected Opened By fact: %+v", facts[1])
+
+	if factsMap["Machine ID:"] != "25-115G" {
+		t.Errorf("unexpected Machine ID fact: %s", factsMap["Machine ID:"])
 	}
-	if facts[2].Title != "Date Opened:" || facts[2].Value != "2026-09-16 14:28 EDT" {
-		t.Errorf("unexpected Date Opened fact: got %s, expected 2026-09-16 14:28 EDT", facts[2].Value)
+	if factsMap["Opened By:"] != "Lucas Rettore" {
+		t.Errorf("unexpected Opened By fact: %s", factsMap["Opened By:"])
 	}
-	if facts[3].Title != "Due Date:" || facts[3].Value != "2026-09-18 17:00 EDT" {
-		t.Errorf("unexpected Due Date fact: got %s, expected 2026-09-18 17:00 EDT", facts[3].Value)
+	if factsMap["Date Opened:"] != "2026-09-16 14:28 EDT" {
+		t.Errorf("unexpected Date Opened fact: got %s, expected 2026-09-16 14:28 EDT", factsMap["Date Opened:"])
+	}
+	if factsMap["Due Date:"] != "2026-09-18 17:00 EDT" {
+		t.Errorf("unexpected Due Date fact: got %s, expected 2026-09-18 17:00 EDT", factsMap["Due Date:"])
+	}
+	if factsMap["Department:"] != "Controls" {
+		t.Errorf("unexpected Department fact: got %s, expected Controls", factsMap["Department:"])
+	}
+	if factsMap["Severity:"] != "CRITICAL" {
+		t.Errorf("unexpected Severity fact: got %s, expected CRITICAL", factsMap["Severity:"])
+	}
+	if !strings.Contains(factsMap["Issue Link:"], "http://vtrflux/machine?id=") {
+		t.Errorf("unexpected Issue Link fact: %s", factsMap["Issue Link:"])
+	}
+
+	// Verify actions and HTML link
+	if len(card.Actions) != 1 || card.Actions[0].Type != "Action.OpenUrl" || card.Actions[0].Title != "View Issue in vtrFlux" {
+		t.Errorf("unexpected Actions: %+v", card.Actions)
+	}
+	if !strings.Contains(card.IssueLinkHTML, `<a href="http://vtrflux/machine?id=`) {
+		t.Errorf("unexpected IssueLinkHTML: %s", card.IssueLinkHTML)
+	}
+}
+
+func TestPowerAutomateChannel_BuildAdaptiveCard_WithDetailedNotesAndAssignee(t *testing.T) {
+	cfg := Config{
+		Enabled:               true,
+		PowerAutomateURL:      "http://example.com/webhook",
+		DefaultRecipientEmail: "justin@vtrfeedersolutions.com",
+		AppBaseURL:            "http://vtrflux",
+	}
+	channel := NewPowerAutomateChannel(cfg, nil)
+
+	dueDate := time.Date(2026, 9, 25, 21, 0, 0, 0, time.UTC)
+	dateOpened := time.Date(2026, 9, 20, 15, 30, 0, 0, time.UTC)
+	defectID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	machineID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+
+	notif := IssueNotification{
+		DefectID:       defectID,
+		MachineID:      machineID,
+		MachineNumber:  "25-200A",
+		Description:    "Bowl feeder sensor bracket loose",
+		Severity:       "major",
+		Status:         "open",
+		AssignedDept:   "assembly",
+		AssigneeName:   "Lucas Rettore",
+		Notes:          "Tighten M5 bracket bolts and re-calibrate fiber optic sensor before noon FAT.",
+		RecipientEmail: "lucas@vtrfeedersolutions.com",
+		OpenedByName:   "Justin Reporter",
+		DateOpened:     dateOpened,
+		DueDate:        &dueDate,
+		Timezone:       "America/Toronto",
+	}
+
+	card := channel.BuildAdaptiveCard(notif)
+
+	// Since Notes are present, len(card.Body) should be 4: Header, Description, Detailed Notes, FactSet
+	if len(card.Body) != 4 {
+		t.Fatalf("expected 4 body elements with notes, got %d", len(card.Body))
+	}
+
+	// Element 0: Header
+	if card.Body[0].Text != "vtrFlux Machine ID: 25-200A" {
+		t.Errorf("unexpected header: %s", card.Body[0].Text)
+	}
+
+	// Element 1: Description
+	if card.Body[1].Text != "Bowl feeder sensor bracket loose" {
+		t.Errorf("unexpected description: %s", card.Body[1].Text)
+	}
+
+	// Element 2: Detailed Notes
+	expectedNotes := "**Detailed Notes:**\nTighten M5 bracket bolts and re-calibrate fiber optic sensor before noon FAT."
+	if card.Body[2].Type != "TextBlock" || card.Body[2].Text != expectedNotes || !card.Body[2].Wrap {
+		t.Errorf("unexpected detailed notes item: %+v", card.Body[2])
+	}
+
+	// Element 3: FactSet
+	if card.Body[3].Type != "FactSet" {
+		t.Fatalf("expected FactSet at Body[3], got: %+v", card.Body[3])
+	}
+
+	factsMap := make(map[string]string)
+	for _, f := range card.Body[3].Facts {
+		factsMap[f.Title] = f.Value
+	}
+
+	if factsMap["Assignee:"] != "Lucas Rettore" {
+		t.Errorf("expected Assignee 'Lucas Rettore', got %s", factsMap["Assignee:"])
+	}
+	if factsMap["Department:"] != "Assembly" {
+		t.Errorf("expected Department 'Assembly', got %s", factsMap["Department:"])
+	}
+	if factsMap["Severity:"] != "MAJOR" {
+		t.Errorf("expected Severity 'MAJOR', got %s", factsMap["Severity:"])
+	}
+	if factsMap["Status:"] != "OPEN" {
+		t.Errorf("expected Status 'OPEN', got %s", factsMap["Status:"])
+	}
+
+	expectedURL := "http://vtrflux/machine?id=22222222-2222-2222-2222-222222222222&defect_id=11111111-1111-1111-1111-111111111111"
+	if card.IssueURL != expectedURL {
+		t.Errorf("expected IssueURL %s, got %s", expectedURL, card.IssueURL)
+	}
+	expectedHTML := `<a href="http://vtrflux/machine?id=22222222-2222-2222-2222-222222222222&defect_id=11111111-1111-1111-1111-111111111111">View Issue on 25-200A in vtrFlux</a>`
+	if card.IssueLinkHTML != expectedHTML {
+		t.Errorf("expected IssueLinkHTML %s, got %s", expectedHTML, card.IssueLinkHTML)
+	}
+
+	if len(card.Actions) != 1 || card.Actions[0].URL != expectedURL {
+		t.Errorf("expected action URL %s, got %+v", expectedURL, card.Actions)
 	}
 }
 

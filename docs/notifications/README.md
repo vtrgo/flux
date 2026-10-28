@@ -79,25 +79,30 @@ Sample payloads are provided for both types:
 
 ### Standard Defect Card Fields
 
-* **`recipient_email`**: Target email address for the notification (resolved from the assigned technician or the default fallback).
-* **`body[0]` (Header TextBlock)**: Prominent title styled with severity color accents (e.g., `Attention` for critical issues).
-* **`body[2]` (FactSet)**: Key-value metadata including:
-  * Issue ID (`DEF-...`)
-  * Severity (`CRITICAL`, `MAJOR`, `MINOR`)
-  * Status (`Open`)
-  * Target Resolution (Due Date)
-  * Machine Order Number & Model
-  * Source Department & Assigned Department (e.g., `Quality / PM`, `Machine Shop`, `Assembly`)
-  * Assigned Technician & Reporter
-  * Local Date/Time Reported
-* **`body[3..4]` (Containers)**: Formatted description and detailed notes/context blocks.
-* **`actions` (Action.OpenUrl)**: Deep-links directly to the machine detail view and the Quality Inspection Hub in Flux.
-* **`metadata`**: Machine-readable JSON metadata block for automated parsing in downstream Power Automate flows.
+* **`recipient_email`**: Target email address for the notification (resolved from the assigned technician or default fallback).
+* **`issue_url`**: Direct HTTP link to the issue in vtrFlux (`http://vtrflux/machine?id={MachineID}&defect_id={DefectID}`).
+* **`issue_link_html`**: Formatted HTML anchor tag for Power Automate Outlook email workflows (`<a href="...">View Issue on ... in vtrFlux</a>`).
+* **`body[0]` (Header TextBlock)**: `vtrFlux Machine ID: {MachineNumber}` styled Bolder / Medium.
+* **`body[1]` (Description TextBlock)**: Brief issue problem statement with `wrap: true`.
+* **`body[2]` (Detailed Notes TextBlock)**: Dedicated notes block formatted as `**Detailed Notes:**\n{Notes}` (included when notes are present).
+* **`body[3]` (FactSet)**: Key-value metadata facts:
+  * `Machine ID:`
+  * `Opened By:`
+  * `Date Opened:` (formatted in facility timezone)
+  * `Due Date:`
+  * `Assignee:` (Assigned technician full name, or department fallback, or Unassigned)
+  * `Department:` (Formatted department label, e.g. Controls, Assembly, Machine Shop)
+  * `Severity:` (`CRITICAL`, `MAJOR`, `MINOR`, `LOW`)
+  * `Status:` (`OPEN`, `FIXED`, `VERIFIED`)
+  * `Issue Link:` Clickable markdown link `[http://vtrflux/...](http://vtrflux/...)`
+* **`actions` (Action.OpenUrl)**: Prominent action button labelled **"View Issue in vtrFlux"** that directly links into `http://vtrflux/machine?id=...&defect_id=...`.
 
 ### Non-Conformance Report (NCR) Card Fields
 
 When `IsNCR` is true, the payload is formatted specifically for formal quality escalation:
 * **`recipient_email`**: Target email address (routed to the assigned responsible person or administrator).
+* **`issue_url`**: Direct deep-link to the machine and NCR in vtrFlux.
+* **`issue_link_html`**: Formatted HTML anchor tag.
 * **`body[0]` (Header TextBlock)**: High-visibility warning title: `⚠️ NON-CONFORMANCE REPORT: {NCRNumber} (Machine: {MachineNumber})`.
 * **`body[1]` (TextBlock)**: Non-conformance details and problem description.
 * **`body[2]` (FactSet)**: Formal NCR tracking metadata including:
@@ -112,6 +117,8 @@ When `IsNCR` is true, the payload is formatted specifically for formal quality e
   * Target Due Date
   * Root Cause
   * Corrective Action
+  * Issue Link: Direct clickable markdown link
+* **`actions` (Action.OpenUrl)**: Prominent action button labelled **"View Issue in vtrFlux"**.
 
 ---
 

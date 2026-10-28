@@ -310,6 +310,28 @@ func dispatchDefectNotification(ctx context.Context, defect models.Defect, assig
 		teamLeadSignature = *defect.TeamLeadSignature
 	}
 
+	notes := ""
+	if defect.Notes != nil {
+		notes = *defect.Notes
+	}
+
+	assigneeName := ""
+	if defect.AssignedUserName != nil {
+		assigneeName = *defect.AssignedUserName
+	}
+	if defect.AssignedUserID != nil {
+		var fullName string
+		if err := db.DB.QueryRowContext(ctx, `
+			SELECT COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), username)
+			FROM users WHERE id = $1
+		`, *defect.AssignedUserID).Scan(&fullName); err == nil && fullName != "" {
+			assigneeName = fullName
+		}
+	}
+	if assigneeName == "" && defect.IsNCR && teamLeadSignature != "" {
+		assigneeName = teamLeadSignature
+	}
+
 	notif := notifications.IssueNotification{
 		DefectID:          defect.ID,
 		MachineID:         defect.MachineID,
@@ -330,6 +352,8 @@ func dispatchDefectNotification(ctx context.Context, defect models.Defect, assig
 		CorrectiveAction:  correctiveAction,
 		TeamLeadSignature: teamLeadSignature,
 		Status:            defect.Status,
+		Notes:             notes,
+		AssigneeName:      assigneeName,
 	}
 
 	notifications.Dispatch(notif)

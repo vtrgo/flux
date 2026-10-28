@@ -22,6 +22,7 @@ function MachineDetailContent() {
   const { timezone } = useDateTime();
   const searchParams = useSearchParams();
   const id = searchParams.get("id") as string;
+  const targetDefectId = searchParams.get("defect_id") || searchParams.get("issue_id");
 
   const [machine, setMachine] = useState<Machine | null>(null);
   const [salesOrder, setSalesOrder] = useState<SalesOrder | null>(null);
@@ -86,6 +87,16 @@ function MachineDetailContent() {
 
     fetchData();
   }, [id]);
+
+  // Deep-link direct defect inspection if defect_id is in query params
+  useEffect(() => {
+    if (!targetDefectId || defects.length === 0) return;
+    const match = defects.find(d => d.id === targetDefectId);
+    if (match) {
+      setEditingDefect(match);
+      setIsModalOpen(true);
+    }
+  }, [targetDefectId, defects]);
 
   const openNewModal = useCallback(() => {
     setEditingDefect(null);

@@ -10,15 +10,27 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+// AdaptiveCardAction models interactive card actions (e.g., Action.OpenUrl)
+type AdaptiveCardAction struct {
+	Type  string `json:"type"`
+	Title string `json:"title"`
+	URL   string `json:"url"`
+}
 
 // AdaptiveCardPayload models the Microsoft Teams Adaptive Card format consumed by Power Automate.
 type AdaptiveCardPayload struct {
-	RecipientEmail string             `json:"recipient_email"`
-	Type           string             `json:"type"`
-	Schema         string             `json:"$schema"`
-	Version        string             `json:"version"`
-	Body           []AdaptiveCardItem `json:"body"`
+	RecipientEmail string               `json:"recipient_email"`
+	IssueURL       string               `json:"issue_url,omitempty"`
+	IssueLinkHTML  string               `json:"issue_link_html,omitempty"`
+	Type           string               `json:"type"`
+	Schema         string               `json:"$schema"`
+	Version        string               `json:"version"`
+	Body           []AdaptiveCardItem   `json:"body"`
+	Actions        []AdaptiveCardAction `json:"actions,omitempty"`
 }
 
 // AdaptiveCardItem models body elements (TextBlock, FactSet)
@@ -41,6 +53,7 @@ type AdaptiveCardFact struct {
 type PowerAutomateChannel struct {
 	webhookURL            string
 	defaultRecipientEmail string
+	appBaseURL            string
 	enabled               bool
 	client                *http.Client
 }
@@ -53,9 +66,16 @@ func NewPowerAutomateChannel(cfg Config, client *http.Client) *PowerAutomateChan
 		}
 	}
 
+	baseURL := cfg.AppBaseURL
+	if baseURL == "" {
+		baseURL = DefaultAppBaseURL
+	}
+	baseURL = strings.TrimRight(baseURL, "/")
+
 	return &PowerAutomateChannel{
 		webhookURL:            cfg.PowerAutomateURL,
 		defaultRecipientEmail: cfg.DefaultRecipientEmail,
+		appBaseURL:            baseURL,
 		enabled:               cfg.Enabled,
 		client:                client,
 	}
@@ -69,6 +89,30 @@ func (c *PowerAutomateChannel) Name() string {
 // IsEnabled indicates whether this channel is configured and active.
 func (c *PowerAutomateChannel) IsEnabled() bool {
 	return c.enabled && c.webhookURL != ""
+}
+
+// formatDepartmentName converts an internal department key to human-readable form.
+func formatDepartmentName(dept string) string {
+	switch strings.ToLower(dept) {
+	case "design":
+		return "Design"
+	case "kitting":
+		return "Kitting"
+	case "machine_shop":
+		return "Machine Shop"
+	case "laser":
+		return "Laser"
+	case "assembly":
+		return "Assembly"
+	case "electrical_controls", "controls":
+		return "Controls"
+	case "enclosures":
+		return "Enclosures"
+	case "quality", "quality_pm", "pm", "project_management":
+		return "Quality / PM"
+	default:
+		return dept
+	}
 }
 
 // BuildAdaptiveCard constructs the Adaptive Card payload from an issue notification.
@@ -98,6 +142,35 @@ func (c *PowerAutomateChannel) BuildAdaptiveCard(notif IssueNotification) Adapti
 	openedBy := notif.OpenedByName
 	if openedBy == "" {
 		openedBy = "System"
+	}
+
+	// Resolve issue link and HTML representation
+	issueURL := notif.IssueURL
+	if issueURL == "" {
+		baseURL := c.appBaseURL
+		if baseURL == "" {
+			baseURL = DefaultAppBaseURL
+		}
+		if notif.MachineID != uuid.Nil {
+			if notif.DefectID != uuid.Nil {
+				issueURL = fmt.Sprintf("%s/machine?id=%s&defect_id=%s", baseURL, notif.MachineID, notif.DefectID)
+			} else {
+				issueURL = fmt.Sprintf("%s/machine?id=%s", baseURL, notif.MachineID)
+			}
+		} else if notif.DefectID != uuid.Nil {
+			issueURL = fmt.Sprintf("%s/quality?defect_id=%s", baseURL, notif.DefectID)
+		} else {
+			issueURL = fmt.Sprintf("%s/", baseURL)
+		}
+	}
+	issueLinkHTML := fmt.Sprintf(`<a href="%s">View Issue on %s in vtrFlux</a>`, issueURL, machineLabel)
+
+	actions := []AdaptiveCardAction{
+		{
+			Type:  "Action.OpenUrl",
+			Title: "View Issue in vtrFlux",
+			URL:   issueURL,
+		},
 	}
 
 	if notif.IsNCR {
@@ -165,6 +238,10 @@ func (c *PowerAutomateChannel) BuildAdaptiveCard(notif IssueNotification) Adapti
 				Value: notif.CorrectiveAction,
 			})
 		}
+		facts = append(facts, AdaptiveCardFact{
+			Title: "Issue Link:",
+			Value: fmt.Sprintf("[%s](%s)", issueURL, issueURL),
+		})
 
 		body := []AdaptiveCardItem{
 			{
@@ -186,52 +263,107 @@ func (c *PowerAutomateChannel) BuildAdaptiveCard(notif IssueNotification) Adapti
 
 		return AdaptiveCardPayload{
 			RecipientEmail: recipient,
+			IssueURL:       issueURL,
+			IssueLinkHTML:  issueLinkHTML,
 			Type:           "AdaptiveCard",
 			Schema:         "http://adaptivecards.io/schemas/adaptive-card.json",
 			Version:        "1.2",
 			Body:           body,
+			Actions:        actions,
 		}
 	}
 
+	facts := []AdaptiveCardFact{
+		{
+			Title: "Machine ID:",
+			Value: machineLabel,
+		},
+		{
+			Title: "Opened By:",
+			Value: openedBy,
+		},
+		{
+			Title: "Date Opened:",
+			Value: dateOpenedStr,
+		},
+		{
+			Title: "Due Date:",
+			Value: dueDateStr,
+		},
+	}
+
+	assignee := notif.AssigneeName
+	if assignee == "" {
+		if notif.AssignedDept != "" {
+			assignee = fmt.Sprintf("%s (Unassigned)", formatDepartmentName(notif.AssignedDept))
+		} else {
+			assignee = "Unassigned"
+		}
+	}
+	facts = append(facts, AdaptiveCardFact{
+		Title: "Assignee:",
+		Value: assignee,
+	})
+
+	if notif.AssignedDept != "" {
+		facts = append(facts, AdaptiveCardFact{
+			Title: "Department:",
+			Value: formatDepartmentName(notif.AssignedDept),
+		})
+	}
+	if notif.Severity != "" {
+		facts = append(facts, AdaptiveCardFact{
+			Title: "Severity:",
+			Value: strings.ToUpper(notif.Severity),
+		})
+	}
+	if notif.Status != "" {
+		facts = append(facts, AdaptiveCardFact{
+			Title: "Status:",
+			Value: strings.ToUpper(notif.Status),
+		})
+	}
+	facts = append(facts, AdaptiveCardFact{
+		Title: "Issue Link:",
+		Value: fmt.Sprintf("[%s](%s)", issueURL, issueURL),
+	})
+
+	body := []AdaptiveCardItem{
+		{
+			Type:   "TextBlock",
+			Text:   fmt.Sprintf("vtrFlux Machine ID: %s", machineLabel),
+			Weight: "Bolder",
+			Size:   "Medium",
+		},
+		{
+			Type: "TextBlock",
+			Text: notif.Description,
+			Wrap: true,
+		},
+	}
+
+	if strings.TrimSpace(notif.Notes) != "" {
+		body = append(body, AdaptiveCardItem{
+			Type: "TextBlock",
+			Text: fmt.Sprintf("**Detailed Notes:**\n%s", strings.TrimSpace(notif.Notes)),
+			Wrap: true,
+		})
+	}
+
+	body = append(body, AdaptiveCardItem{
+		Type:  "FactSet",
+		Facts: facts,
+	})
+
 	return AdaptiveCardPayload{
 		RecipientEmail: recipient,
+		IssueURL:       issueURL,
+		IssueLinkHTML:  issueLinkHTML,
 		Type:           "AdaptiveCard",
 		Schema:         "http://adaptivecards.io/schemas/adaptive-card.json",
 		Version:        "1.2",
-		Body: []AdaptiveCardItem{
-			{
-				Type:   "TextBlock",
-				Text:   fmt.Sprintf("vtrFlux Machine ID: %s", machineLabel),
-				Weight: "Bolder",
-				Size:   "Medium",
-			},
-			{
-				Type: "TextBlock",
-				Text: notif.Description,
-				Wrap: true,
-			},
-			{
-				Type: "FactSet",
-				Facts: []AdaptiveCardFact{
-					{
-						Title: "Machine ID:",
-						Value: machineLabel,
-					},
-					{
-						Title: "Opened By:",
-						Value: openedBy,
-					},
-					{
-						Title: "Date Opened:",
-						Value: dateOpenedStr,
-					},
-					{
-						Title: "Due Date:",
-						Value: dueDateStr,
-					},
-				},
-			},
-		},
+		Body:           body,
+		Actions:        actions,
 	}
 }
 

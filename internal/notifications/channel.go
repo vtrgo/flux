@@ -29,6 +29,9 @@ type IssueNotification struct {
 	CorrectiveAction string
 	TeamLeadSignature string
 	Status         string
+	Notes          string
+	AssigneeName   string
+	IssueURL       string
 }
 
 // Channel defines the standard contract for any notification transport method.
