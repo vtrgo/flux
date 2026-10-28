@@ -69,7 +69,7 @@ describe('printTimesheet utilities', () => {
     expect(html).toContain('EP');
     expect(html).toContain('Shop');
     expect(html).not.toContain('Job allocation approved by');
-    expect(html).toContain('Approved timesheets must be delivered to Lisa every Monday morning');
+    expect(html).not.toContain('Approved timesheets must be delivered to Lisa every Monday morning');
     expect(html).toContain('Comments / Notes &amp; Remarks');
     expect(html).toContain('@page {');
     expect(html).toContain('size: letter landscape;');

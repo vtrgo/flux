@@ -160,7 +160,7 @@
 
 /* Task / Job Rows */
 .rowJob td {
-  height: 23px;
+  height: 21px;
   font-size: 11px;
 }
 
@@ -175,7 +175,7 @@
 .cellHours {
   text-align: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -183,20 +183,20 @@
   text-align: right;
   font-weight: 700;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 /* Blank / Write-in Rows */
 .rowBlank td {
-  height: 23px;
+  height: 21px;
 }
 
 /* Totals Row */
 .rowTotals td {
   background-color: #e5e5e5;
   font-weight: 800;
-  font-size: 12px;
-  height: 32px;
+  font-size: 11.5px;
+  height: 26px;
   border-top: 2px solid #000000;
   border-bottom: 2px solid #000000;
 }
@@ -246,8 +246,8 @@
 }
 
 .commentsBody {
-  padding: 8px 10px;
-  min-height: 115px;
+  padding: 6px 10px;
+  min-height: 90px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -258,16 +258,16 @@
   font-size: 11px;
   color: #111111;
   white-space: pre-wrap;
-  margin-bottom: 8px;
-  line-height: 1.4;
+  margin-bottom: 6px;
+  line-height: 1.35;
   font-weight: 500;
 }
 
 .commentsLines {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 4px;
+  gap: 14px;
+  margin-top: 3px;
   width: 100%;
 }
 
@@ -344,29 +344,21 @@
   gap: 6px;
 }
 
-.deliveryNotice {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #111111;
-  margin-top: 10px;
-  text-align: left;
-}
-
 .systemAuditLine {
   font-size: 9px;
   color: #666666;
-  margin-top: 12px;
+  margin-top: 8px;
   display: flex;
   justify-content: space-between;
   border-top: 1px dotted #ccc;
-  padding-top: 6px;
+  padding-top: 4px;
 }
 
 /* Fallback print rules for direct page printing */
 @media print {
   @page {
     size: letter landscape;
-    margin: 0.35in 0.35in 0.35in 0.35in;
+    margin: 0.25in 0.3in 0.25in 0.3in;
   }
 
   .sheet {

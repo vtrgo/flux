@@ -134,7 +134,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
   <style>
     @page {
       size: letter landscape;
-      margin: 0.35in 0.35in 0.35in 0.35in;
+      margin: 0.25in 0.3in 0.25in 0.3in;
     }
     *, *::before, *::after {
       box-sizing: border-box;
@@ -264,7 +264,7 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       height: 22px;
     }
     .rowJob td {
-      height: 23px;
+      height: 21px;
       font-size: 11px;
     }
     .jobName {
@@ -277,23 +277,23 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     .cellHours {
       text-align: center;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 500;
     }
     .cellRowTotal {
       text-align: right;
       font-weight: 700;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 11.5px;
+      font-size: 11px;
     }
     .rowBlank td {
-      height: 23px;
+      height: 21px;
     }
     .rowTotals td {
       background-color: #e5e5e5 !important;
       font-weight: 800;
-      font-size: 12px;
-      height: 28px;
+      font-size: 11.5px;
+      height: 26px;
       border-top: 2px solid #000000 !important;
       border-bottom: 2px solid #000000 !important;
     }
@@ -304,11 +304,11 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
     .cellDayTotal {
       text-align: center;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 11.5px;
+      font-size: 11px;
     }
     .cellGrandTotal {
       text-align: right;
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 800;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
@@ -319,8 +319,8 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       width: 100%;
       border: 1.5px solid #000000;
       border-radius: 2px;
-      margin-top: 6px;
-      margin-bottom: 6px;
+      margin-top: 5px;
+      margin-bottom: 5px;
       background: #ffffff;
       box-sizing: border-box;
       page-break-inside: avoid;
@@ -336,8 +336,8 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       color: #000000;
     }
     .commentsBody {
-      padding: 6px 10px;
-      min-height: 115px;
+      padding: 5px 8px;
+      min-height: 90px;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -347,15 +347,15 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       font-size: 11px;
       color: #111111;
       white-space: pre-wrap;
-      margin-bottom: 6px;
-      line-height: 1.4;
+      margin-bottom: 5px;
+      line-height: 1.35;
       font-weight: 500;
     }
     .commentsLines {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      margin-top: 4px;
+      gap: 14px;
+      margin-top: 3px;
       width: 100%;
     }
     .commentRule {
@@ -419,13 +419,6 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       display: flex;
       align-items: center;
       gap: 6px;
-    }
-    .deliveryNotice {
-      font-size: 11.5px;
-      font-weight: 700;
-      color: #000000;
-      margin-top: 8px;
-      text-align: left;
     }
     .systemAuditLine {
       font-size: 9px;
@@ -491,16 +484,12 @@ export function generateTimesheetHtml(params: TimesheetPrintParams): string {
       <div class="commentsBody">
         ${notes ? `<div class="commentsText">${escapeHtml(notes)}</div>` : ''}
         <div class="commentsLines">
-          ${Array.from({ length: notes ? 4 : 7 }).map(() => `<div class="commentRule"></div>`).join('')}
+          ${Array.from({ length: notes ? 3 : 5 }).map(() => `<div class="commentRule"></div>`).join('')}
         </div>
       </div>
     </div>
 
     <div class="footerContainer">
-      <div class="deliveryNotice">
-        Approved timesheets must be delivered to Lisa every Monday morning
-      </div>
-
       <div class="systemAuditLine">
         <span>
           Flux MES &bull; Timesheet ID: ${timesheetId ? escapeHtml(timesheetId.slice(0, 8)) : 'NEW'} &bull; Status: ${escapeHtml(status.toUpperCase())}
