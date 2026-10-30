@@ -9,6 +9,7 @@ import { useSSE } from "../../../components/SSEProvider";
 import { IssueCard } from "../../../components/IssueCard";
 import { NCRModal } from "../../../components/NCRModal";
 import { FilterButtonGroup } from "../../../components/FilterButtonGroup";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 import { toast } from "sonner";
 
@@ -21,6 +22,7 @@ export default function NCRTrackerPage() {
   const [selectedNCR, setSelectedNCR] = useState<NCR | null>(null);
   const [autoPrint, setAutoPrint] = useState(false);
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [deletingNCRId, setDeletingNCRId] = useState<string | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,15 +87,21 @@ export default function NCRTrackerPage() {
     openCreateModal();
   });
 
-  const handleDelete = async (e: React.MouseEvent, ncrId: string) => {
+  const handleDelete = (e: React.MouseEvent, ncrId: string) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to permanently delete this Non-Conformance Report?")) return;
+    setDeletingNCRId(ncrId);
+  };
+
+  const confirmDeleteNCR = async () => {
+    if (!deletingNCRId) return;
     try {
-      await fetchApi(`defects/${ncrId}`, { method: "DELETE" });
+      await fetchApi(`defects/${deletingNCRId}`, { method: "DELETE" });
       toast.success("NCR deleted successfully");
     } catch (err) {
       console.error("Failed to delete NCR", err);
       toast.error("Failed to delete NCR");
+    } finally {
+      setDeletingNCRId(null);
     }
   };
 
@@ -376,6 +384,16 @@ export default function NCRTrackerPage() {
         editingNCR={selectedNCR}
         onSaved={fetchNCRs}
         autoPrint={autoPrint}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingNCRId)}
+        title="Delete NCR"
+        message="Are you sure you want to permanently delete this Non-Conformance Report? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteNCR}
+        onCancel={() => setDeletingNCRId(null)}
       />
     </main>
   );

@@ -1,6 +1,7 @@
 import React from 'react';
 import { GlobalHeader } from "../../components/GlobalHeader";
 import { AuthGuard } from "../../components/AuthGuard";
+import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 
 export default function MainLayout({
   children,
@@ -10,7 +11,9 @@ export default function MainLayout({
   return (
     <AuthGuard>
       <GlobalHeader />
-      {children}
+      <ErrorBoundary componentName="Main View">
+        {children}
+      </ErrorBoundary>
     </AuthGuard>
   );
 }

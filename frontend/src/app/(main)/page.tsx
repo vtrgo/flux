@@ -12,6 +12,7 @@ import { IssueModal } from '../../components/IssueModal';
 import { MachineCard } from '../../components/MachineCard';
 import { ProjectCard } from '../../components/ProjectCard';
 import { Authorize } from '../../components/Authorize';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { SalesOrder, Machine, DefectSummary } from "../../types";
 import { ACTIVE_DEPARTMENTS } from '../../lib/departments';
 import { useAppHotkeys } from '../../hooks/useAppHotkeys';
@@ -20,25 +21,29 @@ export default function Home() {
   const { orders, machines, defectSummaries, projectSummaries, loading } = useDashboardData();
   const [selectedMachineDept, setSelectedMachineDept] = useState<{ machineId: string, dept: string } | null>(null);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [deletingMachineId, setDeletingMachineId] = useState<string | null>(null);
 
   useAppHotkeys('c', (e) => {
     e.preventDefault();
     setIsIssueModalOpen(true);
   });
 
-
-  const handleDeleteMachine = useCallback(async (e: React.MouseEvent, id: string) => {
+  const handleDeleteMachine = useCallback((e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (window.confirm("Are you sure you want to permanently delete this project? All associated tasks, parts, and issues will be lost.")) {
-      try {
-        await fetchApi(`machines/${id}`, { method: 'DELETE' });
-      } catch (err) {
-        console.error("Failed to delete machine:", err);
-      }
-    }
+    setDeletingMachineId(id);
   }, []);
+
+  const confirmDeleteMachine = useCallback(async () => {
+    if (!deletingMachineId) return;
+    try {
+      await fetchApi(`machines/${deletingMachineId}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error("Failed to delete machine:", err);
+    } finally {
+      setDeletingMachineId(null);
+    }
+  }, [deletingMachineId]);
 
   const handleSelectDept = useCallback((machineId: string, dept: string) => {
     setSelectedMachineDept({ machineId, dept });
@@ -106,6 +111,16 @@ export default function Home() {
         isOpen={isIssueModalOpen}
         onClose={() => setIsIssueModalOpen(false)}
         editingDefect={null}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingMachineId)}
+        title="Delete Project / Machine"
+        message="Are you sure you want to permanently delete this project? All associated tasks, parts, and issues will be lost."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteMachine}
+        onCancel={() => setDeletingMachineId(null)}
       />
     </main>
   );

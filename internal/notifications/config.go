@@ -12,6 +12,9 @@ const (
 
 	// DefaultNotificationRecipientEmail is the fallback recipient when no assignee email is available
 	DefaultNotificationRecipientEmail = "justin@vtrfeedersolutions.com"
+
+	// DefaultAppBaseURL is the core domain for deep links back into vtrFlux
+	DefaultAppBaseURL = "http://vtrflux"
 )
 
 // Config represents runtime configuration for notification channels
@@ -19,6 +22,7 @@ type Config struct {
 	Enabled               bool
 	PowerAutomateURL      string
 	DefaultRecipientEmail string
+	AppBaseURL            string
 }
 
 // LoadConfigFromEnv populates configuration from environment variables with sensible defaults.
@@ -49,9 +53,16 @@ func LoadConfigFromEnv() Config {
 		defaultEmail = DefaultNotificationRecipientEmail
 	}
 
+	appBaseURL := os.Getenv("APP_BASE_URL")
+	if appBaseURL == "" {
+		appBaseURL = DefaultAppBaseURL
+	}
+	appBaseURL = strings.TrimRight(appBaseURL, "/")
+
 	return Config{
 		Enabled:               enabled,
 		PowerAutomateURL:      powerAutomateURL,
 		DefaultRecipientEmail: defaultEmail,
+		AppBaseURL:            appBaseURL,
 	}
 }

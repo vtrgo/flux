@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { fetchApi } from '../../../../lib/api';
 import { User } from '../../../../types';
 import { ACTIVE_DEPARTMENTS, formatDepartmentName } from '../../../../lib/departments';
+import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { toast } from 'sonner';
 import styles from '../admin.module.css';
 
@@ -14,6 +15,7 @@ export default function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({ username: '', email: '', first_name: '', last_name: '', department: '', role: '', password: '' });
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -75,15 +77,21 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+  const handleDelete = (id: string) => {
+    setDeletingUserId(id);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!deletingUserId) return;
     try {
-      await fetchApi(`users/${id}`, { method: 'DELETE' });
+      await fetchApi(`users/${deletingUserId}`, { method: 'DELETE' });
       toast.success('User deleted');
       loadUsers();
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete user');
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -242,6 +250,16 @@ export default function AdminUsersPage() {
           </section>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingUserId)}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This account will no longer have access to Flux."
+        confirmLabel="Delete User"
+        variant="danger"
+        onConfirm={confirmDeleteUser}
+        onCancel={() => setDeletingUserId(null)}
+      />
     </main>
   );
 }

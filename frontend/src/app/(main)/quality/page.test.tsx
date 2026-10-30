@@ -3,8 +3,12 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import QualityResolutionHub from './page';
 import { fetchApi } from '../../../lib/api';
+import { useAuth } from '../../../contexts/AuthContext';
 
 vi.mock('../../../lib/api');
+vi.mock('../../../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
+}));
 vi.mock('../../../components/SSEProvider', () => ({
   useSSE: vi.fn(),
   useSSEConnectionStatus: () => true,
@@ -73,6 +77,12 @@ describe('QualityResolutionHub Component', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (useAuth as any).mockReturnValue({
+      user: { id: 'u-1', username: 'tech', role: 'technician' },
+      isAdmin: false,
+      hasRole: vi.fn().mockReturnValue(false),
+      hasDepartment: vi.fn().mockReturnValue(false),
+    });
     (fetchApi as any).mockImplementation((endpoint: string) => {
       if (endpoint === 'defects') return Promise.resolve(mockDefects);
       if (endpoint === 'machines') return Promise.resolve(mockMachines);
@@ -119,5 +129,58 @@ describe('QualityResolutionHub Component', () => {
     // Actionable defects should now be visible, General issue filtered out
     expect(screen.getByText('Loose motor mount bolts')).toBeInTheDocument();
     expect(screen.queryByText('Vendor fastener pitch variance noted for future machine builds')).not.toBeInTheDocument();
+  });
+
+  it('hides CoNC widget and toggle button completely for non-admin users', async () => {
+    (useAuth as any).mockReturnValue({
+      user: { id: 'u-1', username: 'tech', role: 'technician' },
+      isAdmin: false,
+      hasRole: vi.fn().mockReturnValue(false),
+      hasDepartment: vi.fn().mockReturnValue(false),
+    });
+
+    await act(async () => {
+      render(<QualityResolutionHub />);
+    });
+
+    expect(screen.queryByTestId('conc-widget')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /conc metrics/i })).not.toBeInTheDocument();
+  });
+
+  it('defaults to hiding CoNC metrics for admins with toggle button available to show/hide', async () => {
+    (useAuth as any).mockReturnValue({
+      user: { id: 'admin-1', username: 'admin', role: 'admin' },
+      isAdmin: true,
+      hasRole: vi.fn().mockReturnValue(true),
+      hasDepartment: vi.fn().mockReturnValue(true),
+    });
+
+    await act(async () => {
+      render(<QualityResolutionHub />);
+    });
+
+    // Hidden by default
+    expect(screen.queryByTestId('conc-widget')).not.toBeInTheDocument();
+
+    // Toggle button is available
+    const toggleBtn = screen.getByRole('button', { name: /conc metrics/i });
+    expect(toggleBtn).toBeInTheDocument();
+    expect(toggleBtn.textContent).toContain('CoNC Metrics');
+
+    // Admin clicks to show CoNC metrics
+    await act(async () => {
+      fireEvent.click(toggleBtn);
+    });
+
+    expect(screen.getByTestId('conc-widget')).toBeInTheDocument();
+    expect(toggleBtn.textContent).toContain('Hide CoNC Metrics');
+
+    // Admin clicks again to hide CoNC metrics
+    await act(async () => {
+      fireEvent.click(toggleBtn);
+    });
+
+    expect(screen.queryByTestId('conc-widget')).not.toBeInTheDocument();
+    expect(toggleBtn.textContent).toContain('CoNC Metrics');
   });
 });
