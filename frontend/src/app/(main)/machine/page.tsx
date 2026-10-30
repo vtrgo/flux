@@ -13,6 +13,7 @@ import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { AssemblyTreeBuilder } from "../../../components/assembly";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { ErrorBoundary } from "../../../components/ui/ErrorBoundary";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
 import { calculateDaysLate, formatFatDate } from "../../../lib/dateUtils";
@@ -289,7 +290,9 @@ function MachineDetailContent() {
       </nav>
 
       {activeTab === 'assemblies' ? (
-        <AssemblyTreeBuilder machineId={machine.id} orderNumber={machine.order_number} />
+        <ErrorBoundary componentName="Assembly Hierarchy Tree">
+          <AssemblyTreeBuilder machineId={machine.id} orderNumber={machine.order_number} />
+        </ErrorBoundary>
       ) : (
         <div className={styles.boardGrid}>
           {/* OPEN COLUMN */}

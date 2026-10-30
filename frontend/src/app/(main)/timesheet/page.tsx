@@ -9,6 +9,7 @@ import { TimesheetApprovalsTable } from "../../../components/TimesheetApprovalsT
 import { Machine, CreateProjectTaskRequest, CreateDepartmentTaskRequest, ProjectTask, LaborCorrelationItem } from "../../../types";
 import { fetchApi } from "../../../lib/api";
 import { ClockIcon, ChartIcon, CheckIcon } from "../../../components/ui/Icons";
+import { ErrorBoundary } from "../../../components/ui/ErrorBoundary";
 import styles from "./timesheet.module.css";
 
 const DEPARTMENTS = [
@@ -373,11 +374,13 @@ export default function TimesheetPage() {
 
       {/* TAB 1: WEEKLY TIMESHEET (Worker View) */}
       {activeTab === "my_time" && (
-        <WeeklyTimesheetGrid
-          machines={machines}
-          departmentTasks={departmentTasks}
-          userDepartment={user?.department}
-        />
+        <ErrorBoundary componentName="Weekly Timesheet Grid">
+          <WeeklyTimesheetGrid
+            machines={machines}
+            departmentTasks={departmentTasks}
+            userDepartment={user?.department}
+          />
+        </ErrorBoundary>
       )}
 
       {/* TAB 2: PROJECT QUOTING & VARIANCE (Lead / PM View) */}
