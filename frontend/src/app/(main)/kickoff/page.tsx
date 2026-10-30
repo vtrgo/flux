@@ -13,6 +13,7 @@ import { SalesOrderModal } from "../../../components/SalesOrderModal";
 import { SpawnMachineModal } from "../../../components/SpawnMachineModal";
 import { EditMachineModal } from "../../../components/EditMachineModal";
 import { Authorize } from "../../../components/Authorize";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { calculateDaysLate, calculateProjectDaysLate, formatFatDate } from "../../../lib/dateUtils";
 import { useDateTime } from "../../../contexts/DateTimeContext";
 
@@ -27,6 +28,21 @@ function SalesDashboardContent() {
   
   const [isSalesOrderModalOpen, setIsSalesOrderModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<SalesOrder | null>(null);
+  
+  // Custom confirmation dialog state
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    action: () => Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    action: async () => {},
+  });
   
   const [spawningOrderContext, setSpawningOrderContext] = useState<{ id: string, name: string } | null>(null);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
@@ -86,43 +102,75 @@ function SalesDashboardContent() {
     fetchOrders();
   };
 
-  const closeOrder = async (id: string) => {
-    if (!window.confirm("Are you sure you want to close and archive this project? It will be moved to the Archived tab and hidden from active shop views.")) return;
-    try {
-      await fetchApi(`sales_orders/${id}/close`, { method: "POST" });
-      fetchOrders();
-    } catch (err) {
-      console.error("Failed to close project:", err);
-    }
-  };
-
-  const reopenOrder = async (id: string) => {
-    if (!window.confirm("Are you sure you want to reopen this project? It will return to the active pipeline.")) return;
-    try {
-      await fetchApi(`sales_orders/${id}/reopen`, { method: "POST" });
-      fetchOrders();
-    } catch (err) {
-      console.error("Failed to reopen project:", err);
-    }
-  };
-
-  const deleteOrder = async (id: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this project and all its machines? This cannot be undone.")) return;
-    await fetchApi(`sales_orders/${id}`, {
-      method: "DELETE",
+  const closeOrder = (id: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Close & Archive Project",
+      message: "Are you sure you want to close and archive this project? It will be moved to the Archived tab and hidden from active shop views.",
+      confirmLabel: "Archive Project",
+      variant: "warning",
+      action: async () => {
+        try {
+          await fetchApi(`sales_orders/${id}/close`, { method: "POST" });
+          fetchOrders();
+        } catch (err) {
+          console.error("Failed to close project:", err);
+        }
+      },
     });
-    fetchOrders();
-    fetchMachines();
   };
 
-  const deleteMachine = async (e: React.MouseEvent, id: string) => {
+  const reopenOrder = (id: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Reopen Project",
+      message: "Are you sure you want to reopen this project? It will return to the active pipeline.",
+      confirmLabel: "Reopen Project",
+      variant: "primary",
+      action: async () => {
+        try {
+          await fetchApi(`sales_orders/${id}/reopen`, { method: "POST" });
+          fetchOrders();
+        } catch (err) {
+          console.error("Failed to reopen project:", err);
+        }
+      },
+    });
+  };
+
+  const deleteOrder = (id: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Delete Project",
+      message: "Are you sure you want to permanently delete this project and all its machines? This cannot be undone.",
+      confirmLabel: "Delete Project",
+      variant: "danger",
+      action: async () => {
+        await fetchApi(`sales_orders/${id}`, {
+          method: "DELETE",
+        });
+        fetchOrders();
+        fetchMachines();
+      },
+    });
+  };
+
+  const deleteMachine = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this part/machine?")) return;
-    await fetchApi(`machines/${id}`, {
-      method: "DELETE",
+    setConfirmConfig({
+      isOpen: true,
+      title: "Delete Part / Machine",
+      message: "Are you sure you want to delete this part/machine?",
+      confirmLabel: "Delete",
+      variant: "danger",
+      action: async () => {
+        await fetchApi(`machines/${id}`, {
+          method: "DELETE",
+        });
+        fetchMachines();
+      },
     });
-    fetchMachines();
   };
 
   const activeOrders = orders.filter(o => o.status !== 'closed');
@@ -367,6 +415,19 @@ function SalesDashboardContent() {
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmLabel={confirmConfig.confirmLabel}
+        variant={confirmConfig.variant}
+        onConfirm={async () => {
+          await confirmConfig.action();
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }}
+        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
     </main>
   );
 }

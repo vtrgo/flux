@@ -8,6 +8,7 @@ import styles from "./DepartmentHub.module.css";
 import { IssueModal } from "./IssueModal";
 import { IssueCardItem } from "./IssueCardItem";
 import { FilterButtonGroup } from "./FilterButtonGroup";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { useAppHotkeys } from "../hooks/useAppHotkeys";
 
 import { Defect } from "../types";
@@ -22,6 +23,7 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
+  const [deletingDefectId, setDeletingDefectId] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSeverity, setActiveSeverity] = useState<string>("All");
@@ -48,15 +50,21 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
     setIsModalOpen(true);
   }, []);
 
-  const handleDelete = useCallback(async (e: React.MouseEvent, defectId: string) => {
+  const handleDelete = useCallback((e: React.MouseEvent, defectId: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this issue?")) return;
+    setDeletingDefectId(defectId);
+  }, []);
+
+  const confirmDeleteDefect = useCallback(async () => {
+    if (!deletingDefectId) return;
     try {
-      await fetchApi(`defects/${defectId}`, { method: 'DELETE' });
+      await fetchApi(`defects/${deletingDefectId}`, { method: 'DELETE' });
     } catch (err) {
       console.error("Failed to delete defect", err);
+    } finally {
+      setDeletingDefectId(null);
     }
-  }, []);
+  }, [deletingDefectId]);
 
   const handleStatusChange = useCallback(async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
@@ -209,6 +217,16 @@ export function DepartmentHub({ title, departmentKey }: DepartmentHubProps) {
         onClose={() => setIsModalOpen(false)} 
         editingDefect={editingDefect}
         defaultAssignedDept={departmentKey}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingDefectId)}
+        title="Delete Department Issue"
+        message="Are you sure you want to permanently delete this issue?"
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteDefect}
+        onCancel={() => setDeletingDefectId(null)}
       />
     </main>
   );

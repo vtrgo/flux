@@ -17,12 +17,14 @@ import { useAppHotkeys } from "../../../hooks/useAppHotkeys";
 import { formatDepartmentName } from "../../../lib/departments";
 import { ChartIcon, ClipboardIcon } from "../../../components/ui/Icons";
 import { useAuth } from "../../../contexts/AuthContext";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 
 export default function QualityResolutionHub() {
   const { isAdmin } = useAuth();
   const [defects, setDefects] = useState<Defect[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingDefectId, setDeletingDefectId] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
@@ -108,15 +110,21 @@ export default function QualityResolutionHub() {
     }
   }, [openEditModal]);
 
-  const handleDelete = useCallback(async (e: React.MouseEvent, defectId: string) => {
+  const handleDelete = useCallback((e: React.MouseEvent, defectId: string) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to permanently delete this issue?")) return;
+    setDeletingDefectId(defectId);
+  }, []);
+
+  const confirmDeleteDefect = useCallback(async () => {
+    if (!deletingDefectId) return;
     try {
-      await fetchApi(`defects/${defectId}`, { method: 'DELETE' });
+      await fetchApi(`defects/${deletingDefectId}`, { method: 'DELETE' });
     } catch (err) {
       console.error("Failed to delete defect", err);
+    } finally {
+      setDeletingDefectId(null);
     }
-  }, []);
+  }, [deletingDefectId]);
 
   const handleStatusChange = useCallback(async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
@@ -309,6 +317,16 @@ export default function QualityResolutionHub() {
         onClose={() => setIsNCRModalOpen(false)}
         editingNCR={editingNCR}
         onSaved={fetchData}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingDefectId)}
+        title="Delete Quality Issue"
+        message="Are you sure you want to permanently delete this issue?"
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteDefect}
+        onCancel={() => setDeletingDefectId(null)}
       />
     </main>
   );

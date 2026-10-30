@@ -8,6 +8,7 @@ import { getSundayOfWeek, addWeeks, formatWeekRange, formatHours } from '../lib/
 import { useAuth } from '../contexts/AuthContext';
 import { WeeklyTimesheetGrid } from './WeeklyTimesheetGrid';
 import { Modal } from './ui/Modal';
+import { ConfirmDialog } from './ui/ConfirmDialog';
 import { TimesheetPrintModal } from './TimesheetPrintModal';
 import styles from './WeeklyTimesheetGrid.module.css';
 
@@ -58,6 +59,10 @@ export function TimesheetApprovalsTable({
   // Reject dialog state
   const [rejectingTimesheet, setRejectingTimesheet] = useState<WeeklyTimesheet | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
+
+  // Confirmation dialog state for approvals and deletions
+  const [confirmApproveTs, setConfirmApproveTs] = useState<WeeklyTimesheet | null>(null);
+  const [confirmDeleteTs, setConfirmDeleteTs] = useState<WeeklyTimesheet | null>(null);
   const [processingAction, setProcessingAction] = useState<boolean>(false);
 
   // Print dialog state
@@ -105,13 +110,15 @@ export function TimesheetApprovalsTable({
     setExpandedTimesheet(null);
   }, [selectedWeek, deptFilter]);
 
-  const handleApprove = async (ts: WeeklyTimesheet) => {
-    if (!window.confirm(`Approve timesheet for ${ts.user_name || 'worker'} (${formatHours(ts.total_hours)} hrs)?`)) {
-      return;
-    }
+  const handleApprove = (ts: WeeklyTimesheet) => {
+    setConfirmApproveTs(ts);
+  };
+
+  const executeApprove = async () => {
+    if (!confirmApproveTs) return;
     try {
       setProcessingAction(true);
-      await approveWeeklyTimesheet(ts.id);
+      await approveWeeklyTimesheet(confirmApproveTs.id);
       toast.success('Timesheet Approved');
       await loadData();
     } catch (err: unknown) {
@@ -119,20 +126,19 @@ export function TimesheetApprovalsTable({
       toast.error(msg);
     } finally {
       setProcessingAction(false);
+      setConfirmApproveTs(null);
     }
   };
 
-  const handleDeleteTimesheet = async (ts: WeeklyTimesheet) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to delete the timesheet for ${ts.user_name || 'worker'} (${formatWeekRange(ts.week_start_date)})? This will permanently remove all associated time entries.`
-      )
-    ) {
-      return;
-    }
+  const handleDeleteTimesheet = (ts: WeeklyTimesheet) => {
+    setConfirmDeleteTs(ts);
+  };
+
+  const executeDeleteTimesheet = async () => {
+    if (!confirmDeleteTs) return;
     try {
       setProcessingAction(true);
-      await deleteWeeklyTimesheet(ts.id);
+      await deleteWeeklyTimesheet(confirmDeleteTs.id);
       toast.success('Timesheet deleted');
       await loadData();
     } catch (err: unknown) {
@@ -140,6 +146,7 @@ export function TimesheetApprovalsTable({
       toast.error(msg);
     } finally {
       setProcessingAction(false);
+      setConfirmDeleteTs(null);
     }
   };
 
@@ -670,6 +677,29 @@ export function TimesheetApprovalsTable({
           weekStartDate={printingTimesheet.week_start_date || selectedWeek}
         />
       )}
+
+      {/* Confirmation Dialogs */}
+      <ConfirmDialog
+        isOpen={Boolean(confirmApproveTs)}
+        title="Approve Timesheet"
+        message={`Approve timesheet for ${confirmApproveTs?.user_name || 'worker'} (${formatHours(confirmApproveTs?.total_hours || 0)} hrs)?`}
+        confirmLabel="Approve"
+        variant="primary"
+        isLoading={processingAction}
+        onConfirm={executeApprove}
+        onCancel={() => setConfirmApproveTs(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(confirmDeleteTs)}
+        title="Delete Timesheet"
+        message={`Are you sure you want to delete the timesheet for ${confirmDeleteTs?.user_name || 'worker'} (${confirmDeleteTs ? formatWeekRange(confirmDeleteTs.week_start_date) : ''})? This will permanently remove all associated time entries.`}
+        confirmLabel="Delete"
+        variant="danger"
+        isLoading={processingAction}
+        onConfirm={executeDeleteTimesheet}
+        onCancel={() => setConfirmDeleteTs(null)}
+      />
     </div>
   );
 }

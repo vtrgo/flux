@@ -12,6 +12,7 @@ import { IssueModal } from "../../../components/IssueModal";
 import { IssueCardItem } from "../../../components/IssueCardItem";
 import { AttachmentViewer } from "../../../components/AttachmentViewer";
 import { AssemblyTreeBuilder } from "../../../components/assembly";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 
 import { Machine, SalesOrder, Defect } from "../../../types";
 import { calculateDaysLate, formatFatDate } from "../../../lib/dateUtils";
@@ -32,6 +33,7 @@ function MachineDetailContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDefect, setEditingDefect] = useState<Defect | null>(null);
   const [activeTab, setActiveTab] = useState<'issues' | 'assemblies'>('issues');
+  const [deletingDefectId, setDeletingDefectId] = useState<string | null>(null);
 
   useSSE('defect_added', (newDefect: Defect) => {
     if (newDefect.machine_id === id) {
@@ -108,15 +110,21 @@ function MachineDetailContent() {
     setIsModalOpen(true);
   }, []);
 
-  const handleDelete = useCallback(async (e: React.MouseEvent, defectId: string) => {
+  const handleDelete = useCallback((e: React.MouseEvent, defectId: string) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to permanently delete this issue?")) return;
+    setDeletingDefectId(defectId);
+  }, []);
+
+  const confirmDeleteDefect = useCallback(async () => {
+    if (!deletingDefectId) return;
     try {
-      await fetchApi(`defects/${defectId}`, { method: 'DELETE' });
+      await fetchApi(`defects/${deletingDefectId}`, { method: 'DELETE' });
     } catch (err) {
       console.error("Failed to delete defect", err);
+    } finally {
+      setDeletingDefectId(null);
     }
-  }, []);
+  }, [deletingDefectId]);
 
   const handleStatusChange = useCallback(async (e: React.MouseEvent, defect: Defect, nextStatus: string) => {
     e.stopPropagation();
@@ -322,6 +330,16 @@ function MachineDetailContent() {
         editingDefect={editingDefect} 
         defaultAssignedDept="quality"
         preselectedMachineId={machine.id}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingDefectId)}
+        title="Delete Issue"
+        message="Are you sure you want to permanently delete this issue?"
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteDefect}
+        onCancel={() => setDeletingDefectId(null)}
       />
     </main>
   );
